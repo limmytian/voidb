@@ -1,0 +1,36 @@
+id = "example-go"
+name = "Example Go Plugin"
+version = "0.1.0"
+protocol_version = "1"
+description = "Reference VoidB process plugin implemented in Go using stdio-jsonrpc."
+license = "MIT"
+
+[runtime]
+command = "example-go"
+args = []
+transport = "stdio-jsonrpc"
+
+[connections]
+profile_schema = "schemas/profile.schema.json"
+secret_classes = []
+
+[[capabilities]]
+id = "info"
+description = "Return system info and ping response."
+input_schema = "schemas/info-input.schema.json"
+output_schema = "schemas/info-output.schema.json"
+permissions = ["connection.read"]
+risk = "read_only"
+destructive = false
+streaming = false
+connection_required = false
+required_secret_classes = []
+supports_dry_run = false
+default_timeout_ms = 1000
+
+[ui]
+tui = false
+
+[requirements]
+voidb_core = ">=0.1.0"
+platforms = ["darwin", "linux", "windows"]

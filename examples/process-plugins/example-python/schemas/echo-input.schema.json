@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["message"],
+  "properties": {
+    "message": {
+      "type": "string",
+      "description": "Message to echo."
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["echo", "received_at"],
+  "properties": {
+    "echo": {
+      "type": "string"
+    },
+    "received_at": {
+      "type": "string"
+    }
+  }
+}

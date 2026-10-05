@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["pong", "go_version"],
+  "properties": {
+    "pong": {
+      "type": "string"
+    },
+    "go_version": {
+      "type": "string"
+    }
+  }
+}

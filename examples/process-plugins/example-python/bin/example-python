@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+"""
+Reference implementation of a VoidB process plugin in Python.
+Speaks line-delimited JSON-RPC 2.0 over stdin/stdout.
+"""
+
+import sys
+import json
+import datetime
+
+
+def main():
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            req = json.loads(line)
+        except Exception as e:
+            err_resp = {
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {
+                    "code": -32700,
+                    "message": "Parse error",
+                    "data": {
+                        "category": "transport",
+                        "code": "protocol.json_parse_failed",
+                        "message": str(e),
+                        "details": {},
+                        "retryable": False,
+                        "redaction": "applied"
+                    }
+                }
+            }
+            sys.stdout.write(json.dumps(err_resp) + "\n")
+            sys.stdout.flush()
+            continue
+
+        method = req.get("method")
+        msg_id = req.get("id")
+        params = req.get("params", {})
+
+        if method == "voidb.initialize":
+            resp = {
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {
+                    "plugin_id": "example-python",
+                    "protocol_version": "1",
+                    "status": "ready"
+                }
+            }
+        elif method == "voidb.health":
+            resp = {
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {
+                    "status": "ready",
+                    "active_invocations": 0,
+                    "runtime": "python3"
+                }
+            }
+        elif method == "voidb.invoke":
+            invocation = params.get("invocation", {})
+            cap_id = invocation.get("capability_id")
+            inv_id = invocation.get("id", "inv-1")
+
+            if cap_id == "echo":
+                user_msg = invocation.get("input", {}).get("message", "")
+                now_str = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                resp = {
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "result": {
+                        "invocation_id": inv_id,
+                        "status": "succeeded",
+                        "output": {
+                            "echo": user_msg,
+                            "received_at": now_str
+                        },
+                        "output_summary": {
+                            "length": len(user_msg),
+                            "redaction": "not_required"
+                        }
+                    }
+                }
+            else:
+                resp = {
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "error": {
+                        "code": -32040,
+                        "message": f"Unknown capability: {cap_id}",
+                        "data": {
+                            "category": "plugin",
+                            "code": "python.capability_not_found",
+                            "message": f"Capability '{cap_id}' not found.",
+                            "details": {},
+                            "retryable": False,
+                            "redaction": "applied"
+                        }
+                    }
+                }
+        elif method == "voidb.cancel":
+            resp = {
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {
+                    "invocation_id": params.get("invocation_id", "")
+                }
+            }
+        else:
+            resp = {
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "error": {
+                    "code": -32601,
+                    "message": f"Method not found: {method}",
+                    "data": {
+                        "category": "protocol",
+                        "code": "protocol.method_not_found",
+                        "message": f"Method '{method}' not recognized.",
+                        "details": {},
+                        "retryable": False,
+                        "redaction": "applied"
+                    }
+                }
+            }
+
+        sys.stdout.write(json.dumps(resp) + "\n")
+        sys.stdout.flush()
+
+
+if __name__ == "__main__":
+    main()
