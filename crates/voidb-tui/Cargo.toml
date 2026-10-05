@@ -1,0 +1,39 @@
+[package]
+name = "voidb-tui"
+version = "0.3.0-rc.1"
+edition = "2024"
+license.workspace = true
+
+[features]
+default = []
+
+[lib]
+name = "voidb_tui"
+path = "src/lib.rs"
+
+[[bin]]
+name = "voidb"
+path = "src/main.rs"
+
+[[example]]
+name = "test_channel_flow"
+path = "../../examples/test_channel_flow.rs"
+
+[dependencies]
+voidb-core = { path = "../voidb-core" }
+ratatui = { workspace = true }
+crossterm = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+unicode-width = "0.2"
+futures = "0.3"
+tokio-util = "0.7"
+dirs = "6.0"
+arboard = "3.4"  # Clipboard support
+tui-textarea = "0.7"  # Multi-line text editor

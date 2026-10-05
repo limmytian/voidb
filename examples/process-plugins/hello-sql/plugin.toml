@@ -1,0 +1,50 @@
+id = "hello-sql"
+name = "Hello SQL"
+version = "0.1.0"
+protocol_version = "1"
+description = "Safe process-plugin example for read-only and mutating SQL capabilities."
+license = "MIT"
+
+[runtime]
+command = "hello-sql"
+args = []
+transport = "stdio-jsonrpc"
+
+[connections]
+profile_schema = "schemas/profile.schema.json"
+secret_classes = []
+
+[[capabilities]]
+id = "query"
+description = "Return a bounded synthetic SQL result set."
+input_schema = "schemas/query-input.schema.json"
+output_schema = "schemas/query-output.schema.json"
+permissions = ["connection.read", "sql.query"]
+risk = "read_only"
+destructive = false
+streaming = false
+connection_required = false
+required_secret_classes = []
+supports_dry_run = false
+default_timeout_ms = 1000
+
+[[capabilities]]
+id = "exec"
+description = "Plan or execute a synthetic mutating SQL statement."
+input_schema = "schemas/exec-input.schema.json"
+output_schema = "schemas/exec-output.schema.json"
+permissions = ["connection.read", "sql.exec"]
+risk = "mutating"
+destructive = true
+streaming = false
+connection_required = false
+required_secret_classes = []
+supports_dry_run = true
+default_timeout_ms = 1000
+
+[ui]
+tui = false
+
+[requirements]
+voidb_core = ">=0.1.0"
+platforms = ["darwin", "linux", "windows"]

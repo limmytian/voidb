@@ -1,0 +1,78 @@
+id = "hello-storage"
+name = "Hello Storage"
+version = "0.1.0"
+protocol_version = "1"
+description = "Safe process-plugin example for storage and external side-effect capability declarations."
+license = "MIT"
+
+[runtime]
+command = "hello-storage"
+args = []
+transport = "stdio-jsonrpc"
+
+[connections]
+profile_schema = "schemas/profile.schema.json"
+secret_classes = []
+
+[[capabilities]]
+id = "list"
+description = "List synthetic objects from a fixture bucket."
+input_schema = "schemas/list-input.schema.json"
+output_schema = "schemas/list-output.schema.json"
+permissions = ["connection.read", "storage.list"]
+risk = "read_only"
+destructive = false
+streaming = false
+connection_required = false
+required_secret_classes = []
+supports_dry_run = false
+default_timeout_ms = 1000
+
+[[capabilities]]
+id = "put"
+description = "Plan or write one synthetic object."
+input_schema = "schemas/put-input.schema.json"
+output_schema = "schemas/put-output.schema.json"
+permissions = ["connection.read", "storage.put"]
+risk = "mutating"
+destructive = true
+streaming = false
+connection_required = false
+required_secret_classes = []
+supports_dry_run = true
+default_timeout_ms = 1000
+
+[[capabilities]]
+id = "delete"
+description = "Plan or delete one synthetic object."
+input_schema = "schemas/delete-input.schema.json"
+output_schema = "schemas/delete-output.schema.json"
+permissions = ["connection.read", "storage.delete"]
+risk = "destructive"
+destructive = true
+streaming = false
+connection_required = false
+required_secret_classes = []
+supports_dry_run = true
+default_timeout_ms = 1000
+
+[[capabilities]]
+id = "notify"
+description = "Emit a synthetic external notification event."
+input_schema = "schemas/notify-input.schema.json"
+output_schema = "schemas/notify-output.schema.json"
+permissions = ["connection.read", "storage.notify"]
+risk = "external_side_effect"
+destructive = true
+streaming = false
+connection_required = false
+required_secret_classes = []
+supports_dry_run = true
+default_timeout_ms = 1000
+
+[ui]
+tui = false
+
+[requirements]
+voidb_core = ">=0.1.0"
+platforms = ["darwin", "linux", "windows"]

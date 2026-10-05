@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sql"],
+  "properties": {
+    "sql": {
+      "type": "string",
+      "description": "A read-only SQL statement for the fixture."
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 5
+    }
+  }
+}

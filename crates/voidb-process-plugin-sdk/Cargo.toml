@@ -1,0 +1,13 @@
+[package]
+name = "voidb-process-plugin-sdk"
+version = "0.3.0-rc.1"
+edition = "2024"
+license.workspace = true
+
+[dependencies]
+voidb-core = { path = "../voidb-core" }
+
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }

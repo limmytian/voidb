@@ -1,0 +1,4 @@
+interface:
+  display_name: "VoidB SSH Plugin"
+  short_description: "SSH plugin and shared PTY guide"
+  default_prompt: "Use $voidb-plugin-ssh to update VoidB SSH terminal, session sharing, SFTP, forwarding, or capabilities safely."

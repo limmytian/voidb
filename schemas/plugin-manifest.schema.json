@@ -1,0 +1,394 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://voidb.dev/schemas/plugin-manifest.schema.json",
+  "title": "VoidB Process Plugin Manifest",
+  "description": "Schema for a process-based VoidB plugin manifest after TOML parsing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "version",
+    "protocol_version",
+    "runtime",
+    "connections",
+    "capabilities"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional schema URI for editors and tooling."
+    },
+    "id": {
+      "$ref": "#/$defs/pluginId"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+    },
+    "protocol_version": {
+      "type": "string",
+      "pattern": "^[0-9]+(\\.[0-9]+)?$"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "license": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "homepage": {
+      "type": "string",
+      "format": "uri"
+    },
+    "runtime": {
+      "$ref": "#/$defs/runtime"
+    },
+    "connections": {
+      "$ref": "#/$defs/connections"
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/capability"
+      }
+    },
+    "ui": {
+      "$ref": "#/$defs/ui"
+    },
+    "requirements": {
+      "$ref": "#/$defs/requirements"
+    }
+  },
+  "$defs": {
+    "pluginId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "capabilityId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+    },
+    "permission": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.:-]*$"
+    },
+    "schemaRef": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Relative path or URI to a JSON Schema document."
+    },
+    "secretClass": {
+      "type": "string",
+      "enum": [
+        "password",
+        "token",
+        "api_key",
+        "private_key",
+        "client_certificate",
+        "cloud_access_key",
+        "cloud_secret_key",
+        "other"
+      ]
+    },
+    "capabilityRiskLevel": {
+      "type": "string",
+      "enum": [
+        "read_only",
+        "mutating",
+        "destructive",
+        "external_side_effect"
+      ],
+      "default": "read_only"
+    },
+    "capabilityExecutionMode": {
+      "type": "string",
+      "enum": [
+        "stateless",
+        "session_only",
+        "both"
+      ],
+      "default": "stateless"
+    },
+    "qualifiedCapabilityId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}\\.[a-z][a-z0-9_-]{0,63}$"
+    },
+    "pluginSessionPurpose": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "interactive_terminal",
+            "file_transfer",
+            "port_forward",
+            "database_query",
+            "database_transaction",
+            "cache_command",
+            "log_stream",
+            "watch_stream",
+            "infrastructure_client",
+            "sync_client",
+            "capability_invocation",
+            "plugin_defined"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "capabilitySessionHandoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "purpose"
+      ],
+      "properties": {
+        "purpose": {
+          "$ref": "#/$defs/pluginSessionPurpose"
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/qualifiedCapabilityId"
+          },
+          "uniqueItems": true,
+          "default": []
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command",
+        "transport"
+      ],
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "transport": {
+          "type": "string",
+          "minLength": 1
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {}
+        }
+      }
+    },
+    "connections": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_schema",
+        "secret_classes"
+      ],
+      "properties": {
+        "profile_schema": {
+          "$ref": "#/$defs/schemaRef"
+        },
+        "secret_classes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/secretClass"
+          },
+          "uniqueItems": true,
+          "default": []
+        }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "description",
+        "input_schema",
+        "output_schema",
+        "permissions",
+        "destructive",
+        "streaming"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/capabilityId"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "input_schema": {
+          "$ref": "#/$defs/schemaRef"
+        },
+        "output_schema": {
+          "$ref": "#/$defs/schemaRef"
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/permission"
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "authorization": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "declared"
+          ],
+          "properties": {
+            "declared": {
+              "type": "boolean"
+            },
+            "interactive_execute": {
+              "type": "boolean",
+              "default": false
+            },
+            "session_purposes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "interactive_terminal",
+                      "file_transfer",
+                      "port_forward",
+                      "database_query",
+                      "database_transaction",
+                      "cache_command",
+                      "log_stream",
+                      "watch_stream",
+                      "infrastructure_client",
+                      "sync_client",
+                      "capability_invocation",
+                      "plugin_defined"
+                    ]
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                }
+              },
+              "uniqueItems": true,
+              "default": []
+            },
+            "note": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "risk": {
+          "$ref": "#/$defs/capabilityRiskLevel"
+        },
+        "destructive": {
+          "type": "boolean"
+        },
+        "streaming": {
+          "type": "boolean"
+        },
+        "execution_mode": {
+          "$ref": "#/$defs/capabilityExecutionMode"
+        },
+        "session_handoff": {
+          "$ref": "#/$defs/capabilitySessionHandoff"
+        },
+        "connection_required": {
+          "type": "boolean",
+          "default": true
+        },
+        "required_secret_classes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/secretClass"
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "supports_dry_run": {
+          "type": "boolean",
+          "default": false
+        },
+        "default_timeout_ms": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tui"
+      ],
+      "properties": {
+        "tui": {
+          "type": "boolean"
+        },
+        "entrypoint_capability": {
+          "$ref": "#/$defs/capabilityId"
+        },
+        "raw_input": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "voidb_core": {
+          "type": "string",
+          "minLength": 1
+        },
+        "platforms": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "darwin",
+              "linux",
+              "windows"
+            ]
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

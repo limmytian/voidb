@@ -1,0 +1,63 @@
+# Example process plugin manifest for Redis.
+
+id = "redis"
+name = "Redis"
+version = "0.1.0"
+protocol_version = "1"
+description = "Redis key-value capability plugin for VoidB."
+license = "MIT"
+homepage = "https://github.com/voidb-plugins/redis"
+
+[runtime]
+command = "voidb-plugin-redis"
+args = []
+transport = "stdio-jsonrpc"
+
+[connections]
+profile_schema = "schemas/redis-profile.schema.json"
+secret_classes = ["password", "token"]
+
+[[capabilities]]
+id = "get"
+description = "Read one Redis key."
+input_schema = "schemas/get-input.schema.json"
+output_schema = "schemas/get-output.schema.json"
+permissions = ["connection.read", "redis.get"]
+destructive = false
+streaming = false
+connection_required = true
+required_secret_classes = []
+supports_dry_run = false
+default_timeout_ms = 10000
+
+[[capabilities]]
+id = "set"
+description = "Set one Redis key value."
+input_schema = "schemas/set-input.schema.json"
+output_schema = "schemas/set-output.schema.json"
+permissions = ["connection.read", "redis.set"]
+destructive = true
+streaming = false
+connection_required = true
+required_secret_classes = []
+supports_dry_run = false
+default_timeout_ms = 10000
+
+[[capabilities]]
+id = "monitor"
+description = "Stream Redis MONITOR output."
+input_schema = "schemas/monitor-input.schema.json"
+output_schema = "schemas/monitor-output.schema.json"
+permissions = ["connection.read", "redis.monitor"]
+destructive = false
+streaming = true
+connection_required = true
+required_secret_classes = []
+supports_dry_run = false
+
+[ui]
+tui = false
+
+[requirements]
+voidb_core = ">=0.1.0"
+platforms = ["darwin", "linux", "windows"]

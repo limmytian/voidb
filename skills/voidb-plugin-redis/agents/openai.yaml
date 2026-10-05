@@ -1,0 +1,4 @@
+interface:
+  display_name: "VoidB Redis Plugin"
+  short_description: "Guide for VoidB Redis work"
+  default_prompt: "Use $voidb-plugin-redis to update the VoidB Redis plugin, capabilities, CLI, or service layer."

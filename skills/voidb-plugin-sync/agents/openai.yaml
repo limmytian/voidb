@@ -1,0 +1,4 @@
+interface:
+  display_name: "VoidB Sync Plugin"
+  short_description: "Guide for VoidB encrypted sync"
+  default_prompt: "Use $voidb-plugin-sync to update VoidB encrypted sync, credential handoff, conflicts, or periodic sync."

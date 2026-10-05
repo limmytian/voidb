@@ -1,0 +1,51 @@
+# Example process plugin manifest for MySQL.
+
+id = "mysql"
+name = "MySQL"
+version = "0.1.0"
+protocol_version = "1"
+description = "MySQL and MariaDB capability plugin for VoidB."
+license = "MIT"
+homepage = "https://github.com/voidb-plugins/mysql"
+
+[runtime]
+command = "voidb-plugin-mysql"
+args = []
+transport = "stdio-jsonrpc"
+
+[connections]
+profile_schema = "schemas/mysql-profile.schema.json"
+secret_classes = ["password", "client_certificate"]
+
+[[capabilities]]
+id = "query"
+description = "Execute a read-oriented SQL query."
+input_schema = "schemas/query-input.schema.json"
+output_schema = "schemas/query-output.schema.json"
+permissions = ["connection.read", "sql.query"]
+destructive = false
+streaming = false
+connection_required = true
+required_secret_classes = ["password"]
+supports_dry_run = false
+default_timeout_ms = 30000
+
+[[capabilities]]
+id = "exec"
+description = "Execute a SQL statement that may mutate data."
+input_schema = "schemas/exec-input.schema.json"
+output_schema = "schemas/exec-output.schema.json"
+permissions = ["connection.read", "sql.exec"]
+destructive = true
+streaming = false
+connection_required = true
+required_secret_classes = ["password"]
+supports_dry_run = true
+default_timeout_ms = 30000
+
+[ui]
+tui = false
+
+[requirements]
+voidb_core = ">=0.1.0"
+platforms = ["darwin", "linux", "windows"]

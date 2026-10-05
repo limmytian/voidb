@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["key", "content"],
+  "properties": {
+    "key": { "type": "string" },
+    "content": { "type": "string" }
+  }
+}

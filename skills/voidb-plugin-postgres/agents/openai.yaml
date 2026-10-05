@@ -1,0 +1,4 @@
+interface:
+  display_name: "VoidB PostgreSQL Plugin"
+  short_description: "Guide for VoidB PostgreSQL work"
+  default_prompt: "Use $voidb-plugin-postgres to update the VoidB PostgreSQL plugin, capabilities, CLI, or service layer."

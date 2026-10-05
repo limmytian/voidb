@@ -1,0 +1,30 @@
+# VoidB Sync Server — example configuration.
+# Copy to config.toml and edit, or pass --config <path> on the CLI.
+
+# HTTP listen address.
+bind = "0.0.0.0:7781"
+
+# Base data directory. All runtime state lives under this path.
+# In production this should point to an NFS / persistent mount, e.g. /mnt/voidb-sync.
+#
+# Layout:
+#   <data_dir>/metadata.db                  - SQLite metadata database
+#   <data_dir>/blobs/<user_id>/<kind>/<rev>.bin  - encrypted blob payloads
+data_dir = "/app/data"
+
+# Maximum accepted blob payload size in bytes (ciphertext + manifest).
+# Default: 32 MiB. Raise if users sync large history files.
+max_blob_bytes = 33554432
+
+# Number of most recent revisions to keep per (user, kind).
+# Older revisions are pruned on every successful PUT. Set to 0 to keep all.
+history_keep = 20
+
+# Registration policy.
+#   "open"          - anyone with a reachable address can sign up
+#   "invite_only"   - only accounts with invite_tokens can register
+#   "closed"        - registration disabled entirely (existing users can still log in)
+registration = "open"
+
+# Access log verbosity: "error" | "warn" | "info" | "debug" | "trace"
+log_level = "info"

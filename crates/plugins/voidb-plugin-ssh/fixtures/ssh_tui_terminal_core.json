@@ -1,0 +1,73 @@
+{
+  "profile_label": "fixture-ssh",
+  "target_label": "fixture@127.0.0.1:2222",
+  "auth_method": "agent",
+  "terminal_lines": [
+    "VoidB SSH fixture terminal",
+    "$ whoami",
+    "fixture",
+    "$ printf 'raw input path ready'",
+    "raw input path ready"
+  ],
+  "status": "fixture terminal core ready",
+  "host_key": {
+    "host": "127.0.0.1",
+    "port": 2222,
+    "fingerprint": "ssh-ed25519 SHA256:fixture-host-key-fingerprint",
+    "key_changed": false
+  },
+  "sftp_path": "/srv/app",
+  "sftp_entries": [
+    {
+      "name": "releases",
+      "is_dir": true,
+      "permissions": 493,
+      "mtime": 1793088800
+    },
+    {
+      "name": "config.toml",
+      "is_dir": false,
+      "size": 2048,
+      "permissions": 420,
+      "mtime": 1793088900
+    },
+    {
+      "name": "startup.log",
+      "is_dir": false,
+      "size": 131072,
+      "permissions": 420,
+      "mtime": 1793089000
+    }
+  ],
+  "forward_rules": [
+    {
+      "id": 1,
+      "kind": "Local",
+      "summary": "-L 127.0.0.1:18080:db.internal:5432",
+      "status": "active",
+      "bytes_sent": 24576,
+      "bytes_received": 49152,
+      "active_connections": 1,
+      "total_connections": 3
+    },
+    {
+      "id": 2,
+      "kind": "SOCKS5",
+      "summary": "-D 127.0.0.1:18081",
+      "status": "starting",
+      "bytes_sent": 0,
+      "bytes_received": 0,
+      "active_connections": 0,
+      "total_connections": 0
+    }
+  ],
+  "metrics": {
+    "hostname": "fixture-ssh-host",
+    "os_label": "Linux",
+    "cpu_usage": 12.5,
+    "memory_used": 536870912,
+    "memory_total": 2147483648,
+    "load_average": [0.12, 0.18, 0.22],
+    "uptime_secs": 93600
+  }
+}

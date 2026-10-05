@@ -1,0 +1,60 @@
+# VoidB Configuration File Example
+# Copy this file to ~/.config/voidb/config.toml and customize for your environment
+
+# Settings
+[settings]
+# Number of rows to display per page in data grids
+page_size = 100
+
+# Maximum number of concurrent database connections
+max_connections = 5
+
+# Connection definitions
+# Each connection is defined as [[connections]] with the following fields:
+# - name: Unique identifier for the connection
+# - db_type: Database type ("MySQL", "PostgreSQL", or "SQLite")
+# - host: Database server hostname (for MySQL/PostgreSQL)
+# - port: Database server port (for MySQL/PostgreSQL)
+# - username: Database username (for MySQL/PostgreSQL)
+# - password: Database password (optional, encrypted at rest)
+# - database: Default database name (optional)
+
+# Example: Local MySQL connection
+[[connections]]
+name = "local-mysql"
+db_type = "MySQL"
+host = "localhost"
+port = 3306
+username = "root"
+password = ""  # Leave empty or set your password (will be encrypted when saved)
+database = "test_db"  # Optional default database
+
+# Example: Production MySQL connection
+[[connections]]
+name = "production-db"
+db_type = "MySQL"
+host = "db.example.com"
+port = 3306
+username = "app_user"
+password = "your_password_here"
+database = "production"
+
+# Example: PostgreSQL connection
+[[connections]]
+name = "dev-postgres"
+db_type = "PostgreSQL"
+host = "localhost"
+port = 5432
+username = "postgres"
+password = ""
+
+# Example: SQLite database
+[[connections]]
+name = "local-sqlite"
+db_type = "SQLite"
+path = "/path/to/database.db"
+
+# Security Notes:
+# - Passwords are encrypted at rest using AES-GCM
+# - The config file should have restricted permissions (chmod 600 recommended)
+# - For production environments, consider using environment variables or key management systems

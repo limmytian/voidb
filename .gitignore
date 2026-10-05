@@ -1,0 +1,13 @@
+/target
+**/*.rs.bk
+*.pdb
+*.log
+.DS_Store
+*.db
+*.sh
+!scripts/install-skills.sh
+credentials.json
+profiles.json
+.env
+.env.*
+

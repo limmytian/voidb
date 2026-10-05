@@ -1,0 +1,537 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://voidb.dev/schemas/plugin-invocation-transport.schema.json",
+  "title": "VoidB Plugin Invocation Transport",
+  "description": "JSON-RPC message envelope schema for the first stdio process-plugin transport.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/initializeRequest"
+    },
+    {
+      "$ref": "#/$defs/healthRequest"
+    },
+    {
+      "$ref": "#/$defs/invokeRequest"
+    },
+    {
+      "$ref": "#/$defs/cancelRequest"
+    },
+    {
+      "$ref": "#/$defs/successResponse"
+    },
+    {
+      "$ref": "#/$defs/errorResponse"
+    },
+    {
+      "$ref": "#/$defs/streamItemNotification"
+    },
+    {
+      "$ref": "#/$defs/streamProgressNotification"
+    },
+    {
+      "$ref": "#/$defs/streamEndNotification"
+    }
+  ],
+  "$defs": {
+    "jsonRpcId": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "integer"
+        }
+      ]
+    },
+    "jsonRpcVersion": {
+      "type": "string",
+      "const": "2.0"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "invocationId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "pluginId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "capabilityId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+    },
+    "initializeRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "method",
+        "params"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "$ref": "#/$defs/jsonRpcVersion"
+        },
+        "id": {
+          "$ref": "#/$defs/jsonRpcId"
+        },
+        "method": {
+          "const": "voidb.initialize"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "protocol_version",
+            "plugin_id"
+          ],
+          "properties": {
+            "protocol_version": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]+)?$"
+            },
+            "core_version": {
+              "type": "string"
+            },
+            "plugin_id": {
+              "$ref": "#/$defs/pluginId"
+            },
+            "manifest_path": {
+              "type": "string"
+            },
+            "started_at": {
+              "$ref": "#/$defs/timestamp"
+            }
+          }
+        }
+      }
+    },
+    "healthRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "method"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "$ref": "#/$defs/jsonRpcVersion"
+        },
+        "id": {
+          "$ref": "#/$defs/jsonRpcId"
+        },
+        "method": {
+          "const": "voidb.health"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "include_runtime": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    },
+    "invokeRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "method",
+        "params"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "$ref": "#/$defs/jsonRpcVersion"
+        },
+        "id": {
+          "$ref": "#/$defs/jsonRpcId"
+        },
+        "method": {
+          "const": "voidb.invoke"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "invocation"
+          ],
+          "properties": {
+            "invocation": {
+              "$ref": "#/$defs/capabilityInvocation"
+            },
+            "credential_grants": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/credentialGrantDescriptor"
+              },
+              "default": []
+            }
+          }
+        }
+      }
+    },
+    "cancelRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "method",
+        "params"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "$ref": "#/$defs/jsonRpcVersion"
+        },
+        "id": {
+          "$ref": "#/$defs/jsonRpcId"
+        },
+        "method": {
+          "const": "voidb.cancel"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "invocation_id"
+          ],
+          "properties": {
+            "invocation_id": {
+              "$ref": "#/$defs/invocationId"
+            },
+            "cancellation_token": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "successResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "result"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "$ref": "#/$defs/jsonRpcVersion"
+        },
+        "id": {
+          "$ref": "#/$defs/jsonRpcId"
+        },
+        "result": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "errorResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "error"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "$ref": "#/$defs/jsonRpcVersion"
+        },
+        "id": {
+          "$ref": "#/$defs/jsonRpcId"
+        },
+        "error": {
+          "$ref": "#/$defs/jsonRpcError"
+        }
+      }
+    },
+    "streamItemNotification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "method",
+        "params"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "$ref": "#/$defs/jsonRpcVersion"
+        },
+        "method": {
+          "const": "voidb.stream.item"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "invocation_id",
+            "sequence",
+            "item"
+          ],
+          "properties": {
+            "invocation_id": {
+              "$ref": "#/$defs/invocationId"
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "item": {}
+          }
+        }
+      }
+    },
+    "streamProgressNotification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "method",
+        "params"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "$ref": "#/$defs/jsonRpcVersion"
+        },
+        "method": {
+          "const": "voidb.stream.progress"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "invocation_id"
+          ],
+          "properties": {
+            "invocation_id": {
+              "$ref": "#/$defs/invocationId"
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "message": {
+              "type": "string"
+            },
+            "progress": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        }
+      }
+    },
+    "streamEndNotification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "method",
+        "params"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "$ref": "#/$defs/jsonRpcVersion"
+        },
+        "method": {
+          "const": "voidb.stream.end"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "invocation_id",
+            "sequence",
+            "status"
+          ],
+          "properties": {
+            "invocation_id": {
+              "$ref": "#/$defs/invocationId"
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "status": {
+              "$ref": "#/$defs/invocationStatus"
+            },
+            "output_summary": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "error": {
+              "$ref": "#/$defs/capabilityError"
+            }
+          }
+        }
+      }
+    },
+    "capabilityInvocation": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "plugin_id",
+        "capability_id",
+        "connection",
+        "requested_at"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/invocationId"
+        },
+        "plugin_id": {
+          "$ref": "#/$defs/pluginId"
+        },
+        "capability_id": {
+          "$ref": "#/$defs/capabilityId"
+        },
+        "connection": {
+          "type": "object"
+        },
+        "input": {},
+        "controls": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "actor": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "requested_at": {
+          "$ref": "#/$defs/timestamp"
+        }
+      }
+    },
+    "credentialGrantDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "grant_id",
+        "credential_ref_id",
+        "class",
+        "expires_at"
+      ],
+      "properties": {
+        "grant_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "credential_ref_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "class": {
+          "type": "string"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "purpose": {
+          "type": "string"
+        }
+      }
+    },
+    "jsonRpcError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        },
+        "data": {
+          "$ref": "#/$defs/capabilityError"
+        }
+      }
+    },
+    "capabilityError": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "category",
+        "code",
+        "message",
+        "retryable",
+        "redaction"
+      ],
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "validation",
+            "auth",
+            "permission",
+            "credential",
+            "policy",
+            "transport",
+            "timeout",
+            "cancellation",
+            "plugin",
+            "target_system",
+            "conflict",
+            "unavailable",
+            "internal"
+          ]
+        },
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {},
+        "target": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "redaction": {
+          "type": "string",
+          "enum": [
+            "not_required",
+            "applied",
+            "withheld",
+            "failed_closed"
+          ]
+        }
+      }
+    },
+    "invocationStatus": {
+      "type": "string",
+      "enum": [
+        "accepted",
+        "running",
+        "succeeded",
+        "failed",
+        "cancelled",
+        "timed_out"
+      ]
+    }
+  }
+}

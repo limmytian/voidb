@@ -1,0 +1,26 @@
+#!/bin/sh
+while IFS= read -r line; do
+  case "$line" in
+    *voidb.initialize*)
+      echo '{"jsonrpc":"2.0","id":"initialize","result":{"plugin_id":"hello-storage","protocol_version":"1","status":"ready"}}'
+      ;;
+    *voidb.health*)
+      echo '{"jsonrpc":"2.0","id":"health","result":{"status":"ready","active_invocations":0,"example":"hello-storage"}}'
+      ;;
+    *'"capability_id":"list"'*)
+      echo '{"jsonrpc":"2.0","id":"invoke","result":{"invocation_id":"example","status":"succeeded","output":{"objects":[{"key":"hello.txt","bytes":11}]},"output_summary":{"object_count":1,"redaction":"not_required"}}}'
+      ;;
+    *'"capability_id":"put"'*)
+      echo '{"jsonrpc":"2.0","id":"invoke","result":{"invocation_id":"example","status":"succeeded","output":{"planned":true,"key":"hello.txt","bytes":11},"output_summary":{"planned":true,"bytes":11,"redaction":"not_required"}}}'
+      ;;
+    *'"capability_id":"delete"'*)
+      echo '{"jsonrpc":"2.0","id":"invoke","result":{"invocation_id":"example","status":"succeeded","output":{"planned":true,"deleted":false},"output_summary":{"planned":true,"deleted":false,"redaction":"not_required"}}}'
+      ;;
+    *'"capability_id":"notify"'*)
+      echo '{"jsonrpc":"2.0","id":"invoke","result":{"invocation_id":"example","status":"succeeded","output":{"planned":true,"delivered":false},"output_summary":{"planned":true,"delivered":false,"redaction":"not_required"}}}'
+      ;;
+    *voidb.invoke*)
+      echo '{"jsonrpc":"2.0","id":"invoke","error":{"code":-32040,"message":"Capability not found","data":{"category":"plugin","code":"hello_storage.capability_not_found","message":"Capability not found.","details":{},"retryable":false,"redaction":"applied"}}}'
+      ;;
+  esac
+done

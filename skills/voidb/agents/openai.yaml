@@ -1,0 +1,4 @@
+interface:
+  display_name: "VoidB"
+  short_description: "VoidB architecture, CLI authorization, and agent guide"
+  default_prompt: "Use $voidb to make a VoidB change or request scoped, time-bounded CLI authorization with a concrete review purpose."

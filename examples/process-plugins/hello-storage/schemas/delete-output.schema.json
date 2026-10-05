@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["planned", "deleted"],
+  "properties": {
+    "planned": { "type": "boolean" },
+    "deleted": { "type": "boolean" }
+  }
+}

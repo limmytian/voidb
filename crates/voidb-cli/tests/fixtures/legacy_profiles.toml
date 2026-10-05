@@ -1,0 +1,40 @@
+[[connections]]
+name = "prod"
+db_type = "MySQL"
+
+[connections.plugin_config]
+host = "mysql.internal.example"
+port = 3306
+username = "app_user"
+password = "mysql-secret"
+database = "app"
+
+[[connections]]
+name = "prod"
+db_type = "Plugin"
+plugin_id = "redis"
+
+[connections.plugin_config]
+host = "redis.internal.example"
+port = 6379
+password = "redis-secret"
+
+[[connections]]
+name = "warehouse"
+db_type = "PostgreSQL"
+
+[connections.plugin_config]
+host = "postgres.internal.example"
+port = 5432
+username = "analytics"
+password = "postgres-secret"
+database = "warehouse"
+
+[[connections]]
+name = "legacy"
+db_type = "Plugin"
+plugin_id = "custom-protocol"
+
+[connections.plugin_config]
+endpoint = "https://custom.internal.example"
+api_key = "custom-secret"

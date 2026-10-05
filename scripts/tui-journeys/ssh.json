@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "name": "ssh",
+  "command": ["${VOIDB_CLI}", "ssh", "tui", "--fixture", "crates/plugins/voidb-plugin-ssh/fixtures/ssh_tui_terminal_core.json"],
+  "rows": 30,
+  "cols": 100,
+  "timeout_ms": 12000,
+  "measurement": {"cold_runs": 1, "warmup_runs": 1, "warm_runs": 3},
+  "env": {
+    "HOME": "${REPO_ROOT}/target/tmp/tui-journey-runtime/${RUN_ID}/home",
+    "XDG_CONFIG_HOME": "${REPO_ROOT}/target/tmp/tui-journey-runtime/${RUN_ID}/home/.config",
+    "VOIDB_SSH_AGENT_SESSION_DIR": "${REPO_ROOT}/target/tmp/tui-journey-runtime/${RUN_ID}/ssh-agent"
+  },
+  "prepare_dirs": ["${REPO_ROOT}/target/tmp/tui-journey-runtime/${RUN_ID}/home/.config"],
+  "actions": [
+    {"type": "wait", "name": "first_frame", "marker": "SSH TUI -", "timeout_ms": 4000},
+    {"type": "input", "name": "invalid_host_key_choice", "data": "z", "marker": "host key prompt requires", "timeout_ms": 500},
+    {"type": "input", "name": "accept_host_key", "data": "a", "marker": "host key accepted", "metric": "key_to_repaint_ms", "timeout_ms": 500},
+    {"type": "input", "name": "raw_echo", "data": "Z", "expect_echo": true, "metric": "raw_echo_ms", "timeout_ms": 500},
+    {"type": "resize", "name": "resize", "rows": 24, "cols": 80, "marker": "resized PTY", "metric": "resize_frame_ms", "timeout_ms": 500},
+    {"type": "input", "name": "escape_layer", "data_hex": "1d", "marker": "escape: q quit", "timeout_ms": 500},
+    {"type": "input", "name": "open_help", "data": "?", "marker": "Raw terminal input is sent", "timeout_ms": 500},
+    {"type": "input", "name": "close_help", "data": "t", "marker": "returned to terminal", "timeout_ms": 500},
+    {"type": "idle", "name": "idle", "duration_ms": 5000},
+    {"type": "quit", "name": "quit", "data_hex": "1d71", "metric": "quit_restore_ms", "timeout_ms": 1000}
+  ],
+  "required_markers": ["SSH TUI", "Host Key", "host key accepted", "Raw terminal input is sent"],
+  "forbidden_markers": ["super-secret-password", "BEGIN OPENSSH PRIVATE KEY", "fixture-private-key"],
+  "thresholds": {
+    "warm": {
+      "first_frame_ms": {"p50_ms": 500, "p95_ms": 750},
+      "key_to_repaint_ms": {"p50_ms": 60, "p95_ms": 100},
+      "raw_echo_ms": {"p95_ms": 70},
+      "resize_frame_ms": {"p50_ms": 60, "p95_ms": 100},
+      "quit_restore_ms": {"p50_ms": 150, "p95_ms": 250},
+      "idle.cpu_percent": {"p95_max": 2},
+      "idle.repaint_hz": {"p95_max": 2}
+    }
+  }
+}

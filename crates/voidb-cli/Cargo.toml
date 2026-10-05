@@ -1,0 +1,48 @@
+[package]
+name = "voidb-cli"
+version = "0.3.0-rc.1"
+edition = "2024"
+license.workspace = true
+authors.workspace = true
+description = "VoidB CLI with JSON output support"
+
+[[bin]]
+name = "voidb-cli"
+path = "src/main.rs"
+
+[dependencies]
+voidb-core = { path = "../voidb-core" }
+voidb-plugin-mysql = { path = "../plugins/voidb-plugin-mysql" }
+voidb-plugin-postgres = { path = "../plugins/voidb-plugin-postgres" }
+voidb-plugin-sqlite = { path = "../plugins/voidb-plugin-sqlite" }
+voidb-plugin-email = { path = "../plugins/voidb-plugin-email" }
+voidb-plugin-redis = { path = "../plugins/voidb-plugin-redis" }
+voidb-plugin-ssh = { path = "../plugins/voidb-plugin-ssh" }
+voidb-plugin-docker = { path = "../plugins/voidb-plugin-docker" }
+voidb-plugin-kubernetes = { path = "../plugins/voidb-plugin-kubernetes" }
+voidb-plugin-jenkins = { path = "../plugins/voidb-plugin-jenkins" }
+voidb-plugin-webdav = { path = "../plugins/voidb-plugin-webdav" }
+voidb-plugin-s3 = { path = "../plugins/voidb-plugin-s3" }
+voidb-plugin-elasticsearch = { path = "../plugins/voidb-plugin-elasticsearch" }
+voidb-plugin-mongodb = { path = "../plugins/voidb-plugin-mongodb" }
+voidb-plugin-duckdb = { path = "../plugins/voidb-plugin-duckdb" }
+voidb-plugin-sync = { path = "../plugins/voidb-plugin-sync" }
+k8s-openapi = { version = "0.24", features = ["v1_32"] }
+
+clap = { workspace = true }
+async-trait = { workspace = true }
+chrono = { workspace = true }
+jsonschema = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+semver = { workspace = true }
+uuid = { workspace = true }
+rpassword = "7"
+
+[dev-dependencies]
+toml = "0.8"

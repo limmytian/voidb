@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "name": "email",
+  "command": ["${VOIDB_CLI}", "email", "tui", "--fixture", "crates/plugins/voidb-plugin-email/fixtures/email_tui_smoke.json"],
+  "rows": 30,
+  "cols": 110,
+  "timeout_ms": 12000,
+  "measurement": {"cold_runs": 1, "warmup_runs": 1, "warm_runs": 3},
+  "env": {"HOME": "${REPO_ROOT}/target/tmp/tui-journey-runtime/${RUN_ID}/home", "XDG_CONFIG_HOME": "${REPO_ROOT}/target/tmp/tui-journey-runtime/${RUN_ID}/home/.config"},
+  "prepare_dirs": ["${REPO_ROOT}/target/tmp/tui-journey-runtime/${RUN_ID}/home/.config"],
+  "actions": [
+    {"type": "wait", "name": "first_frame", "marker": "Email - fixture", "timeout_ms": 4000},
+    {"type": "input", "name": "next_folder", "data": "f", "marker": "selected folder Archive", "metric": "key_to_repaint_ms", "timeout_ms": 500},
+    {"type": "input", "name": "open_search", "data": "/", "marker": "Search sender or subject", "timeout_ms": 500},
+    {"type": "input", "name": "search_input", "data": "alerts", "marker": "/alerts", "timeout_ms": 500},
+    {"type": "input", "name": "apply_search", "data_hex": "0d", "marker": "matching messages", "timeout_ms": 500},
+    {"type": "input", "name": "error_guidance", "data": "!", "marker": "Provider diagnostics", "timeout_ms": 500},
+    {"type": "input", "name": "recover_mailbox", "data_hex": "1b", "marker": "mailbox mode", "timeout_ms": 500},
+    {"type": "resize", "name": "resize", "rows": 24, "cols": 84, "marker": "Email - fixture", "metric": "resize_frame_ms", "timeout_ms": 500},
+    {"type": "idle", "name": "idle", "duration_ms": 5000},
+    {"type": "quit", "name": "quit", "data": "q", "metric": "quit_restore_ms", "timeout_ms": 1000}
+  ],
+  "required_markers": ["Email - fixture", "Auth failure"],
+  "forbidden_markers": ["PRIVATE_BODY_SHOULD_NOT_APPEAR", "super-secret-password"],
+  "thresholds": {
+    "warm": {
+      "first_frame_ms": {"p50_ms": 500, "p95_ms": 750},
+      "key_to_repaint_ms": {"p50_ms": 70, "p95_ms": 120},
+      "resize_frame_ms": {"p50_ms": 70, "p95_ms": 120},
+      "quit_restore_ms": {"p50_ms": 150, "p95_ms": 250},
+      "idle.cpu_percent": {"p95_max": 2},
+      "idle.repaint_hz": {"p95_max": 2}
+    }
+  }
+}

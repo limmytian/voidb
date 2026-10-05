@@ -1,0 +1,45 @@
+[package]
+name = "voidb-plugin-sync"
+version = "0.3.0-rc.1"
+edition = "2024"
+license.workspace = true
+authors.workspace = true
+description = "E2E encrypted configuration & data sync plugin for VoidB"
+
+[dependencies]
+voidb-core = { path = "../../voidb-core" }
+
+async-trait = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+clap = { workspace = true }
+
+aes-gcm = { workspace = true }
+argon2 = { workspace = true }
+base64 = { workspace = true }
+sha2 = "0.10"
+rand = "0.8"
+hex = "0.4"
+
+# Bundle packaging
+zstd = "0.13"
+tar = "0.4"
+
+# HTTP client (no default features to avoid native-tls conflicts)
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+toml = "0.8"
+dirs = "6.0"
+rpassword = "7"
+keyring = { version = "3.6.3", default-features = false, features = ["apple-native", "windows-native", "linux-native-sync-persistent", "crypto-rust"] }
+
+[dev-dependencies]
+tempfile = "3"
+voidb-sync-server = { path = "../../../voidb-sync-server" }
+axum = "0.8"

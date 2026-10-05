@@ -1,0 +1,4 @@
+interface:
+  display_name: "VoidB DuckDB Plugin"
+  short_description: "Guide for VoidB DuckDB work"
+  default_prompt: "Use $voidb-plugin-duckdb to update the VoidB DuckDB plugin, capabilities, CLI, or SyncWorker service."

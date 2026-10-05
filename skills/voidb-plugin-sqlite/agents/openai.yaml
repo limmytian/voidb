@@ -1,0 +1,4 @@
+interface:
+  display_name: "VoidB SQLite Plugin"
+  short_description: "Guide for VoidB SQLite work"
+  default_prompt: "Use $voidb-plugin-sqlite to update the VoidB SQLite plugin, capabilities, CLI, or SyncWorker service."

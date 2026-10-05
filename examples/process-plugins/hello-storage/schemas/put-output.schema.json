@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["planned", "key"],
+  "properties": {
+    "planned": { "type": "boolean" },
+    "key": { "type": "string" },
+    "bytes": { "type": "integer", "minimum": 0 }
+  }
+}

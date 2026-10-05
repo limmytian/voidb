@@ -1,0 +1,4 @@
+interface:
+  display_name: "VoidB MySQL Plugin"
+  short_description: "Guide for VoidB MySQL work"
+  default_prompt: "Use $voidb-plugin-mysql to update the VoidB MySQL plugin, capabilities, CLI, or service layer."

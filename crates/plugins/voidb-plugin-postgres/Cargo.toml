@@ -1,0 +1,20 @@
+[package]
+name = "voidb-plugin-postgres"
+version = "0.3.0-rc.1"
+edition = "2024"
+license.workspace = true
+
+[dependencies]
+voidb-core = { path = "../../voidb-core", default-features = false }
+tokio-postgres = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+postgres-native-tls = "0.5"
+native-tls = "0.2"
+clap = { workspace = true }

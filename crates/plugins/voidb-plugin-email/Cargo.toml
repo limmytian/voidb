@@ -1,0 +1,23 @@
+[package]
+name = "voidb-plugin-email"
+version = "0.3.0-rc.1"
+edition = "2024"
+license.workspace = true
+
+[dependencies]
+voidb-core = { path = "../../voidb-core" }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+imap = "=3.0.0-alpha.15"
+native-tls = "0.2"
+lettre = { version = "0.11", features = ["tokio1-native-tls", "builder", "smtp-transport"] }
+mailparse = "0.15"
+sha2 = "0.10"
+clap = { workspace = true }
+async-trait = { workspace = true }
+ratatui = { workspace = true }
+crossterm = { workspace = true }

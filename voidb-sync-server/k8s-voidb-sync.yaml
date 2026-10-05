@@ -1,0 +1,107 @@
+# ============================================================
+# voidb-sync-server — Kubernetes 部署配置
+# ============================================================
+#
+# 使用方法:
+#   构建并推送镜像:
+#      ghcr.io/limmytian/voidb-sync-server:latest
+#      ghcr.io/limmytian/voidb-sync-server:<git-short-sha>
+#
+#   部署到集群:
+#      kubectl apply -f k8s-voidb-sync.yaml
+#
+#   访问服务:
+#      - API: http://<node-ip>:30078
+#
+# 前提:
+#   - K8s Node 需安装 NFS 客户端: apt install nfs-common
+#   - NFS 服务端需提前创建目录: <nfs-server-ip>:/data/voidb-sync
+#
+# 架构:
+#   Axum HTTP 服务，配置打入镜像，运行时数据（SQLite + blobs）挂载到 NFS
+#   env 可覆盖镜像内 config.toml 的任意字段，无需重建镜像
+#   通过 NodePort 30078 对外暴露
+# ============================================================
+
+# ==================== Namespace ====================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: voidb-sync
+
+---
+# ==================== Deployment ====================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: voidb-sync-server
+  namespace: voidb-sync
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate   # SQLite 不支持多写，必须 Recreate
+  selector:
+    matchLabels:
+      app: voidb-sync-server
+  template:
+    metadata:
+      labels:
+        app: voidb-sync-server
+    spec:
+      containers:
+        - name: voidb-sync-server
+          image: ghcr.io/limmytian/voidb-sync-server:latest
+          ports:
+            - containerPort: 7781
+          env:
+            - name: TZ
+              value: Asia/Shanghai
+            - name: VOIDB_DATA_DIR
+              value: /app/data
+            - name: VOIDB_REGISTRATION
+              value: invite_only    # open | invite_only | closed
+          volumeMounts:
+            - name: voidb-sync-data
+              mountPath: /app/data
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "512Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /v1/healthz
+              port: 7781
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /v1/healthz
+              port: 7781
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: voidb-sync-data
+          nfs:
+            server: nfs.example.com
+            path: /data/voidb-sync
+      restartPolicy: Always
+
+---
+# ==================== Service ====================
+apiVersion: v1
+kind: Service
+metadata:
+  name: voidb-sync-server
+  namespace: voidb-sync
+spec:
+  selector:
+    app: voidb-sync-server
+  ports:
+    - protocol: TCP
+      port: 7781
+      targetPort: 7781
+      nodePort: 30078
+  type: NodePort

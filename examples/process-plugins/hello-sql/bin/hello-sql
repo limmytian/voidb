@@ -1,0 +1,27 @@
+#!/bin/sh
+while IFS= read -r line; do
+  case "$line" in
+    *voidb.initialize*)
+      echo '{"jsonrpc":"2.0","id":"initialize","result":{"plugin_id":"hello-sql","protocol_version":"1","status":"ready"}}'
+      ;;
+    *voidb.health*)
+      echo '{"jsonrpc":"2.0","id":"health","result":{"status":"ready","active_invocations":0,"example":"hello-sql"}}'
+      ;;
+    *'"capability_id":"query"'*)
+      echo '{"jsonrpc":"2.0","id":"invoke","result":{"invocation_id":"example","status":"succeeded","output":{"columns":["answer"],"rows":[[42]]},"output_summary":{"row_count":1,"redaction":"not_required"}}}'
+      ;;
+    *'"capability_id":"exec"'*)
+      case "$line" in
+        *'"dry_run":true'*)
+          echo '{"jsonrpc":"2.0","id":"invoke","result":{"invocation_id":"example","status":"succeeded","output":{"planned":true,"affected_rows":0},"output_summary":{"planned":true,"affected_rows":0,"redaction":"not_required"}}}'
+          ;;
+        *)
+          echo '{"jsonrpc":"2.0","id":"invoke","result":{"invocation_id":"example","status":"succeeded","output":{"planned":false,"affected_rows":1},"output_summary":{"planned":false,"affected_rows":1,"redaction":"not_required"}}}'
+          ;;
+      esac
+      ;;
+    *voidb.invoke*)
+      echo '{"jsonrpc":"2.0","id":"invoke","error":{"code":-32040,"message":"Capability not found","data":{"category":"plugin","code":"hello_sql.capability_not_found","message":"Capability not found.","details":{},"retryable":false,"redaction":"applied"}}}'
+      ;;
+  esac
+done

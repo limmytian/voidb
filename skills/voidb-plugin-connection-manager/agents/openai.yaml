@@ -1,0 +1,4 @@
+interface:
+  display_name: "VoidB Connection Manager"
+  short_description: "Guide for VoidB profile management"
+  default_prompt: "Use $voidb-plugin-connection-manager to work on VoidB profile, credential, or connection UI behavior."

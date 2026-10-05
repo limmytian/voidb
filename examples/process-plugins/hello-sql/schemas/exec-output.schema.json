@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["planned", "affected_rows"],
+  "properties": {
+    "planned": {
+      "type": "boolean"
+    },
+    "affected_rows": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

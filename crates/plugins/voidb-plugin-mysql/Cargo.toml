@@ -1,0 +1,18 @@
+[package]
+name = "voidb-plugin-mysql"
+version = "0.3.0-rc.1"
+edition = "2024"
+license.workspace = true
+
+[dependencies]
+voidb-core = { path = "../../voidb-core", features = ["mysql"] }
+mysql_async = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tokio = { workspace = true }
+chrono = { workspace = true }
+hex = "0.4"
+clap = { workspace = true }

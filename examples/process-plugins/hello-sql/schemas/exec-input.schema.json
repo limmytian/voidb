@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sql"],
+  "properties": {
+    "sql": {
+      "type": "string",
+      "description": "A synthetic mutating SQL statement."
+    },
+    "expected_rows": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 1
+    }
+  }
+}
