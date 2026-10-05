@@ -1456,6 +1456,21 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn handshake_handles_immediate_crash_with_redacted_transport_error() {
+        let fixture = RuntimeFixture::new("crash_on_init");
+
+        let error = fixture
+            .host
+            .initialize_and_health()
+            .await
+            .expect_err("initialize should fail when plugin crashes immediately");
+
+        assert_eq!(error.category, CapabilityErrorCategory::Transport);
+        assert_eq!(error.code, "transport.process_plugin_exited");
+        assert_eq!(error.redaction, RedactionStatus::Applied);
+    }
+
+    #[tokio::test]
     async fn tolerates_stream_notifications_before_matching_invoke_response() {
         let fixture = RuntimeFixture::new("stream_notification");
 
@@ -1836,6 +1851,9 @@ while IFS= read -r line; do
       case "$mode" in
         protocol_mismatch)
           echo '{"jsonrpc":"2.0","id":"initialize","result":{"plugin_id":"fixture","protocol_version":"2","status":"ready"}}'
+          ;;
+        crash_on_init)
+          exit 42
           ;;
         *)
           echo '{"jsonrpc":"2.0","id":"initialize","result":{"plugin_id":"fixture","protocol_version":"1","status":"ready"}}'

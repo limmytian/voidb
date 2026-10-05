@@ -318,7 +318,7 @@ impl ConnectionManagerPlugin {
 
     /// Build the list of connection types for the dialog.
     fn conn_types(&self) -> Vec<ConnType> {
-        vec![
+        let mut types = vec![
             ConnType::builtin("MySQL", DatabaseType::MySQL, 3306, "root"),
             ConnType::builtin("PostgreSQL", DatabaseType::PostgreSQL, 5432, "postgres"),
             ConnType::builtin("SQLite", DatabaseType::SQLite, 0, ""),
@@ -339,7 +339,28 @@ impl ConnectionManagerPlugin {
             ConnType::plugin("MongoDB", "mongodb", 27017, "localhost", ""),
             ConnType::plugin("DuckDB", "duckdb", 0, "", ""),
             ConnType::plugin("Jenkins", "jenkins", 443, "jenkins.example.com", ""),
-        ]
+        ];
+
+        // Dynamically include discovered external process plugins that aren't already listed
+        let discovery = voidb_core::discover_process_plugins();
+        for candidate in discovery.candidates {
+            if candidate.is_effective_available() {
+                let id = &candidate.id;
+                let already_present = types.iter().any(|ct| {
+                    ct.plugin_id.as_deref() == Some(id.as_str())
+                        || (ct.db_type == DatabaseType::Plugin && ct.label.eq_ignore_ascii_case(id))
+                });
+                if !already_present {
+                    let label = candidate
+                        .name
+                        .clone()
+                        .unwrap_or_else(|| id.clone());
+                    types.push(ConnType::plugin(&label, id, 0, "localhost", ""));
+                }
+            }
+        }
+
+        types
     }
 
     fn plugin_id_for_connection(conn: &ConnectionConfig) -> Result<String> {

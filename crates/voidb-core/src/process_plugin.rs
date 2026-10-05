@@ -636,12 +636,31 @@ pub fn discover_process_plugins_from_roots(
 
 /// Collect process-plugin roots using VoidB's documented precedence order.
 pub fn default_process_plugin_roots() -> Vec<ProcessPluginRoot> {
-    process_plugin_roots_from_parts(
+    let mut user_roots = default_user_plugin_roots();
+    let primary_user_root = if !user_roots.is_empty() {
+        Some(user_roots.remove(0))
+    } else {
+        None
+    };
+
+    let mut roots = process_plugin_roots_from_parts(
         std::env::var_os(PROCESS_PLUGIN_DEVELOPMENT_PATH_ENV).as_deref(),
-        default_user_plugin_root(),
+        primary_user_root,
         default_system_plugin_roots(),
         default_bundled_plugin_roots(),
-    )
+    );
+
+    // If additional user roots exist (e.g. ~/.config/voidb/plugins), add them under User kind
+    for additional_root in user_roots {
+        let precedence = roots.len();
+        roots.push(ProcessPluginRoot::new(
+            additional_root,
+            ProcessPluginRootKind::User,
+            precedence,
+        ));
+    }
+
+    roots
 }
 
 /// Build ordered process-plugin roots from explicit parts.
@@ -688,8 +707,27 @@ fn default_connection_required() -> bool {
     true
 }
 
+fn default_user_plugin_roots() -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    // 1. User configuration directory: ~/.config/voidb/plugins
+    if let Some(config_dir) = dirs::config_dir() {
+        let path = config_dir.join("voidb").join("plugins");
+        if !roots.contains(&path) {
+            roots.push(path);
+        }
+    }
+    // 2. User data directory: ~/.local/share/voidb/plugins or platform equivalent
+    if let Some(data_dir) = dirs::data_dir() {
+        let path = data_dir.join("voidb").join("plugins");
+        if !roots.contains(&path) {
+            roots.push(path);
+        }
+    }
+    roots
+}
+
 fn default_user_plugin_root() -> Option<PathBuf> {
-    dirs::data_dir().map(|dir| dir.join("voidb").join("plugins"))
+    default_user_plugin_roots().into_iter().next()
 }
 
 fn default_bundled_plugin_roots() -> Vec<PathBuf> {
@@ -2361,6 +2399,19 @@ mod tests {
                 ProcessPluginTrustLevel::Bundled,
             ]
         );
+    }
+
+    #[test]
+    fn default_roots_include_user_config_and_data_plugin_directories() {
+        let default_roots = default_process_plugin_roots();
+        let user_roots = default_user_plugin_roots();
+        for user_root in user_roots {
+            assert!(
+                default_roots.iter().any(|r| r.path == user_root && r.kind == ProcessPluginRootKind::User),
+                "default roots should include user root: {:?}",
+                user_root
+            );
+        }
     }
 
     #[test]
