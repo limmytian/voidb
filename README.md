@@ -1,19 +1,27 @@
-# VoidB - Terminal Database Manager
+<div align="center">
 
-A capability-first terminal database and protocol tool with a native profile
-manager, plugin-owned interactive TUIs, and an extensible plugin architecture.
+# VoidB
+
+### Keyboard-First TUI + Safe Gateway for AI Agents
+
+[![CI](https://github.com/limmytian/voidb/actions/workflows/ci.yml/badge.svg)](https://github.com/limmytian/voidb/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/rust-edition%202024-orange.svg)](https://www.rust-lang.org/)
+
+A modern, capability-first database & infrastructure management platform designed for developers and autonomous AI coding agents alike.
+Replicating Navicat-class multi-protocol power in your terminal with Vim-style navigation, encrypted credential vaults, and fine-grained JIT agent authorization.
+
+</div>
 
 ---
 
-## ✨ Features
+## ⚡ Why VoidB?
 
-- 🚀 **Native Profile Manager** - `voidb` opens a standalone profile and credential manager
-- ⌨️ **Keyboard First** - Vim navigation plus explicit create/edit/test workflows
-- 🔌 **CLI/Capability Plugin Surface** - Plugins expose service-backed CLI commands and invoke capabilities
-- 🔒 **Credential Encryption** - AES-256-GCM encrypted config blobs; see [Security Notes](docs/security.md) for current master-password limitations
-- 🌐 **Protocol Agnostic** - MySQL, PostgreSQL, SQLite, Redis, SSH, and more via services, CLI, and plugins
-- 📊 **Capability-First Databases** - Database profiles open to CLI/capability guidance by default
-- 🎨 **Customizable** - Theme and layout primitives live in the TUI/core crates
+- ⌨️ **Keyboard-First Terminal Experience** — Native Ratatui TUI with full Vim keybindings, fuzzy profile search, schema-driven connection forms, and instant interactive diagnostics.
+- 🤖 **Secure Gateway for AI Agents** — Purpose-built CLI & broker architecture that lets AI agents (Cursor, Claude Code, Goose, Antigravity) query databases, inspect containers, and manage infrastructure without handing over raw passwords or permanent privileges.
+- 🛡️ **Defensive Security & JIT Authorization** — Master passwords and credentials stored in AES-256-GCM encrypted vaults; agents request 15-minute time-bounded, read-only or explicit JIT authorization with mandatory human review for destructive calls.
+- 🔌 **Unified Multi-Protocol Ecosystem** — One tool across relational databases (MySQL, PostgreSQL, SQLite, DuckDB), in-memory stores (Redis), document/search engines (MongoDB, Elasticsearch), cloud storage (S3, WebDAV), and DevOps infrastructure (SSH, Docker, Kubernetes, Jenkins).
+- 🚀 **Modular & Blazing Fast** — Zero-cost abstraction plugin architecture with tiered feature compilation (`mysql`, `postgres`, `sqlite`, `redis`, `ssh` by default) so you don't wait for heavy C++ or Kubernetes drivers unless you want them.
 
 ---
 

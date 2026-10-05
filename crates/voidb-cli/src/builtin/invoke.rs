@@ -34,39 +34,69 @@ use voidb_core::{
     discover_process_plugins, evaluate_capability_policy, grant_credentials_for_invocation,
     local_cli_actor, profile_names_equal, redact_text_with_json,
 };
+#[cfg(feature = "docker")]
 use voidb_plugin_docker::{DockerConfig, docker_capabilities, invoke_docker_capability};
+#[cfg(feature = "duckdb")]
 use voidb_plugin_duckdb::{DuckDbConfig, duckdb_capabilities, invoke_duckdb_capability};
+#[cfg(feature = "elasticsearch")]
 use voidb_plugin_elasticsearch::{
     EsConfig, elasticsearch_capabilities, invoke_elasticsearch_capability,
 };
+#[cfg(feature = "email")]
 use voidb_plugin_email::{EmailConfig, email_capabilities, invoke_email_capability};
+#[cfg(feature = "jenkins")]
 use voidb_plugin_jenkins::{JenkinsConfig, invoke_jenkins_capability, jenkins_capabilities};
+#[cfg(feature = "kubernetes")]
 use voidb_plugin_kubernetes::{K8sConfig, invoke_kubernetes_capability, kubernetes_capabilities};
+#[cfg(feature = "mongodb")]
 use voidb_plugin_mongodb::{MongoConfig, invoke_mongodb_capability, mongodb_capabilities};
+#[cfg(feature = "mysql")]
 use voidb_plugin_mysql::{MySqlConfig, invoke_mysql_capability, mysql_capabilities};
+#[cfg(feature = "postgres")]
 use voidb_plugin_postgres::{PostgresConfig, invoke_postgres_capability, postgres_capabilities};
+#[cfg(feature = "redis")]
 use voidb_plugin_redis::{RedisConfig, invoke_redis_capability, redis_capabilities};
+#[cfg(feature = "s3")]
 use voidb_plugin_s3::{config::S3Config, invoke_s3_capability, s3_capabilities};
+#[cfg(feature = "sqlite")]
 use voidb_plugin_sqlite::{SqliteConfig, invoke_sqlite_capability, sqlite_capabilities};
+#[cfg(feature = "ssh")]
 use voidb_plugin_ssh::{SshConfig, invoke_ssh_capability, ssh_capabilities};
+#[cfg(feature = "sync")]
 use voidb_plugin_sync::{invoke_sync_capability, sync_capabilities};
+#[cfg(feature = "webdav")]
 use voidb_plugin_webdav::{config::WebDavConfig, invoke_webdav_capability, webdav_capabilities};
 
 const SUPPORTED_INVOKE_PLUGINS: &[&str] = &[
+    #[cfg(feature = "sqlite")]
     "sqlite",
+    #[cfg(feature = "redis")]
     "redis",
+    #[cfg(feature = "mysql")]
     "mysql",
+    #[cfg(feature = "postgres")]
     "postgres",
+    #[cfg(feature = "duckdb")]
     "duckdb",
+    #[cfg(feature = "ssh")]
     "ssh",
+    #[cfg(feature = "s3")]
     "s3",
+    #[cfg(feature = "webdav")]
     "webdav",
+    #[cfg(feature = "email")]
     "email",
+    #[cfg(feature = "docker")]
     "docker",
+    #[cfg(feature = "kubernetes")]
     "kubernetes",
+    #[cfg(feature = "mongodb")]
     "mongodb",
+    #[cfg(feature = "elasticsearch")]
     "elasticsearch",
+    #[cfg(feature = "jenkins")]
     "jenkins",
+    #[cfg(feature = "sync")]
     "sync",
 ];
 const INVOKE_CLI_SCHEMA_VERSION: u32 = 1;
@@ -220,16 +250,26 @@ impl CliPlugin for InvokeCliPlugin {
 }
 
 fn handle_matrix(matches: &ArgMatches) -> Result<(), VoidbError> {
-    let matrix = super::capability_matrix::build()?;
-    match matches.get_one::<String>("format").map(String::as_str) {
-        Some("json") => print_json(&matrix),
-        Some("markdown") | None => {
-            println!("{}", super::capability_matrix::render_markdown(&matrix));
-            Ok(())
+    #[cfg(not(feature = "full"))]
+    {
+        let _ = matches;
+        return Err(VoidbError::Plugin(
+            "Capability matrix generation requires the 'full' feature flag: cargo run -p voidb-cli --features full -- invoke matrix".into(),
+        ));
+    }
+    #[cfg(feature = "full")]
+    {
+        let matrix = super::capability_matrix::build()?;
+        match matches.get_one::<String>("format").map(String::as_str) {
+            Some("json") => print_json(&matrix),
+            Some("markdown") | None => {
+                println!("{}", super::capability_matrix::render_markdown(&matrix));
+                Ok(())
+            }
+            Some(other) => Err(VoidbError::Plugin(format!(
+                "Unsupported capability matrix format '{other}'"
+            ))),
         }
-        Some(other) => Err(VoidbError::Plugin(format!(
-            "Unsupported capability matrix format '{other}'"
-        ))),
     }
 }
 
@@ -757,7 +797,7 @@ fn parse_input(matches: &ArgMatches) -> Result<Value, Box<CapabilityError>> {
     Ok(json!({}))
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "full"))]
 #[allow(clippy::result_large_err)]
 async fn run_invocation(
     ctx: &CliContext,
@@ -806,7 +846,7 @@ async fn run_invocation_with_id(
     .await
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "full"))]
 #[allow(clippy::result_large_err)]
 async fn run_invocation_with_discovery(
     ctx: &CliContext,
@@ -817,7 +857,7 @@ async fn run_invocation_with_discovery(
     run_invocation_with_discovery_and_profiles(ctx, options, discovery, &profiles).await
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "full"))]
 #[allow(clippy::result_large_err)]
 async fn run_invocation_with_discovery_and_profiles(
     ctx: &CliContext,
@@ -1256,6 +1296,7 @@ async fn invoke_builtin_capability_inner(
 ) -> Result<CapabilityInvocationResult, CapabilityError> {
     let timeout_ms = invocation.controls.timeout_ms;
     match capability.plugin_id.as_str() {
+        #[cfg(feature = "sqlite")]
         "sqlite" => {
             let config = parse_sqlite_config(connection).map_err(|error| *error)?;
             invoke_with_timeout(
@@ -1266,6 +1307,7 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
+        #[cfg(feature = "redis")]
         "redis" => {
             let config = parse_redis_config(connection).map_err(|error| *error)?;
             invoke_with_timeout(
@@ -1276,6 +1318,7 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
+        #[cfg(feature = "mysql")]
         "mysql" => {
             let config = parse_mysql_config(connection).map_err(|error| *error)?;
             invoke_with_timeout(
@@ -1286,6 +1329,7 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
+        #[cfg(feature = "postgres")]
         "postgres" => {
             let config = parse_postgres_config(connection).map_err(|error| *error)?;
             invoke_with_timeout(
@@ -1296,6 +1340,7 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
+        #[cfg(feature = "duckdb")]
         "duckdb" => {
             let config = parse_duckdb_config(connection).map_err(|error| *error)?;
             invoke_with_timeout(
@@ -1306,6 +1351,7 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
+        #[cfg(feature = "ssh")]
         "ssh" => {
             let config = parse_ssh_config(connection).map_err(|error| *error)?;
             invoke_with_timeout(
@@ -1316,6 +1362,7 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
+        #[cfg(feature = "s3")]
         "s3" => {
             let config = parse_s3_config(connection).map_err(|error| *error)?;
             invoke_with_timeout(
@@ -1326,6 +1373,7 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
+        #[cfg(feature = "webdav")]
         "webdav" => {
             let config = parse_webdav_config(connection).map_err(|error| *error)?;
             invoke_with_timeout(
@@ -1336,6 +1384,7 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
+        #[cfg(feature = "email")]
         "email" => {
             let config = parse_email_config(connection).map_err(|error| *error)?;
             invoke_with_timeout(
@@ -1346,6 +1395,7 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
+        #[cfg(feature = "docker")]
         "docker" => {
             let config = parse_docker_config(connection).map_err(|error| *error)?;
             invoke_with_timeout(
@@ -1356,6 +1406,7 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
+        #[cfg(feature = "kubernetes")]
         "kubernetes" => {
             let config = parse_kubernetes_config(connection).map_err(|error| *error)?;
             invoke_with_timeout(
@@ -1366,6 +1417,7 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
+        #[cfg(feature = "mongodb")]
         "mongodb" => {
             let config = parse_mongodb_config(connection).map_err(|error| *error)?;
             invoke_with_timeout(
@@ -1376,6 +1428,7 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
+        #[cfg(feature = "elasticsearch")]
         "elasticsearch" => {
             let config = parse_elasticsearch_config(connection).map_err(|error| *error)?;
             invoke_with_timeout(
@@ -1386,6 +1439,7 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
+        #[cfg(feature = "jenkins")]
         "jenkins" => {
             let config = parse_jenkins_config(connection).map_err(|error| *error)?;
             invoke_with_timeout(
@@ -1396,6 +1450,7 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
+        #[cfg(feature = "sync")]
         "sync" => {
             invoke_with_timeout(
                 invoke_sync_capability(invocation),
@@ -1474,74 +1529,88 @@ where
     }
 }
 
+#[cfg(feature = "sqlite")]
 fn parse_sqlite_config(
     connection: &ConnectionConfig,
 ) -> Result<SqliteConfig, Box<CapabilityError>> {
     parse_plugin_config(connection, "sqlite", "SQLite")
 }
 
+#[cfg(feature = "redis")]
 fn parse_redis_config(connection: &ConnectionConfig) -> Result<RedisConfig, Box<CapabilityError>> {
     parse_plugin_config(connection, "redis", "Redis")
 }
 
+#[cfg(feature = "mysql")]
 fn parse_mysql_config(connection: &ConnectionConfig) -> Result<MySqlConfig, Box<CapabilityError>> {
     parse_plugin_config(connection, "mysql", "MySQL")
 }
 
+#[cfg(feature = "postgres")]
 fn parse_postgres_config(
     connection: &ConnectionConfig,
 ) -> Result<PostgresConfig, Box<CapabilityError>> {
     parse_plugin_config_with_aliases(connection, &["postgres", "postgresql"], "PostgreSQL")
 }
 
+#[cfg(feature = "duckdb")]
 fn parse_duckdb_config(
     connection: &ConnectionConfig,
 ) -> Result<DuckDbConfig, Box<CapabilityError>> {
     parse_plugin_config(connection, "duckdb", "DuckDB")
 }
 
+#[cfg(feature = "ssh")]
 fn parse_ssh_config(connection: &ConnectionConfig) -> Result<SshConfig, Box<CapabilityError>> {
     parse_plugin_config(connection, "ssh", "SSH")
 }
 
+#[cfg(feature = "s3")]
 fn parse_s3_config(connection: &ConnectionConfig) -> Result<S3Config, Box<CapabilityError>> {
     parse_plugin_config(connection, "s3", "S3")
 }
 
+#[cfg(feature = "webdav")]
 fn parse_webdav_config(
     connection: &ConnectionConfig,
 ) -> Result<WebDavConfig, Box<CapabilityError>> {
     parse_plugin_config(connection, "webdav", "WebDAV")
 }
 
+#[cfg(feature = "email")]
 fn parse_email_config(connection: &ConnectionConfig) -> Result<EmailConfig, Box<CapabilityError>> {
     parse_plugin_config(connection, "email", "Email")
 }
 
+#[cfg(feature = "docker")]
 fn parse_docker_config(
     connection: &ConnectionConfig,
 ) -> Result<DockerConfig, Box<CapabilityError>> {
     parse_plugin_config(connection, "docker", "Docker")
 }
 
+#[cfg(feature = "kubernetes")]
 fn parse_kubernetes_config(
     connection: &ConnectionConfig,
 ) -> Result<K8sConfig, Box<CapabilityError>> {
     parse_plugin_config_with_aliases(connection, &["kubernetes", "k8s"], "Kubernetes")
 }
 
+#[cfg(feature = "mongodb")]
 fn parse_mongodb_config(
     connection: &ConnectionConfig,
 ) -> Result<MongoConfig, Box<CapabilityError>> {
     parse_plugin_config(connection, "mongodb", "MongoDB")
 }
 
+#[cfg(feature = "elasticsearch")]
 fn parse_elasticsearch_config(
     connection: &ConnectionConfig,
 ) -> Result<EsConfig, Box<CapabilityError>> {
     parse_plugin_config(connection, "elasticsearch", "Elasticsearch")
 }
 
+#[cfg(feature = "jenkins")]
 fn parse_jenkins_config(
     connection: &ConnectionConfig,
 ) -> Result<JenkinsConfig, Box<CapabilityError>> {
@@ -1664,20 +1733,35 @@ fn capabilities_for_plugin(
     discovery: &ProcessPluginDiscovery,
 ) -> Result<Vec<CapabilityDefinition>, Box<CapabilityError>> {
     match plugin_id {
+        #[cfg(feature = "sqlite")]
         "sqlite" => Ok(sqlite_capabilities()),
+        #[cfg(feature = "redis")]
         "redis" => Ok(redis_capabilities()),
+        #[cfg(feature = "mysql")]
         "mysql" => Ok(mysql_capabilities()),
+        #[cfg(feature = "postgres")]
         "postgres" => Ok(postgres_capabilities()),
+        #[cfg(feature = "duckdb")]
         "duckdb" => Ok(duckdb_capabilities()),
+        #[cfg(feature = "ssh")]
         "ssh" => Ok(ssh_capabilities()),
+        #[cfg(feature = "s3")]
         "s3" => Ok(s3_capabilities()),
+        #[cfg(feature = "webdav")]
         "webdav" => Ok(webdav_capabilities()),
+        #[cfg(feature = "email")]
         "email" => Ok(email_capabilities()),
+        #[cfg(feature = "docker")]
         "docker" => Ok(docker_capabilities()),
+        #[cfg(feature = "kubernetes")]
         "kubernetes" => Ok(kubernetes_capabilities()),
+        #[cfg(feature = "mongodb")]
         "mongodb" => Ok(mongodb_capabilities()),
+        #[cfg(feature = "elasticsearch")]
         "elasticsearch" => Ok(elasticsearch_capabilities()),
+        #[cfg(feature = "jenkins")]
         "jenkins" => Ok(jenkins_capabilities()),
+        #[cfg(feature = "sync")]
         "sync" => Ok(sync_capabilities()),
         _ => {
             let candidate = select_available_process_candidate(discovery, plugin_id)?;
@@ -1688,20 +1772,35 @@ fn capabilities_for_plugin(
 
 pub(crate) fn builtin_capabilities() -> Vec<CapabilityDefinition> {
     let mut capabilities = Vec::new();
+    #[cfg(feature = "sqlite")]
     capabilities.extend(sqlite_capabilities());
+    #[cfg(feature = "redis")]
     capabilities.extend(redis_capabilities());
+    #[cfg(feature = "mysql")]
     capabilities.extend(mysql_capabilities());
+    #[cfg(feature = "postgres")]
     capabilities.extend(postgres_capabilities());
+    #[cfg(feature = "duckdb")]
     capabilities.extend(duckdb_capabilities());
+    #[cfg(feature = "ssh")]
     capabilities.extend(ssh_capabilities());
+    #[cfg(feature = "s3")]
     capabilities.extend(s3_capabilities());
+    #[cfg(feature = "webdav")]
     capabilities.extend(webdav_capabilities());
+    #[cfg(feature = "email")]
     capabilities.extend(email_capabilities());
+    #[cfg(feature = "docker")]
     capabilities.extend(docker_capabilities());
+    #[cfg(feature = "kubernetes")]
     capabilities.extend(kubernetes_capabilities());
+    #[cfg(feature = "mongodb")]
     capabilities.extend(mongodb_capabilities());
+    #[cfg(feature = "elasticsearch")]
     capabilities.extend(elasticsearch_capabilities());
+    #[cfg(feature = "jenkins")]
     capabilities.extend(jenkins_capabilities());
+    #[cfg(feature = "sync")]
     capabilities.extend(sync_capabilities());
     capabilities.sort_by_key(CapabilityDefinition::qualified_id);
     capabilities
@@ -2857,7 +2956,7 @@ struct InvokeRuntimeSummary {
     transport: Option<&'static str>,
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "full"))]
 mod tests {
     use std::fs;
     use std::path::{Path, PathBuf};

@@ -12,22 +12,21 @@ path = "src/main.rs"
 
 [dependencies]
 voidb-core = { path = "../voidb-core" }
-voidb-plugin-mysql = { path = "../plugins/voidb-plugin-mysql" }
-voidb-plugin-postgres = { path = "../plugins/voidb-plugin-postgres" }
-voidb-plugin-sqlite = { path = "../plugins/voidb-plugin-sqlite" }
-voidb-plugin-email = { path = "../plugins/voidb-plugin-email" }
-voidb-plugin-redis = { path = "../plugins/voidb-plugin-redis" }
-voidb-plugin-ssh = { path = "../plugins/voidb-plugin-ssh" }
-voidb-plugin-docker = { path = "../plugins/voidb-plugin-docker" }
-voidb-plugin-kubernetes = { path = "../plugins/voidb-plugin-kubernetes" }
-voidb-plugin-jenkins = { path = "../plugins/voidb-plugin-jenkins" }
-voidb-plugin-webdav = { path = "../plugins/voidb-plugin-webdav" }
-voidb-plugin-s3 = { path = "../plugins/voidb-plugin-s3" }
-voidb-plugin-elasticsearch = { path = "../plugins/voidb-plugin-elasticsearch" }
-voidb-plugin-mongodb = { path = "../plugins/voidb-plugin-mongodb" }
-voidb-plugin-duckdb = { path = "../plugins/voidb-plugin-duckdb" }
-voidb-plugin-sync = { path = "../plugins/voidb-plugin-sync" }
-k8s-openapi = { version = "0.24", features = ["v1_32"] }
+voidb-plugin-mysql = { path = "../plugins/voidb-plugin-mysql", optional = true }
+voidb-plugin-postgres = { path = "../plugins/voidb-plugin-postgres", optional = true }
+voidb-plugin-sqlite = { path = "../plugins/voidb-plugin-sqlite", optional = true }
+voidb-plugin-email = { path = "../plugins/voidb-plugin-email", optional = true }
+voidb-plugin-redis = { path = "../plugins/voidb-plugin-redis", optional = true }
+voidb-plugin-ssh = { path = "../plugins/voidb-plugin-ssh", optional = true }
+voidb-plugin-docker = { path = "../plugins/voidb-plugin-docker", optional = true }
+voidb-plugin-kubernetes = { path = "../plugins/voidb-plugin-kubernetes", optional = true }
+voidb-plugin-jenkins = { path = "../plugins/voidb-plugin-jenkins", optional = true }
+voidb-plugin-webdav = { path = "../plugins/voidb-plugin-webdav", optional = true }
+voidb-plugin-s3 = { path = "../plugins/voidb-plugin-s3", optional = true }
+voidb-plugin-elasticsearch = { path = "../plugins/voidb-plugin-elasticsearch", optional = true }
+voidb-plugin-mongodb = { path = "../plugins/voidb-plugin-mongodb", optional = true }
+voidb-plugin-duckdb = { path = "../plugins/voidb-plugin-duckdb", optional = true }
+voidb-plugin-sync = { path = "../plugins/voidb-plugin-sync", optional = true }
 
 clap = { workspace = true }
 async-trait = { workspace = true }
@@ -43,6 +42,27 @@ tracing-subscriber = { workspace = true }
 semver = { workspace = true }
 uuid = { workspace = true }
 rpassword = "7"
+
+[features]
+default = ["mysql", "postgres", "sqlite", "redis", "ssh"]
+mysql = ["dep:voidb-plugin-mysql"]
+postgres = ["dep:voidb-plugin-postgres"]
+sqlite = ["dep:voidb-plugin-sqlite"]
+redis = ["dep:voidb-plugin-redis"]
+ssh = ["dep:voidb-plugin-ssh"]
+docker = ["dep:voidb-plugin-docker"]
+kubernetes = ["dep:voidb-plugin-kubernetes"]
+jenkins = ["dep:voidb-plugin-jenkins"]
+webdav = ["dep:voidb-plugin-webdav"]
+s3 = ["dep:voidb-plugin-s3"]
+elasticsearch = ["dep:voidb-plugin-elasticsearch"]
+mongodb = ["dep:voidb-plugin-mongodb"]
+duckdb = ["dep:voidb-plugin-duckdb"]
+email = ["dep:voidb-plugin-email"]
+sync = ["dep:voidb-plugin-sync"]
+all-dbs = ["mysql", "postgres", "sqlite", "redis", "duckdb", "mongodb", "elasticsearch"]
+all-infra = ["ssh", "docker", "kubernetes", "jenkins", "s3", "webdav"]
+full = ["all-dbs", "all-infra", "email", "sync"]
 
 [dev-dependencies]
 toml = "0.8"

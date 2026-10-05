@@ -57,22 +57,37 @@ fn build_cli_manager() -> CliPluginManager {
     cli_manager.register(Box::new(builtin::profile::ProfileCliPlugin::new()));
 
     // Database plugins
+    #[cfg(feature = "mysql")]
     cli_manager.register(voidb_plugin_mysql::create_mysql_cli_plugin());
+    #[cfg(feature = "postgres")]
     cli_manager.register(voidb_plugin_postgres::create_postgres_cli_plugin());
+    #[cfg(feature = "sqlite")]
     cli_manager.register(voidb_plugin_sqlite::create_sqlite_cli_plugin());
 
     // Other plugins
+    #[cfg(feature = "email")]
     cli_manager.register(voidb_plugin_email::create_email_cli_plugin());
+    #[cfg(feature = "redis")]
     cli_manager.register(voidb_plugin_redis::create_redis_cli_plugin());
+    #[cfg(feature = "ssh")]
     cli_manager.register(voidb_plugin_ssh::create_ssh_cli_plugin());
+    #[cfg(feature = "docker")]
     cli_manager.register(voidb_plugin_docker::create_docker_cli_plugin());
+    #[cfg(feature = "kubernetes")]
     cli_manager.register(voidb_plugin_kubernetes::create_k8s_cli_plugin());
+    #[cfg(feature = "jenkins")]
     cli_manager.register(voidb_plugin_jenkins::create_jenkins_cli_plugin());
+    #[cfg(feature = "webdav")]
     cli_manager.register(voidb_plugin_webdav::create_webdav_cli_plugin());
+    #[cfg(feature = "s3")]
     cli_manager.register(voidb_plugin_s3::create_s3_cli_plugin());
+    #[cfg(feature = "elasticsearch")]
     cli_manager.register(voidb_plugin_elasticsearch::create_es_cli_plugin());
+    #[cfg(feature = "mongodb")]
     cli_manager.register(voidb_plugin_mongodb::create_mongo_cli_plugin());
+    #[cfg(feature = "duckdb")]
     cli_manager.register(voidb_plugin_duckdb::create_duckdb_cli_plugin());
+    #[cfg(feature = "sync")]
     cli_manager.register(voidb_plugin_sync::create_sync_cli_plugin());
 
     cli_manager

@@ -1,4 +1,5 @@
 pub mod audit;
+#[cfg(feature = "full")]
 pub mod capability_matrix;
 pub mod connections;
 pub mod context;

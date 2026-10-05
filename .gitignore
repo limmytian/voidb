@@ -5,6 +5,7 @@
 .DS_Store
 *.db
 *.sh
+!scripts/*.sh
 !scripts/install-skills.sh
 credentials.json
 profiles.json

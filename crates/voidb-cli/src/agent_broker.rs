@@ -5912,46 +5912,54 @@ fn register_session_factories(
         .plugin_config
         .ok_or_else(|| anyhow!("granted session profile configuration is unavailable"))?;
     match grant.plugin_id.as_str() {
+        #[cfg(feature = "ssh")]
         "ssh" => host.register_factory(Arc::new(voidb_plugin_ssh::SshAgentSessionFactory::new(
             serde_json::from_value(config)
                 .map_err(|_| anyhow!("granted SSH profile configuration is invalid"))?,
         ))),
+        #[cfg(feature = "sqlite")]
         "sqlite" => host.register_factory(Arc::new(
             voidb_plugin_sqlite::SqliteAgentSessionFactory::new(
                 serde_json::from_value(config)
                     .map_err(|_| anyhow!("granted SQLite profile configuration is invalid"))?,
             ),
         )),
+        #[cfg(feature = "duckdb")]
         "duckdb" => host.register_factory(Arc::new(
             voidb_plugin_duckdb::DuckDbAgentSessionFactory::new(
                 serde_json::from_value(config)
                     .map_err(|_| anyhow!("granted DuckDB profile configuration is invalid"))?,
             ),
         )),
+        #[cfg(feature = "mysql")]
         "mysql" => {
             host.register_factory(Arc::new(voidb_plugin_mysql::MySqlAgentSessionFactory::new(
                 serde_json::from_value(config)
                     .map_err(|_| anyhow!("granted MySQL profile configuration is invalid"))?,
             )))
         }
+        #[cfg(feature = "postgres")]
         "postgres" => host.register_factory(Arc::new(
             voidb_plugin_postgres::PostgresAgentSessionFactory::new(
                 serde_json::from_value(config)
                     .map_err(|_| anyhow!("granted PostgreSQL profile configuration is invalid"))?,
             ),
         )),
+        #[cfg(feature = "redis")]
         "redis" => {
             host.register_factory(Arc::new(voidb_plugin_redis::RedisAgentSessionFactory::new(
                 serde_json::from_value(config)
                     .map_err(|_| anyhow!("granted Redis profile configuration is invalid"))?,
             )))
         }
+        #[cfg(feature = "mongodb")]
         "mongodb" => host.register_factory(Arc::new(
             voidb_plugin_mongodb::MongoAgentSessionFactory::new(
                 serde_json::from_value(config)
                     .map_err(|_| anyhow!("granted MongoDB profile configuration is invalid"))?,
             ),
         )),
+        #[cfg(feature = "elasticsearch")]
         "elasticsearch" => host.register_factory(Arc::new(
             voidb_plugin_elasticsearch::EsAgentSessionFactory::new(
                 serde_json::from_value(config).map_err(|_| {
@@ -5959,34 +5967,40 @@ fn register_session_factories(
                 })?,
             ),
         )),
+        #[cfg(feature = "docker")]
         "docker" => host.register_factory(Arc::new(
             voidb_plugin_docker::DockerAgentSessionFactory::new(
                 serde_json::from_value(config)
                     .map_err(|_| anyhow!("granted Docker profile configuration is invalid"))?,
             ),
         )),
+        #[cfg(feature = "kubernetes")]
         "kubernetes" => host.register_factory(Arc::new(
             voidb_plugin_kubernetes::K8sAgentSessionFactory::new(
                 serde_json::from_value(config)
                     .map_err(|_| anyhow!("granted Kubernetes profile configuration is invalid"))?,
             ),
         )),
+        #[cfg(feature = "jenkins")]
         "jenkins" => host.register_factory(Arc::new(
             voidb_plugin_jenkins::JenkinsAgentSessionFactory::new(
                 serde_json::from_value(config)
                     .map_err(|_| anyhow!("granted Jenkins profile configuration is invalid"))?,
             ),
         )),
+        #[cfg(feature = "s3")]
         "s3" => host.register_factory(Arc::new(voidb_plugin_s3::S3AgentSessionFactory::new(
             serde_json::from_value(config)
                 .map_err(|_| anyhow!("granted S3 profile configuration is invalid"))?,
         ))),
+        #[cfg(feature = "webdav")]
         "webdav" => host.register_factory(Arc::new(
             voidb_plugin_webdav::WebDavAgentSessionFactory::new(
                 serde_json::from_value(config)
                     .map_err(|_| anyhow!("granted WebDAV profile configuration is invalid"))?,
             ),
         )),
+        #[cfg(feature = "email")]
         "email" => {
             host.register_factory(Arc::new(voidb_plugin_email::EmailAgentSessionFactory::new(
                 serde_json::from_value(config)
@@ -6691,11 +6705,11 @@ fn append_agent_audit(
 ) {
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "full"))]
 #[path = "infrastructure_live_session_conformance.rs"]
 mod infrastructure_live_session_conformance;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "full"))]
 #[path = "data_search_live_session_conformance.rs"]
 mod data_search_live_session_conformance;
 
@@ -7034,6 +7048,7 @@ mod tests {
         assert!(!argv.iter().any(|argument| argument == "--plugin"));
     }
 
+    #[cfg(feature = "full")]
     #[test]
     fn agent_exec_accepts_explicit_principal_binding_and_exact_jit_scope() {
         let matches = agent_command()
@@ -7239,6 +7254,7 @@ mod tests {
         assert!(command_allowed(&grant, &argv(r#"{"command":"whoami"}"#)).is_err());
     }
 
+    #[cfg(feature = "full")]
     #[test]
     fn local_filesystem_boundary_rejects_unscoped_proactive_grants() {
         for (plugin_id, capability_id) in [
@@ -7818,6 +7834,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "full")]
     #[test]
     fn shared_presets_resolve_and_validate_exact_cli_scopes() {
         let stateless = CapabilityExecutionMode::Stateless;
@@ -8107,6 +8124,7 @@ mod tests {
         fs::remove_dir_all(directory).expect("remove batch spec directory");
     }
 
+    #[cfg(feature = "full")]
     #[test]
     fn builtin_authorization_metadata_builds_shared_exact_presets() {
         for plugin_id in [
@@ -8287,6 +8305,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "full")]
     #[test]
     fn bundled_plugin_approval_fields_are_real_normalized_input_paths() {
         for plugin_id in [
@@ -8368,6 +8387,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "full")]
     #[test]
     fn incomplete_process_metadata_is_custom_only_and_sync_is_supported() {
         let mut definition = resolved_authorization_capabilities(Some("ssh"))

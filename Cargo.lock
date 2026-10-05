@@ -7199,7 +7199,6 @@ dependencies = [
  "chrono",
  "clap",
  "jsonschema",
- "k8s-openapi",
  "rpassword",
  "semver",
  "serde",

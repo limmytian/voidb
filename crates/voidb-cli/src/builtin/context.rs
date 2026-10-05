@@ -400,21 +400,25 @@ fn principal_component(
 }
 
 fn default_catalog() -> Result<AgentContextStoreCatalog, AgentContextProtocolError> {
-    let roots = [
-        ("ssh", voidb_plugin_ssh::ssh_agent_context_store_root()),
-        (
-            "docker",
-            voidb_plugin_docker::docker_agent_context_store_root(),
-        ),
-        (
-            "kubernetes",
-            voidb_plugin_kubernetes::kubernetes_agent_context_store_root(),
-        ),
-        (
-            "jenkins",
-            voidb_plugin_jenkins::jenkins_agent_context_store_root(),
-        ),
-    ];
+    let mut roots = Vec::new();
+    #[cfg(feature = "ssh")]
+    roots.push(("ssh", voidb_plugin_ssh::ssh_agent_context_store_root()));
+    #[cfg(feature = "docker")]
+    roots.push((
+        "docker",
+        voidb_plugin_docker::docker_agent_context_store_root(),
+    ));
+    #[cfg(feature = "kubernetes")]
+    roots.push((
+        "kubernetes",
+        voidb_plugin_kubernetes::kubernetes_agent_context_store_root(),
+    ));
+    #[cfg(feature = "jenkins")]
+    roots.push((
+        "jenkins",
+        voidb_plugin_jenkins::jenkins_agent_context_store_root(),
+    ));
+
     let mut sources = Vec::with_capacity(roots.len());
     for (plugin_id, root) in roots {
         let root = root.map_err(|_| {

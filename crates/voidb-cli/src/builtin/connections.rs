@@ -216,6 +216,7 @@ pub(crate) async fn test_connection_by_plugin(
 ) -> Result<String, String> {
     match plugin_id {
         // === MySQL ===
+        #[cfg(feature = "mysql")]
         "mysql" => {
             let config: voidb_plugin_mysql::MySqlConfig = parse_plugin_config(conn)?;
             voidb_plugin_mysql::service::MySqlService::new_direct(&config)
@@ -224,6 +225,7 @@ pub(crate) async fn test_connection_by_plugin(
         }
 
         // === PostgreSQL ===
+        #[cfg(feature = "postgres")]
         "postgres" | "postgresql" => {
             let config: voidb_plugin_postgres::PostgresConfig = parse_plugin_config(conn)?;
             voidb_plugin_postgres::service::PostgresService::new_direct(&config)
@@ -232,6 +234,7 @@ pub(crate) async fn test_connection_by_plugin(
         }
 
         // === SQLite ===
+        #[cfg(feature = "sqlite")]
         "sqlite" => {
             let config: voidb_plugin_sqlite::SqliteConfig = parse_plugin_config(conn)?;
             voidb_plugin_sqlite::service::SqliteService::new_direct(&config)?;
@@ -239,12 +242,14 @@ pub(crate) async fn test_connection_by_plugin(
         }
 
         // === DuckDB ===
+        #[cfg(feature = "duckdb")]
         "duckdb" => {
             let config: voidb_plugin_duckdb::DuckDbConfig = parse_plugin_config(conn)?;
             voidb_plugin_duckdb::test_connection(&config)
         }
 
         // === Redis — uses dedicated test_connection helper for a real PING ===
+        #[cfg(feature = "redis")]
         "redis" => {
             voidb_plugin_redis::test_connection(conn)
                 .await
@@ -252,6 +257,7 @@ pub(crate) async fn test_connection_by_plugin(
         }
 
         // === Kubernetes ===
+        #[cfg(feature = "kubernetes")]
         "kubernetes" => {
             voidb_plugin_kubernetes::test_connection(conn)
                 .await
@@ -259,6 +265,7 @@ pub(crate) async fn test_connection_by_plugin(
         }
 
         // === S3 ===
+        #[cfg(feature = "s3")]
         "s3" => {
             voidb_plugin_s3::test_connection(conn)
                 .await
@@ -266,6 +273,7 @@ pub(crate) async fn test_connection_by_plugin(
         }
 
         // === WebDAV ===
+        #[cfg(feature = "webdav")]
         "webdav" => {
             voidb_plugin_webdav::test_connection(conn)
                 .await
@@ -273,6 +281,7 @@ pub(crate) async fn test_connection_by_plugin(
         }
 
         // === Elasticsearch ===
+        #[cfg(feature = "elasticsearch")]
         "elasticsearch" => {
             voidb_plugin_elasticsearch::test_connection(conn)
                 .await
@@ -280,6 +289,7 @@ pub(crate) async fn test_connection_by_plugin(
         }
 
         // === MongoDB ===
+        #[cfg(feature = "mongodb")]
         "mongodb" => {
             voidb_plugin_mongodb::test_connection(conn)
                 .await
@@ -287,6 +297,7 @@ pub(crate) async fn test_connection_by_plugin(
         }
 
         // === SSH ===
+        #[cfg(feature = "ssh")]
         "ssh" => {
             voidb_plugin_ssh::test_connection(conn)
                 .await
@@ -294,6 +305,7 @@ pub(crate) async fn test_connection_by_plugin(
         }
 
         // === Email — new_direct() then connect_direct() ===
+        #[cfg(feature = "email")]
         "email" => {
             let config: voidb_plugin_email::EmailConfig = parse_plugin_config(conn)?;
             let mut svc = voidb_plugin_email::EmailService::new_direct()
@@ -305,6 +317,7 @@ pub(crate) async fn test_connection_by_plugin(
         }
 
         // === Jenkins ===
+        #[cfg(feature = "jenkins")]
         "jenkins" => voidb_plugin_jenkins::test_connection(conn)
             .await
             .map_err(|e| e.to_string()),
@@ -317,7 +330,7 @@ pub(crate) async fn test_connection_by_plugin(
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "jenkins"))]
 mod tests {
     use serde_json::json;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -326,6 +339,7 @@ mod tests {
 
     use super::test_connection_by_plugin;
 
+    #[cfg(feature = "jenkins")]
     #[tokio::test]
     async fn dispatches_jenkins_connection_test() {
         let listener = TcpListener::bind("127.0.0.1:0")

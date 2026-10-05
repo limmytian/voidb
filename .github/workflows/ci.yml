@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fast-checks:
+    name: Fast Checks (Tier 1 Default Features)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Clippy (Fast Tier)
+        run: |
+          cargo clippy -p voidb-core --all-targets --no-deps
+          cargo clippy -p voidb-cli --all-targets --no-deps
+          cargo clippy -p voidb-tui --all-targets --no-deps
+
+      - name: Tests (voidb-core)
+        run: cargo test -p voidb-core
+
+      - name: Tests (voidb-cli default)
+        run: cargo test -p voidb-cli
+
+      - name: Tests (voidb-tui)
+        run: cargo test -p voidb-tui
+
+  capability-matrix:
+    name: Agent Capability Matrix Drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install System Dependencies
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+      - name: Check Capability Matrix
+        run: bash scripts/check-agent-capability-matrix.sh
+
+  full-workspace:
+    name: Full Workspace Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Install System Dependencies
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+
+      - name: Clippy (Workspace)
+        run: cargo clippy --workspace --all-targets --no-deps
+
+      - name: Tests (Workspace)
+        run: cargo test --workspace --no-fail-fast
