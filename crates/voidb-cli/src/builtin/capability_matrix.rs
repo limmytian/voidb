@@ -169,14 +169,6 @@ const PLUGIN_EXPERIENCE: &[PluginExperience] = &[
         validation_coverage: "`scripts/release-sync-smoke.sh`; Sync plugin and standalone server tests",
         known_limit: "Must remain opt-in; no generic live handle, plaintext key, or decrypted bundle may cross the boundary.",
     },
-    PluginExperience {
-        plugin_id: "webdav",
-        release_posture: "release_candidate",
-        standalone_tui: true,
-        tui_context_handoff: "None; capability and agent-owned session only",
-        validation_coverage: "WebDAV plugin tests; local-filesystem boundary gate; WebDAV fixture smoke; `scripts/tui-quality-gate.sh`",
-        known_limit: "Server-specific locking and atomicity behavior needs opt-in fixture evidence.",
-    },
 ];
 
 pub fn build() -> Result<CapabilityMatrix, VoidbError> {

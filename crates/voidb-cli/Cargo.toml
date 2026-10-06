@@ -20,7 +20,6 @@ voidb-plugin-redis = { path = "../plugins/voidb-plugin-redis", optional = true }
 voidb-plugin-ssh = { path = "../plugins/voidb-plugin-ssh", optional = true }
 voidb-plugin-docker = { path = "../plugins/voidb-plugin-docker", optional = true }
 voidb-plugin-kubernetes = { path = "../plugins/voidb-plugin-kubernetes", optional = true }
-voidb-plugin-webdav = { path = "../plugins/voidb-plugin-webdav", optional = true }
 voidb-plugin-s3 = { path = "../plugins/voidb-plugin-s3", optional = true }
 voidb-plugin-elasticsearch = { path = "../plugins/voidb-plugin-elasticsearch", optional = true }
 voidb-plugin-mongodb = { path = "../plugins/voidb-plugin-mongodb", optional = true }
@@ -51,7 +50,6 @@ redis = ["dep:voidb-plugin-redis"]
 ssh = ["dep:voidb-plugin-ssh"]
 docker = ["dep:voidb-plugin-docker"]
 kubernetes = ["dep:voidb-plugin-kubernetes"]
-webdav = ["dep:voidb-plugin-webdav"]
 s3 = ["dep:voidb-plugin-s3"]
 elasticsearch = ["dep:voidb-plugin-elasticsearch"]
 mongodb = ["dep:voidb-plugin-mongodb"]
@@ -59,7 +57,7 @@ duckdb = ["dep:voidb-plugin-duckdb"]
 email = ["dep:voidb-plugin-email"]
 sync = ["dep:voidb-plugin-sync"]
 all-dbs = ["mysql", "postgres", "sqlite", "redis", "duckdb", "mongodb", "elasticsearch"]
-all-infra = ["ssh", "docker", "kubernetes", "s3", "webdav"]
+all-infra = ["ssh", "docker", "kubernetes", "s3"]
 full = ["all-dbs", "all-infra", "email", "sync"]
 
 [dev-dependencies]

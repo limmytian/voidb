@@ -24,7 +24,6 @@ The committed output is `docs/agent-capability-matrix.md`. Regenerate with `carg
 | `sqlite` | release_candidate | 9 | destructive:2, read_only:7 | both, stateless | 30000, 60000 | 1 | yes | no | None; capability and agent-owned session only | SQLite plugin tests; CLI invoke tests; Core SQL contract | Local filesystem policy applies; there is intentionally no human data-inspector TUI. |
 | `ssh` | release_candidate | 15 | destructive:8, mutating:1, read_only:6 | both, session_only, stateless | 30000 | 1 | yes | yes | Explicit bounded live-PTY share with one-shot local review | SSH plugin tests; external-agent boundary gate; SSH fixture smoke; `scripts/tui-quality-gate.sh` | Host-key, authentication-agent, and terminal-application behavior needs opt-in live evidence. |
 | `sync` | beta_opt_in | 6 | destructive:2, read_only:4 | stateless | 5000, 10000, 30000, 120000, 180000 | 0 | no | no | None; encrypted plugin-owned operations only | `scripts/release-sync-smoke.sh`; Sync plugin and standalone server tests | Must remain opt-in; no generic live handle, plaintext key, or decrypted bundle may cross the boundary. |
-| `webdav` | release_candidate | 14 | destructive:6, external_side_effect:2, read_only:6 | session_only, stateless | 5000, 30000, 60000, 900000 | 2 | yes | yes | None; capability and agent-owned session only | WebDAV plugin tests; local-filesystem boundary gate; WebDAV fixture smoke; `scripts/tui-quality-gate.sh` | Server-specific locking and atomicity behavior needs opt-in fixture evidence. |
 
 ## Capability Inventory
 
@@ -184,20 +183,6 @@ The committed output is `docs/agent-capability-matrix.md`. Regenerate with `carg
 | `sync.plan` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
 | `sync.recovery` | destructive | stateless | 180000 | no | invoke caller-token/SIGINT | yes | declared | — |
 | `sync.status` | read_only | stateless | 5000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `webdav.copy` | destructive | stateless | 60000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `webdav.delete` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `webdav.get` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `webdav.list` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `webdav.lock_acquire` | external_side_effect | session_only | 30000 | no | session call-cancel + close | no | declared | — |
-| `webdav.lock_release` | external_side_effect | session_only | 30000 | no | session call-cancel + close | no | declared | — |
-| `webdav.mkdir` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `webdav.move` | destructive | stateless | 60000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `webdav.probe` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `webdav.put` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `webdav.stat` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `webdav.sync_plan` | read_only | stateless | 60000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `webdav.transfer` | destructive | session_only | 900000 | yes | session call-cancel + close | no | declared | — |
-| `webdav.transfer_status` | read_only | session_only | 5000 | yes | session call-cancel + close | no | declared | — |
 
 ## Interpretation
 

@@ -62,8 +62,6 @@ use voidb_plugin_sqlite::{SqliteConfig, invoke_sqlite_capability, sqlite_capabil
 use voidb_plugin_ssh::{SshConfig, invoke_ssh_capability, ssh_capabilities};
 #[cfg(feature = "sync")]
 use voidb_plugin_sync::{invoke_sync_capability, sync_capabilities};
-#[cfg(feature = "webdav")]
-use voidb_plugin_webdav::{config::WebDavConfig, invoke_webdav_capability, webdav_capabilities};
 
 const SUPPORTED_INVOKE_PLUGINS: &[&str] = &[
     #[cfg(feature = "sqlite")]
@@ -80,8 +78,6 @@ const SUPPORTED_INVOKE_PLUGINS: &[&str] = &[
     "ssh",
     #[cfg(feature = "s3")]
     "s3",
-    #[cfg(feature = "webdav")]
-    "webdav",
     #[cfg(feature = "email")]
     "email",
     #[cfg(feature = "docker")]
@@ -1369,17 +1365,6 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
-        #[cfg(feature = "webdav")]
-        "webdav" => {
-            let config = parse_webdav_config(connection).map_err(|error| *error)?;
-            invoke_with_timeout(
-                invoke_webdav_capability(&config, invocation),
-                timeout_ms,
-                &capability.plugin_id,
-                &capability.id,
-            )
-            .await
-        }
         #[cfg(feature = "email")]
         "email" => {
             let config = parse_email_config(connection).map_err(|error| *error)?;
@@ -1555,13 +1540,6 @@ fn parse_s3_config(connection: &ConnectionConfig) -> Result<S3Config, Box<Capabi
     parse_plugin_config(connection, "s3", "S3")
 }
 
-#[cfg(feature = "webdav")]
-fn parse_webdav_config(
-    connection: &ConnectionConfig,
-) -> Result<WebDavConfig, Box<CapabilityError>> {
-    parse_plugin_config(connection, "webdav", "WebDAV")
-}
-
 #[cfg(feature = "email")]
 fn parse_email_config(connection: &ConnectionConfig) -> Result<EmailConfig, Box<CapabilityError>> {
     parse_plugin_config(connection, "email", "Email")
@@ -1725,8 +1703,6 @@ fn capabilities_for_plugin(
         "ssh" => Ok(ssh_capabilities()),
         #[cfg(feature = "s3")]
         "s3" => Ok(s3_capabilities()),
-        #[cfg(feature = "webdav")]
-        "webdav" => Ok(webdav_capabilities()),
         #[cfg(feature = "email")]
         "email" => Ok(email_capabilities()),
         #[cfg(feature = "docker")]
@@ -1762,8 +1738,6 @@ pub(crate) fn builtin_capabilities() -> Vec<CapabilityDefinition> {
     capabilities.extend(ssh_capabilities());
     #[cfg(feature = "s3")]
     capabilities.extend(s3_capabilities());
-    #[cfg(feature = "webdav")]
-    capabilities.extend(webdav_capabilities());
     #[cfg(feature = "email")]
     capabilities.extend(email_capabilities());
     #[cfg(feature = "docker")]
@@ -3015,11 +2989,6 @@ mod tests {
         assert!(
             capabilities
                 .iter()
-                .any(|capability| capability.qualified_id() == "webdav.list")
-        );
-        assert!(
-            capabilities
-                .iter()
                 .any(|capability| capability.qualified_id() == "email.diagnostics")
         );
         assert!(
@@ -3084,7 +3053,7 @@ mod tests {
         use voidb_core::CapabilityExecutionMode;
 
         let capabilities = supported_capabilities(&empty_discovery());
-        assert_eq!(capabilities.len(), 168);
+        assert_eq!(capabilities.len(), 154);
         assert!(capabilities.iter().all(|capability| {
             !capability.supports_session_execution() || capability.session_handoff.is_some()
         }));
@@ -3129,10 +3098,6 @@ mod tests {
                 "ssh.terminal_signal",
                 "ssh.terminal_snapshot",
                 "ssh.terminal_write",
-                "webdav.lock_acquire",
-                "webdav.lock_release",
-                "webdav.transfer",
-                "webdav.transfer_status",
             ]
         );
 
@@ -3253,7 +3218,6 @@ mod tests {
                 "sqlite": [9, 7, 0, 2],
                 "ssh": [15, 6, 7, 2],
                 "sync": [6, 6, 0, 0],
-                "webdav": [14, 10, 4, 0],
             })
         );
     }
@@ -3467,7 +3431,6 @@ mod tests {
     fn storage_and_ssh_release_candidate_catalog_is_bounded_and_gated() {
         let discovery = empty_discovery();
         let s3 = capabilities_for_plugin("s3", &discovery).expect("s3 capabilities");
-        let webdav = capabilities_for_plugin("webdav", &discovery).expect("webdav capabilities");
         let ssh = capabilities_for_plugin("ssh", &discovery).expect("ssh capabilities");
 
         for id in ["put", "delete", "mkdir"] {
@@ -3498,39 +3461,6 @@ mod tests {
         );
         assert!(
             s3_get
-                .output_schema
-                .to_string()
-                .contains("content_truncated")
-        );
-
-        for id in ["put", "delete", "mkdir"] {
-            let capability = find_capability(&webdav, id);
-            assert!(capability.destructive, "webdav.{id} is destructive");
-            assert!(
-                capability.supports_dry_run,
-                "webdav.{id} supports dry-run promotion gate"
-            );
-            assert_eq!(capability.risk, CapabilityRiskLevel::Destructive);
-            assert_permission(capability, "connection.write");
-            assert_permission(capability, &format!("webdav.{id}"));
-        }
-
-        let webdav_list = find_capability(&webdav, "list");
-        assert_eq!(
-            webdav_list.output_schema["properties"]["limit"]["maximum"],
-            json!(500)
-        );
-        assert_eq!(
-            webdav_list.output_schema["properties"]["next_cursor"]["type"][0],
-            "string"
-        );
-        let webdav_get = find_capability(&webdav, "get");
-        assert_eq!(
-            webdav_get.input_schema["properties"]["max_bytes"]["maximum"],
-            json!(1024 * 1024)
-        );
-        assert!(
-            webdav_get
                 .output_schema
                 .to_string()
                 .contains("content_truncated")
@@ -3577,31 +3507,17 @@ mod tests {
     #[test]
     fn storage_plugins_map_to_one_fail_closed_transfer_lifecycle() {
         let s3 = voidb_plugin_s3::s3_transfer_contract();
-        let webdav = voidb_plugin_webdav::webdav_transfer_contract();
         s3.validate().expect("valid S3 transfer contract");
-        webdav.validate().expect("valid WebDAV transfer contract");
 
-        assert_eq!(s3.protocol_version, webdav.protocol_version);
-        assert_eq!(s3.operations, webdav.operations);
-        assert_eq!(s3.conflicts, webdav.conflicts);
-        assert_eq!(s3.local_path, webdav.local_path);
+        assert_eq!(s3.protocol_version, 1);
         assert!(
             s3.chunking
                 .modes
                 .contains(&voidb_core::AgentTransferChunkMode::Multipart)
         );
         assert_eq!(s3.resume.mode, voidb_core::AgentTransferResumeMode::Exact);
-        assert_eq!(
-            webdav.resume.mode,
-            voidb_core::AgentTransferResumeMode::BestEffort
-        );
-        assert!(
-            webdav
-                .preconditions
-                .contains(&voidb_core::AgentTransferPrecondition::LockToken)
-        );
 
-        for capabilities in [s3_capabilities(), webdav_capabilities()] {
+        for capabilities in [s3_capabilities()] {
             for capability in capabilities {
                 if matches!(
                     capability.id.as_str(),
@@ -3643,12 +3559,10 @@ mod tests {
     fn local_filesystem_boundary_capability_policy_is_scoped_and_explicit() {
         let discovery = empty_discovery();
         let s3 = capabilities_for_plugin("s3", &discovery).expect("s3 capabilities");
-        let webdav = capabilities_for_plugin("webdav", &discovery).expect("webdav capabilities");
         let ssh = capabilities_for_plugin("ssh", &discovery).expect("ssh capabilities");
 
         for capability in [
             find_capability(&s3, "sync_plan"),
-            find_capability(&webdav, "sync_plan"),
         ] {
             assert_eq!(capability.risk, CapabilityRiskLevel::ReadOnly);
             assert!(!capability.authorization.capability_wide_allowed);
@@ -4547,38 +4461,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn webdav_mkdir_dry_run_does_not_open_target_connection() {
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![webdav_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let data = run_invocation(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "webdav.mkdir".into(),
-                profile_ref: "dav".into(),
-                input: json!({ "path": "/agent" }),
-                timeout_ms: None,
-                dry_run: true,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect("webdav mkdir dry-run");
-
-        assert_eq!(data.plugin_id, "webdav");
-        assert_eq!(data.output["dry_run"], true);
-        assert_eq!(data.output["operation"], "mkdir");
-        assert_eq!(data.output_summary["dry_run"], true);
-        assert_eq!(data.output_summary["operation"], "mkdir");
-        assert_eq!(data.runtime.kind, "builtin");
-    }
-
-    #[tokio::test]
     async fn destructive_storage_invocations_require_ack_or_dry_run() {
         let s3_ctx = CliContext::new(AppConfig {
             connections: vec![s3_connection()],
@@ -4608,35 +4490,6 @@ mod tests {
         assert_eq!(s3_error.category, CapabilityErrorCategory::Policy);
         assert_eq!(s3_error.code, "policy.destructive_denied_by_default");
         assert_eq!(s3_error.details["qualified_id"], "s3.delete");
-
-        let webdav_ctx = CliContext::new(AppConfig {
-            connections: vec![webdav_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let webdav_error = run_invocation(
-            &webdav_ctx,
-            InvokeRunOptions {
-                capability_ref: "webdav.put".into(),
-                profile_ref: "dav".into(),
-                input: json!({
-                    "path": "/agent/probe.txt",
-                    "content_text": "hello"
-                }),
-                timeout_ms: None,
-                dry_run: false,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect_err("webdav destructive denied");
-
-        assert_eq!(webdav_error.category, CapabilityErrorCategory::Policy);
-        assert_eq!(webdav_error.code, "policy.destructive_denied_by_default");
-        assert_eq!(webdav_error.details["qualified_id"], "webdav.put");
     }
 
     #[test]
@@ -4651,15 +4504,6 @@ mod tests {
                     "content_text": "payload-secret"
                 }),
                 "payload-secret",
-            ),
-            (
-                "webdav.put",
-                "dav",
-                json!({
-                    "path": "/agent/probe.txt",
-                    "content_text": "dav-payload-secret"
-                }),
-                "dav-payload-secret",
             ),
             (
                 "ssh.exec",
@@ -4738,17 +4582,6 @@ mod tests {
                 }),
                 "/Volumes/private/数据",
                 "财务/预算",
-            ),
-            (
-                "webdav.sync_plan",
-                "dav",
-                json!({
-                    "remote_path": "/reports",
-                    "local_root": "/home/private/archive",
-                    "local_path": "secret/report.txt",
-                }),
-                "/home/private/archive",
-                "secret/report.txt",
             ),
         ] {
             let error = CapabilityError {
@@ -5834,24 +5667,6 @@ mod tests {
                     "type": "Auto"
                 },
                 "timeout": 30
-            })),
-        }
-    }
-
-    fn webdav_connection() -> ConnectionConfig {
-        ConnectionConfig {
-            name: "dav".into(),
-            db_type: DatabaseType::Plugin,
-            plugin_id: Some("webdav".into()),
-            plugin_config: Some(json!({
-                "url": "https://dav.internal.example/",
-                "auth": {
-                    "type": "Basic",
-                    "username": "agent",
-                    "password": "dav-secret"
-                },
-                "timeout": 30,
-                "verify_ssl": true
             })),
         }
     }

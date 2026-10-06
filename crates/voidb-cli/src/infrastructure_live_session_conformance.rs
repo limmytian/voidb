@@ -365,7 +365,7 @@ async fn exercise_runtime(
 #[tokio::test]
 async fn infrastructure_live_sessions_pass_shared_conformance() {
     let fixtures = fixtures();
-    assert_eq!(fixtures.len(), 12);
+    assert_eq!(fixtures.len(), 9);
     let mut family_counts = BTreeMap::<String, usize>::new();
 
     for fixture in &fixtures {

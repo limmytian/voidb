@@ -681,7 +681,7 @@ fn agent_command() -> Command {
                             Arg::new("capability")
                                 .required(true)
                                 .value_name("PLUGIN.CAPABILITY")
-                                .help("Qualified capability, for example docker.containers"),
+                                .help("Qualified capability, for example docker.list_containers"),
                         )
                         .arg(
                             Arg::new("profile")
@@ -5985,13 +5985,6 @@ fn register_session_factories(
             serde_json::from_value(config)
                 .map_err(|_| anyhow!("granted S3 profile configuration is invalid"))?,
         ))),
-        #[cfg(feature = "webdav")]
-        "webdav" => host.register_factory(Arc::new(
-            voidb_plugin_webdav::WebDavAgentSessionFactory::new(
-                serde_json::from_value(config)
-                    .map_err(|_| anyhow!("granted WebDAV profile configuration is invalid"))?,
-            ),
-        )),
         #[cfg(feature = "email")]
         "email" => {
             host.register_factory(Arc::new(voidb_plugin_email::EmailAgentSessionFactory::new(
@@ -7006,7 +6999,7 @@ mod tests {
                 "voidb-cli",
                 "agent",
                 "exec",
-                "docker.containers",
+                "docker.list_containers",
                 "--profile",
                 "prod-docker",
                 "--input-json",
@@ -7018,14 +7011,14 @@ mod tests {
         let (_, agent) = matches.subcommand().expect("agent command");
         let (_, exec) = agent.subcommand().expect("exec command");
         let input = parse_agent_exec_input(exec).expect("agent exec input");
-        let argv = agent_exec_argv(exec, "docker.containers", "profile:docker", &input);
+        let argv = agent_exec_argv(exec, "docker.list_containers", "profile:docker", &input);
 
         assert_eq!(
             argv,
             vec![
                 "invoke",
                 "run",
-                "docker.containers",
+                "docker.list_containers",
                 "--profile",
                 "id:profile:docker",
                 "--input-json",
@@ -7048,7 +7041,7 @@ mod tests {
                 "voidb-cli",
                 "agent",
                 "exec",
-                "docker.containers",
+                "docker.list_containers",
                 "--profile",
                 "prod-docker",
                 "--client-id",
@@ -7068,13 +7061,13 @@ mod tests {
         assert_eq!(principal.task_id, "task-123");
         assert_eq!(principal.instance_id.as_deref(), Some("desktop"));
 
-        let (scope, risk) = exact_agent_exec_scope("docker", "docker.containers", json!({}))
+        let (scope, risk) = exact_agent_exec_scope("docker", "docker.list_containers", json!({}))
             .expect("exact Docker scope");
         assert_eq!(risk, voidb_core::CapabilityRiskLevel::ReadOnly);
         assert!(matches!(
             scope,
             AgentAuthorizationScope::ExactInvocation { capability_id, .. }
-                if capability_id == "docker.containers"
+                if capability_id == "docker.list_containers"
         ));
     }
 
@@ -7099,7 +7092,7 @@ mod tests {
             assert!(!help.contains(hidden), "exec help exposed {hidden}");
         }
         for visible in [
-            "docker.containers",
+            "docker.list_containers",
             "--profile",
             "--input-json",
             "--purpose",
@@ -7253,7 +7246,6 @@ mod tests {
             ("ssh", "ssh.sftp_get"),
             ("ssh", "ssh.sftp_put"),
             ("s3", "s3.sync_plan"),
-            ("webdav", "webdav.sync_plan"),
         ] {
             let mut scoped_only = grant();
             scoped_only.plugin_id = plugin_id.into();
@@ -8104,7 +8096,6 @@ mod tests {
             "duckdb",
             "ssh",
             "s3",
-            "webdav",
             "email",
             "sync",
             "docker",
@@ -8284,7 +8275,6 @@ mod tests {
             "duckdb",
             "ssh",
             "s3",
-            "webdav",
             "email",
             "docker",
             "kubernetes",
@@ -10018,12 +10008,12 @@ mod tests {
         );
 
         let scope = AgentAuthorizationScope::ExactInvocation {
-            capability_id: "docker.containers".into(),
+            capability_id: "docker.list_containers".into(),
             normalized_input: json!({}),
             invocation_fingerprint: "fingerprint".into(),
         };
         let summary = format_review_scope_summary(&scope);
-        assert!(summary.contains("Exact invocation: 'docker.containers'"));
+        assert!(summary.contains("Exact invocation: 'docker.list_containers'"));
 
         let scope_cap = AgentAuthorizationScope::Capability {
             capability_id: "mysql.query".into(),
