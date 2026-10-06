@@ -264,14 +264,6 @@ pub(crate) async fn test_connection_by_plugin(
                 .map_err(|e| e.to_string())
         }
 
-        // === S3 ===
-        #[cfg(feature = "s3")]
-        "s3" => {
-            voidb_plugin_s3::test_connection(conn)
-                .await
-                .map_err(|e| e.to_string())
-        }
-
         // === Elasticsearch ===
         #[cfg(feature = "elasticsearch")]
         "elasticsearch" => {

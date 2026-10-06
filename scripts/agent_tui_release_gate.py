@@ -141,7 +141,7 @@ def phases() -> list[Phase]:
         ),
         Phase(
             "local-transfer-boundary",
-            "ssh,s3",
+            "ssh",
             "local-transfer-and-cancellation",
             ("scripts/check-local-filesystem-boundaries.sh",),
             minimum_profile="deterministic",
@@ -158,7 +158,7 @@ def phases() -> list[Phase]:
         ),
         Phase(
             "tui-terminal-restoration-quick",
-            "connections,ssh,docker,kubernetes,s3",
+            "connections,ssh,docker,kubernetes",
             "terminal-restoration",
             (
                 "scripts/tui-quality-gate.sh",
@@ -197,7 +197,7 @@ def phases() -> list[Phase]:
         ),
         Phase(
             "promoted-plugin-smoke",
-            "ssh,s3,mysql",
+            "ssh,mysql",
             "fixture-backed-capability-smoke",
             ("scripts/release-plugin-smoke.sh",),
             minimum_profile="deterministic",
@@ -214,7 +214,7 @@ def phases() -> list[Phase]:
         ),
         Phase(
             "tui-terminal-restoration",
-            "connections,ssh,docker,kubernetes,s3",
+            "connections,ssh,docker,kubernetes",
             "terminal-restoration",
             (
                 "scripts/tui-quality-gate.sh",
@@ -302,7 +302,6 @@ def live_fixture_phases() -> list[Phase]:
             )
             for plugin in [
                 "ssh",
-                "s3",
                 "mysql",
                 "kubernetes",
             ]

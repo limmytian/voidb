@@ -10,7 +10,7 @@ INVOKE_SMOKE=0
 
 usage() {
   cat <<'EOF'
-Usage: scripts/release-plugin-smoke.sh [--plugin all|ssh|s3] [--no-diff-check]
+Usage: scripts/release-plugin-smoke.sh [--plugin all|ssh] [--no-diff-check]
 
 Runs focused, secret-free plugin smoke checks for release-candidate preparation.
 External service smoke is intentionally documented, not run here.
@@ -68,21 +68,12 @@ smoke_ssh() {
   INVOKE_SMOKE=1
 }
 
-smoke_s3() {
-  run cargo test -p voidb-plugin-s3 --quiet
-  INVOKE_SMOKE=1
-}
-
 case "${PLUGIN}" in
   all)
     smoke_ssh
-    smoke_s3
     ;;
   ssh)
     smoke_ssh
-    ;;
-  s3)
-    smoke_s3
     ;;
   *)
     echo "unsupported plugin: ${PLUGIN}" >&2

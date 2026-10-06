@@ -19,8 +19,6 @@ capability_only_plugins=(
   mongodb
   redis
   elasticsearch
-  s3
-  email
 )
 
 for plugin in "${capability_only_plugins[@]}"; do

@@ -52,8 +52,6 @@ use voidb_plugin_mysql::{MySqlConfig, invoke_mysql_capability, mysql_capabilitie
 use voidb_plugin_postgres::{PostgresConfig, invoke_postgres_capability, postgres_capabilities};
 #[cfg(feature = "redis")]
 use voidb_plugin_redis::{RedisConfig, invoke_redis_capability, redis_capabilities};
-#[cfg(feature = "s3")]
-use voidb_plugin_s3::{config::S3Config, invoke_s3_capability, s3_capabilities};
 #[cfg(feature = "sqlite")]
 use voidb_plugin_sqlite::{SqliteConfig, invoke_sqlite_capability, sqlite_capabilities};
 #[cfg(feature = "ssh")]
@@ -74,8 +72,6 @@ const SUPPORTED_INVOKE_PLUGINS: &[&str] = &[
     "duckdb",
     #[cfg(feature = "ssh")]
     "ssh",
-    #[cfg(feature = "s3")]
-    "s3",
     #[cfg(feature = "docker")]
     "docker",
     #[cfg(feature = "kubernetes")]
@@ -1350,17 +1346,6 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
-        #[cfg(feature = "s3")]
-        "s3" => {
-            let config = parse_s3_config(connection).map_err(|error| *error)?;
-            invoke_with_timeout(
-                invoke_s3_capability(&config, invocation),
-                timeout_ms,
-                &capability.plugin_id,
-                &capability.id,
-            )
-            .await
-        }
         #[cfg(feature = "docker")]
         "docker" => {
             let config = parse_docker_config(connection).map_err(|error| *error)?;
@@ -1520,11 +1505,6 @@ fn parse_ssh_config(connection: &ConnectionConfig) -> Result<SshConfig, Box<Capa
     parse_plugin_config(connection, "ssh", "SSH")
 }
 
-#[cfg(feature = "s3")]
-fn parse_s3_config(connection: &ConnectionConfig) -> Result<S3Config, Box<CapabilityError>> {
-    parse_plugin_config(connection, "s3", "S3")
-}
-
 #[cfg(feature = "docker")]
 fn parse_docker_config(
     connection: &ConnectionConfig,
@@ -1681,8 +1661,6 @@ fn capabilities_for_plugin(
         "duckdb" => Ok(duckdb_capabilities()),
         #[cfg(feature = "ssh")]
         "ssh" => Ok(ssh_capabilities()),
-        #[cfg(feature = "s3")]
-        "s3" => Ok(s3_capabilities()),
         #[cfg(feature = "docker")]
         "docker" => Ok(docker_capabilities()),
         #[cfg(feature = "kubernetes")]
@@ -1714,8 +1692,6 @@ pub(crate) fn builtin_capabilities() -> Vec<CapabilityDefinition> {
     capabilities.extend(duckdb_capabilities());
     #[cfg(feature = "ssh")]
     capabilities.extend(ssh_capabilities());
-    #[cfg(feature = "s3")]
-    capabilities.extend(s3_capabilities());
     #[cfg(feature = "docker")]
     capabilities.extend(docker_capabilities());
     #[cfg(feature = "kubernetes")]
@@ -2960,11 +2936,6 @@ mod tests {
         assert!(
             capabilities
                 .iter()
-                .any(|capability| capability.qualified_id() == "s3.list")
-        );
-        assert!(
-            capabilities
-                .iter()
                 .any(|capability| capability.qualified_id() == "docker.list_containers")
         );
         assert!(
@@ -3024,7 +2995,7 @@ mod tests {
         use voidb_core::CapabilityExecutionMode;
 
         let capabilities = supported_capabilities(&empty_discovery());
-        assert_eq!(capabilities.len(), 141);
+        assert_eq!(capabilities.len(), 128);
         assert!(capabilities.iter().all(|capability| {
             !capability.supports_session_execution() || capability.session_handoff.is_some()
         }));
@@ -3059,8 +3030,6 @@ mod tests {
                 "redis.monitor_read",
                 "redis.pubsub_read",
                 "redis.stream_read",
-                "s3.transfer",
-                "s3.transfer_status",
                 "ssh.forward_open",
                 "ssh.forward_status",
                 "ssh.terminal_read",
@@ -3183,7 +3152,6 @@ mod tests {
                 "mysql": [9, 7, 0, 2],
                 "postgres": [9, 7, 0, 2],
                 "redis": [11, 7, 3, 1],
-                "s3": [13, 11, 2, 0],
                 "sqlite": [9, 7, 0, 2],
                 "ssh": [15, 6, 7, 2],
                 "sync": [6, 6, 0, 0],
@@ -3397,43 +3365,9 @@ mod tests {
     }
 
     #[test]
-    fn storage_and_ssh_release_candidate_catalog_is_bounded_and_gated() {
+    fn ssh_release_candidate_catalog_is_bounded_and_gated() {
         let discovery = empty_discovery();
-        let s3 = capabilities_for_plugin("s3", &discovery).expect("s3 capabilities");
         let ssh = capabilities_for_plugin("ssh", &discovery).expect("ssh capabilities");
-
-        for id in ["put", "delete", "mkdir"] {
-            let capability = find_capability(&s3, id);
-            assert!(capability.destructive, "s3.{id} is destructive");
-            assert!(
-                capability.supports_dry_run,
-                "s3.{id} supports dry-run promotion gate"
-            );
-            assert_eq!(capability.risk, CapabilityRiskLevel::Destructive);
-            assert_permission(capability, "connection.write");
-            assert_permission(capability, &format!("s3.{id}"));
-        }
-
-        let s3_list = find_capability(&s3, "list");
-        assert_eq!(
-            s3_list.output_schema["properties"]["limit"]["maximum"],
-            json!(500)
-        );
-        assert_eq!(
-            s3_list.output_schema["properties"]["next_cursor"]["type"][0],
-            "string"
-        );
-        let s3_get = find_capability(&s3, "get");
-        assert_eq!(
-            s3_get.input_schema["properties"]["max_bytes"]["maximum"],
-            json!(1024 * 1024)
-        );
-        assert!(
-            s3_get
-                .output_schema
-                .to_string()
-                .contains("content_truncated")
-        );
 
         for id in ["exec", "sftp_put", "sftp_mkdir", "sftp_rm"] {
             let capability = find_capability(&ssh, id);
@@ -3474,75 +3408,9 @@ mod tests {
     }
 
     #[test]
-    fn storage_plugins_map_to_one_fail_closed_transfer_lifecycle() {
-        let s3 = voidb_plugin_s3::s3_transfer_contract();
-        s3.validate().expect("valid S3 transfer contract");
-
-        assert_eq!(s3.protocol_version, 1);
-        assert!(
-            s3.chunking
-                .modes
-                .contains(&voidb_core::AgentTransferChunkMode::Multipart)
-        );
-        assert_eq!(s3.resume.mode, voidb_core::AgentTransferResumeMode::Exact);
-
-        for capabilities in [s3_capabilities()] {
-            for capability in capabilities {
-                if matches!(
-                    capability.id.as_str(),
-                    "transfer" | "transfer_status" | "lock_acquire" | "lock_release"
-                ) {
-                    let handoff = capability
-                        .session_handoff
-                        .expect("stateful transfer capability requires a session handoff");
-                    assert_eq!(
-                        handoff.purpose,
-                        voidb_core::PluginSessionPurpose::FileTransfer
-                    );
-                    assert!(
-                        handoff
-                            .capabilities
-                            .contains(&format!("{}.transfer", capability.plugin_id))
-                    );
-                    assert!(
-                        handoff
-                            .capabilities
-                            .contains(&format!("{}.transfer_status", capability.plugin_id))
-                    );
-                    let validator = jsonschema::validator_for(&capability.output_schema)
-                        .expect("transfer output schema compiles");
-                    if capability.id == "transfer_status" {
-                        assert!(validator.is_valid(&json!({
-                            "active": false,
-                            "event": null
-                        })));
-                    }
-                } else {
-                    assert!(capability.session_handoff.is_none());
-                }
-            }
-        }
-    }
-
-    #[test]
     fn local_filesystem_boundary_capability_policy_is_scoped_and_explicit() {
         let discovery = empty_discovery();
-        let s3 = capabilities_for_plugin("s3", &discovery).expect("s3 capabilities");
         let ssh = capabilities_for_plugin("ssh", &discovery).expect("ssh capabilities");
-
-        for capability in [
-            find_capability(&s3, "sync_plan"),
-        ] {
-            assert_eq!(capability.risk, CapabilityRiskLevel::ReadOnly);
-            assert!(!capability.authorization.capability_wide_allowed);
-            assert_permission(capability, "local.scan");
-            let required = capability.input_schema["required"]
-                .as_array()
-                .expect("local scope required fields");
-            for field in ["local_root", "local_path"] {
-                assert!(required.iter().any(|value| value == field));
-            }
-        }
 
         let get = find_capability(&ssh, "sftp_get");
         assert_eq!(get.risk, CapabilityRiskLevel::Mutating);
@@ -4303,89 +4171,9 @@ mod tests {
         assert_eq!(data.runtime.kind, "builtin");
     }
 
-    #[tokio::test]
-    async fn s3_put_dry_run_does_not_open_target_connection() {
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![s3_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let data = run_invocation(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "s3.put".into(),
-                profile_ref: "objects".into(),
-                input: json!({
-                    "bucket": "missing-bucket",
-                    "key": "agent/probe.txt",
-                    "content_text": "hello"
-                }),
-                timeout_ms: None,
-                dry_run: true,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect("s3 put dry-run");
-
-        assert_eq!(data.plugin_id, "s3");
-        assert_eq!(data.output["dry_run"], true);
-        assert_eq!(data.output["operation"], "put");
-        assert_eq!(data.output_summary["dry_run"], true);
-        assert_eq!(data.output_summary["operation"], "put");
-        assert_eq!(data.runtime.kind, "builtin");
-        let encoded = serde_json::to_string(&data).expect("serialize data");
-        assert!(!encoded.contains("hello"));
-    }
-
-    #[tokio::test]
-    async fn destructive_storage_invocations_require_ack_or_dry_run() {
-        let s3_ctx = CliContext::new(AppConfig {
-            connections: vec![s3_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let s3_error = run_invocation(
-            &s3_ctx,
-            InvokeRunOptions {
-                capability_ref: "s3.delete".into(),
-                profile_ref: "objects".into(),
-                input: json!({
-                    "bucket": "missing-bucket",
-                    "key": "agent/probe.txt"
-                }),
-                timeout_ms: None,
-                dry_run: false,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect_err("s3 destructive denied");
-
-        assert_eq!(s3_error.category, CapabilityErrorCategory::Policy);
-        assert_eq!(s3_error.code, "policy.destructive_denied_by_default");
-        assert_eq!(s3_error.details["qualified_id"], "s3.delete");
-    }
-
     #[test]
-    fn storage_and_ssh_policy_denials_have_redacted_audit_context() {
+    fn ssh_policy_denials_have_redacted_audit_context() {
         for (capability_ref, profile_ref, input, sensitive_value) in [
-            (
-                "s3.put",
-                "objects",
-                json!({
-                    "bucket": "release-candidate",
-                    "key": "agent/probe.txt",
-                    "content_text": "payload-secret"
-                }),
-                "payload-secret",
-            ),
             (
                 "ssh.exec",
                 "shell",
@@ -4452,17 +4240,6 @@ mod tests {
                 }),
                 "/Users/private/approved-downloads",
                 "../outside.txt",
-            ),
-            (
-                "s3.sync_plan",
-                "objects",
-                json!({
-                    "bucket": "reports",
-                    "local_root": "/Volumes/private/数据",
-                    "local_path": "财务/预算",
-                }),
-                "/Volumes/private/数据",
-                "财务/预算",
             ),
         ] {
             let error = CapabilityError {
@@ -5475,25 +5252,6 @@ mod tests {
                     "private_key_path": "/home/deploy/.ssh/id_ed25519",
                     "passphrase": "key-passphrase"
                 }
-            })),
-        }
-    }
-
-    fn s3_connection() -> ConnectionConfig {
-        ConnectionConfig {
-            name: "objects".into(),
-            db_type: DatabaseType::Plugin,
-            plugin_id: Some("s3".into()),
-            plugin_config: Some(json!({
-                "provider": {
-                    "type": "Aws",
-                    "region": "us-east-1"
-                },
-                "bucket": null,
-                "auth": {
-                    "type": "Auto"
-                },
-                "timeout": 30
             })),
         }
     }

@@ -130,14 +130,6 @@ const PLUGIN_EXPERIENCE: &[PluginExperience] = &[
         known_limit: "Cluster/provider behavior remains outside deterministic local coverage.",
     },
     PluginExperience {
-        plugin_id: "s3",
-        release_posture: "release_candidate",
-        standalone_tui: true,
-        tui_context_handoff: "None; capability and agent-owned session only",
-        validation_coverage: "S3 plugin tests; local-filesystem boundary gate; S3 fixture smoke; `scripts/tui-quality-gate.sh`",
-        known_limit: "Provider-specific multipart and consistency behavior needs opt-in fixture evidence.",
-    },
-    PluginExperience {
         plugin_id: "sqlite",
         release_posture: "release_candidate",
         standalone_tui: false,

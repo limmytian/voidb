@@ -14,13 +14,11 @@ The committed output is `docs/agent-capability-matrix.md`. Regenerate with `carg
 | `docker` | release_candidate | 18 | destructive:2, external_side_effect:4, read_only:12 | session_only, stateless | 30000 | 5 | yes | yes | Bounded current-view share with local operation review | `scripts/check-infrastructure-live-session-conformance.sh`; Docker plugin tests; `scripts/tui-quality-gate.sh` | Provider-specific daemon behavior still requires an opt-in disposable live fixture. |
 | `duckdb` | beta | 9 | destructive:2, read_only:7 | both, stateless | 30000, 60000 | 1 | yes | no | None; capability and agent-owned session only | DuckDB plugin tests; CLI invoke tests; Core SQL contract | Bundled native DuckDB makes clean builds and full gates materially slower. |
 | `elasticsearch` | release_candidate | 11 | destructive:2, read_only:9 | session_only, stateless | 30000 | 1 | yes | no | None; capability and agent-owned session only | `scripts/check-data-search-live-session-conformance.sh`; Elasticsearch plugin tests | Disposable target evidence remains an opt-in promotion gate. |
-| `email` | release_candidate | 13 | destructive:1, external_side_effect:4, read_only:8 | session_only, stateless | 5000, 30000, 60000, 120000 | 1 | yes | yes | None; capability and agent-owned session only | Email plugin tests; `scripts/email-fixture-smoke.sh`; `scripts/tui-quality-gate.sh` | Real-provider SMTP/IMAP interoperability and TLS evidence remain opt-in. |
 | `kubernetes` | release_candidate | 16 | destructive:4, external_side_effect:2, read_only:10 | session_only, stateless | 30000 | 4 | yes | yes | Bounded current-view share with local operation review | `scripts/check-infrastructure-live-session-conformance.sh`; Kubernetes plugin tests; `scripts/tui-quality-gate.sh` | Cluster-specific RBAC and admission behavior still needs an opt-in disposable fixture. |
 | `mongodb` | release_candidate | 15 | destructive:6, read_only:9 | both, session_only, stateless | 30000 | 2 | yes | no | None; capability and agent-owned session only | `scripts/check-data-search-live-session-conformance.sh`; MongoDB plugin tests | Replica-set and provider-specific behavior remains an opt-in live-fixture claim. |
 | `mysql` | release_candidate | 9 | destructive:2, read_only:7 | both, stateless | 30000, 60000 | 1 | yes | no | None; capability and agent-owned session only | MySQL plugin tests; CLI invoke tests; Core SQL contract; MySQL fixture smoke | Server-version and provider-specific compatibility still requires fixture evidence. |
 | `postgres` | release_candidate | 9 | destructive:2, read_only:7 | both, stateless | 30000, 60000 | 1 | yes | no | None; capability and agent-owned session only | PostgreSQL plugin tests; CLI invoke tests; Core SQL contract | Live PostgreSQL fixture coverage remains opt-in. |
 | `redis` | release_candidate | 11 | destructive:4, external_side_effect:1, read_only:6 | both, session_only, stateless | 30000 | 3 | yes | no | None; capability and agent-owned session only | `scripts/check-data-search-live-session-conformance.sh`; Redis plugin tests | Cluster/provider behavior remains outside deterministic local coverage. |
-| `s3` | release_candidate | 13 | destructive:7, read_only:6 | session_only, stateless | 5000, 30000, 60000, 900000 | 2 | yes | yes | None; capability and agent-owned session only | S3 plugin tests; local-filesystem boundary gate; S3 fixture smoke; `scripts/tui-quality-gate.sh` | Provider-specific multipart and consistency behavior needs opt-in fixture evidence. |
 | `sqlite` | release_candidate | 9 | destructive:2, read_only:7 | both, stateless | 30000, 60000 | 1 | yes | no | None; capability and agent-owned session only | SQLite plugin tests; CLI invoke tests; Core SQL contract | Local filesystem policy applies; there is intentionally no human data-inspector TUI. |
 | `ssh` | release_candidate | 15 | destructive:8, mutating:1, read_only:6 | both, session_only, stateless | 30000 | 1 | yes | yes | Explicit bounded live-PTY share with one-shot local review | SSH plugin tests; external-agent boundary gate; SSH fixture smoke; `scripts/tui-quality-gate.sh` | Host-key, authentication-agent, and terminal-application behavior needs opt-in live evidence. |
 | `sync` | beta_opt_in | 6 | destructive:2, read_only:4 | stateless | 5000, 10000, 30000, 120000, 180000 | 0 | no | no | None; encrypted plugin-owned operations only | `scripts/release-sync-smoke.sh`; Sync plugin and standalone server tests | Must remain opt-in; no generic live handle, plaintext key, or decrypted bundle may cross the boundary. |
@@ -127,19 +125,6 @@ The committed output is `docs/agent-capability-matrix.md`. Regenerate with `carg
 | `redis.set` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
 | `redis.stream_read` | read_only | session_only | 30000 | yes | session call-and-source cancel + stop-observation close | no | declared | 1 |
 | `redis.ttl` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `s3.buckets` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `s3.copy` | destructive | stateless | 60000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `s3.delete` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `s3.get` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `s3.list` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `s3.mkdir` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `s3.move` | destructive | stateless | 60000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `s3.presign` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `s3.put` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `s3.stat` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `s3.sync_plan` | read_only | stateless | 60000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `s3.transfer` | destructive | session_only | 900000 | yes | session call-cancel + close | no | declared | — |
-| `s3.transfer_status` | read_only | session_only | 5000 | yes | session call-cancel + close | no | declared | — |
 | `sqlite.catalogs` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
 | `sqlite.describe_table` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
 | `sqlite.exec` | destructive | both | 30000 | no | invoke caller-token/SIGINT; session call-cancel + close | yes | declared | — |

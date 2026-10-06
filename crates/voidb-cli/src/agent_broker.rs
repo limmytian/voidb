@@ -5892,7 +5892,6 @@ fn register_session_factories(
             | "elasticsearch"
             | "docker"
             | "kubernetes"
-            | "s3"
             | "webdav"
     ) {
         return Ok(());
@@ -5979,11 +5978,6 @@ fn register_session_factories(
                     .map_err(|_| anyhow!("granted Kubernetes profile configuration is invalid"))?,
             ),
         )),
-        #[cfg(feature = "s3")]
-        "s3" => host.register_factory(Arc::new(voidb_plugin_s3::S3AgentSessionFactory::new(
-            serde_json::from_value(config)
-                .map_err(|_| anyhow!("granted S3 profile configuration is invalid"))?,
-        ))),
         _ => {}
     }
     Ok(())
@@ -7237,7 +7231,6 @@ mod tests {
         for (plugin_id, capability_id) in [
             ("ssh", "ssh.sftp_get"),
             ("ssh", "ssh.sftp_put"),
-            ("s3", "s3.sync_plan"),
         ] {
             let mut scoped_only = grant();
             scoped_only.plugin_id = plugin_id.into();
@@ -8087,7 +8080,6 @@ mod tests {
             "postgres",
             "duckdb",
             "ssh",
-            "s3",
             "sync",
             "docker",
             "kubernetes",
@@ -8265,7 +8257,6 @@ mod tests {
             "postgres",
             "duckdb",
             "ssh",
-            "s3",
             "docker",
             "kubernetes",
             "mongodb",

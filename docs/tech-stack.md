@@ -71,7 +71,6 @@
 | bollard | 0.18 | Docker Engine API client | `voidb-plugin-docker` |
 | kube | 0.99 | Kubernetes API client (rustls-tls, ws features) | `voidb-plugin-kubernetes` |
 | k8s-openapi | 0.24 | Kubernetes API types (v1.32) | `voidb-plugin-kubernetes`, `voidb-tui`, `voidb-cli` |
-| rust-s3 | 0.37 | S3-compatible object storage client | `voidb-plugin-s3` |
 | reqwest | 0.12 | HTTP client (json, native-tls features) | `voidb-plugin-elasticsearch` |
 
 ### Utilities

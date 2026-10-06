@@ -73,8 +73,6 @@ fn build_cli_manager() -> CliPluginManager {
     cli_manager.register(voidb_plugin_docker::create_docker_cli_plugin());
     #[cfg(feature = "kubernetes")]
     cli_manager.register(voidb_plugin_kubernetes::create_k8s_cli_plugin());
-    #[cfg(feature = "s3")]
-    cli_manager.register(voidb_plugin_s3::create_s3_cli_plugin());
     #[cfg(feature = "elasticsearch")]
     cli_manager.register(voidb_plugin_elasticsearch::create_es_cli_plugin());
     #[cfg(feature = "mongodb")]

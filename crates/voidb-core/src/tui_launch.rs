@@ -287,7 +287,7 @@ mod tests {
             Some(&"grant:tui:profile:ssh-prod:terminal".to_string())
         );
         assert_eq!(plan.credential_grant.credential_refs.len(), 1);
-        assert_eq!(plan.raw_input, true);
+        assert!(plan.raw_input);
     }
 
     #[test]

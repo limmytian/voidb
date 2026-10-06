@@ -117,7 +117,7 @@ identifiers are restricted to fixture state and redacted evidence.
 
 ## Promoted Plugin Smoke Helper
 
-Release-candidate preparation for SSH, S3, and MySQL can use
+Release-candidate preparation for SSH and MySQL can use
 the secret-free helper:
 
 ```bash
@@ -128,31 +128,15 @@ To focus one plugin:
 
 ```bash
 scripts/release-plugin-smoke.sh --plugin ssh
-scripts/release-plugin-smoke.sh --plugin s3
 ```
 
 The helper intentionally runs only local deterministic tests and
 `git diff --check`; live service smoke remains opt-in and is documented in
 Release Plugin Smoke.
 
-S3/WebDAV Agent transfer changes also use the focused shared contract and live
-fixture reliability gate:
-
-```bash
-cargo test -p voidb-core transfer
-cargo test -p voidb-plugin-s3
-cargo test -p voidb-plugin-webdav
-cargo test -p voidb-cli storage_plugins_map_to_one_fail_closed_transfer_lifecycle
-scripts/check-local-filesystem-boundaries.sh
-scripts/check-external-agent-interaction.sh
-scripts/s3-fixture-smoke.sh --report target/tmp/s3-transfer-reliability.md
-scripts/webdav-fixture-smoke.sh --report target/tmp/webdav-transfer-reliability.md
-```
-
-The two live wrappers include both their established capability smoke and the
-Agent reliability examples. They must tear down generated containers and
-report no silent corruption, committed partial destination, leaked multipart
-state, or leaked WebDAV lock.
+S3 and other external process plugins are verified within their independent
+repositories (`voidb-plugin-s3`, `voidb-plugin-webdav`, `voidb-plugin-email`,
+`voidb-plugin-jenkins`).
 
 ## Local Docker Fixture Helper
 
@@ -668,14 +652,14 @@ slice summary and keep the diff limited to the selected warning group.
 | Agent capability matrix | Pull request touching built-in capability metadata, session handoffs, standalone TUI registration, or readiness posture | `scripts/check-agent-capability-matrix.sh` | Regenerates the repository-owned matrix from runtime definitions and fails on added, removed, changed, or undocumented rows. |
 | Fast core | Pull request, every push | `cargo test -p voidb-core` | Catches shared API, crypto, config, widget regressions. |
 | Fast CLI | Pull request touching `crates/voidb-cli` | `cargo test -p voidb-cli` | Catches profile, invoke, audit, and plugin command regressions. |
-| Promoted plugin smoke | Release-candidate prep or plugin smoke doc changes | `scripts/release-plugin-smoke.sh` | Runs secret-free focused checks for SSH, S3, and MySQL; local fixture wrappers cover promoted Docker-backed services such as Kubernetes and MongoDB when provisioned; live service commands stay opt-in. |
+| Promoted plugin smoke | Release-candidate prep or plugin smoke doc changes | `scripts/release-plugin-smoke.sh` | Runs secret-free focused checks for SSH and MySQL; local fixture wrappers cover promoted Docker-backed services such as Kubernetes and MongoDB when provisioned; live service commands stay opt-in. |
 | Sync smoke | Release-candidate prep or sync client/server changes | `scripts/release-sync-smoke.sh` | Runs sync plugin e2e tests and standalone sync server smoke with disposable local state. |
 | Package smoke | Release-candidate prep or package automation changes | `scripts/stage-release-artifacts.sh --build`; `scripts/package-smoke.sh --artifact-root target/package/voidb-<version>-<platform>` | Stages default TUI, CLI, and sync-server artifacts; verifies checksums, manifest consistency, executable bits, CLI and sync-server entry points, and TUI prerequisites. Use Package CI Matrix for macOS, Linux, Windows, and runner-skip rules. |
 | First protocol pair | Pull request touching SQLite/Redis capabilities or generic invoke | `cargo test -p voidb-plugin-sqlite`; `cargo test -p voidb-plugin-redis`; `cargo test -p voidb-cli invoke` | Proves the SQLite/Redis reference capability pair, including pagination, dry-run, structured target errors, and redaction. |
 | MySQL capability | Pull request touching MySQL SQL capabilities or diagnostics | `cargo check -p voidb-plugin-mysql --example fixture_smoke`; `cargo test -p voidb-plugin-mysql`; `cargo test -p voidb-cli invoke`; `cargo test -p voidb-core sql_contract`; `scripts/mysql-fixture-smoke.sh --report target/tmp/mysql-fixture-smoke-evidence.md` | Proves the first networked SQL capability path through a disposable local fixture without external credentials. |
 | MongoDB capability | Pull request touching MongoDB document capabilities or diagnostics | `cargo check -p voidb-plugin-mongodb --example fixture_smoke`; `cargo test -p voidb-plugin-mongodb`; `cargo test -p voidb-cli invoke`; `scripts/mongodb-fixture-smoke.sh --report target/tmp/mongodb-fixture-smoke-evidence.md` | Proves the MongoDB capability path through a disposable local fixture without external credentials. |
 | External-agent interaction | Pull request touching SSH session sharing, Docker/Kubernetes/Jenkins current-view sharing, capability-only plugin boundaries, or related docs | `scripts/check-external-agent-interaction.sh`; relevant plugin tests from the focused group above | Prevents retired conversation UI, protects capability-only plugins, and verifies session/context-share operation gates. |
-| Local filesystem boundary | Pull request touching agent-triggered local reads, writes, scans, transfer staging, SSH SFTP, S3/WebDAV sync planning, or authorization/audit projection | `scripts/check-local-filesystem-boundaries.sh`; `scripts/check-external-agent-interaction.sh` | Proves traversal/alias rejection, Unicode handling, no-follow behavior, root-identity conflicts, no-replace races, bounded scans, capability-wide denial, and audit redaction across the affected plugins. |
+| Local filesystem boundary | Pull request touching agent-triggered local reads, writes, scans, transfer staging, SSH SFTP, or authorization/audit projection | `scripts/check-local-filesystem-boundaries.sh`; `scripts/check-external-agent-interaction.sh` | Proves traversal/alias rejection, Unicode handling, no-follow behavior, root-identity conflicts, no-replace races, bounded scans, capability-wide denial, and audit redaction across the affected plugins. |
 | SSH capability and TUI smoke | Pull request touching SSH capabilities, profiles, host-key policy, terminal/SFTP/forwarding sessions, external-agent sharing, or generic invoke | `cargo test -p voidb-plugin-ssh`; `cargo test -p voidb-cli invoke`; `cargo test -p voidb-core profile_adapter`; `cargo test -p voidb-core profile_store`; for sharing changes also `cargo test -p voidb-core assist`, `cargo test -p voidb-core session`, `cargo test -p voidb-cli agent_broker`, `scripts/check-external-agent-interaction.sh`, and the SSH TUI `--evidence` command above | Proves SSH capability metadata, strict non-interactive host-key errors, destructive gates, profile redaction, session-share redaction/confirmation/revoke behavior, and the documented manual fixture smoke boundary. |
 | Process plugin runtime/package management | Pull request touching process-plugin discovery, manifests, trust roots, package install/update/lifecycle commands, stdio runtime, or process invocation | `cargo test -p voidb-core process_plugin`; `cargo test -p voidb-core process_plugin_runtime`; `cargo test -p voidb-cli plugin`; `cargo test -p voidb-cli invoke` | Proves deterministic local process-plugin discovery, package validation, compatibility diagnostics, lifecycle handling, and redacted runtime failures. |
 | Fast TUI | Pull request touching `crates/voidb-tui` | `cargo test -p voidb-tui` | Builds the default lightweight TUI surface: shell, tab manager, and Connection Manager only. |
