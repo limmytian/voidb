@@ -38,6 +38,13 @@ pub use voidb_core::{
     PROCESS_PLUGIN_SUPPORTED_PROTOCOL_VERSIONS, PROCESS_PLUGIN_SUPPORTED_TRANSPORTS,
 };
 
+pub mod sql;
+
+pub use sql::{
+    GenericSqlBackend, SqlCatalogItem, SqlExecResult, SqlQueryResult, SqlTableDescription,
+    SqlTableItem, SqlValue, generic_sql_capabilities, mount_generic_sql_router,
+};
+
 pub type SdkResult<T> = Result<T, ProcessPluginSdkError>;
 
 #[derive(Debug, Error)]
