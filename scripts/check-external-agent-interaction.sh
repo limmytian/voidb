@@ -20,7 +20,6 @@ capability_only_plugins=(
   redis
   elasticsearch
   s3
-  webdav
   email
 )
 

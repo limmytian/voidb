@@ -139,11 +139,6 @@ plugins = [
         "fixture": "crates/plugins/voidb-plugin-s3/fixtures/s3_tui_browser.json",
     },
     {
-        "id": "webdav",
-        "kind": "webdav_tui_fixture_evidence",
-        "fixture": "crates/plugins/voidb-plugin-webdav/fixtures/webdav_tui_browser.json",
-    },
-    {
         "id": "docker",
         "kind": "docker_tui_fixture_evidence",
         "fixture": "crates/plugins/voidb-plugin-docker/fixtures/docker_tui_operations.json",

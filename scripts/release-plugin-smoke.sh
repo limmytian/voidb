@@ -78,17 +78,11 @@ smoke_s3() {
   INVOKE_SMOKE=1
 }
 
-smoke_webdav() {
-  run cargo test -p voidb-plugin-webdav --quiet
-  INVOKE_SMOKE=1
-}
-
 case "${PLUGIN}" in
   all)
     smoke_email
     smoke_ssh
     smoke_s3
-    smoke_webdav
     ;;
   email)
     smoke_email
@@ -98,9 +92,6 @@ case "${PLUGIN}" in
     ;;
   s3)
     smoke_s3
-    ;;
-  webdav)
-    smoke_webdav
     ;;
   *)
     echo "unsupported plugin: ${PLUGIN}" >&2

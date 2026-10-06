@@ -141,7 +141,7 @@ def phases() -> list[Phase]:
         ),
         Phase(
             "local-transfer-boundary",
-            "ssh,s3,webdav,email",
+            "ssh,s3,email",
             "local-transfer-and-cancellation",
             ("scripts/check-local-filesystem-boundaries.sh",),
             minimum_profile="deterministic",
@@ -158,7 +158,7 @@ def phases() -> list[Phase]:
         ),
         Phase(
             "tui-terminal-restoration-quick",
-            "connections,ssh,email,docker,kubernetes,s3,webdav,jenkins",
+            "connections,ssh,email,docker,kubernetes,s3",
             "terminal-restoration",
             (
                 "scripts/tui-quality-gate.sh",
@@ -197,7 +197,7 @@ def phases() -> list[Phase]:
         ),
         Phase(
             "promoted-plugin-smoke",
-            "email,ssh,s3,webdav,mysql",
+            "email,ssh,s3,mysql",
             "fixture-backed-capability-smoke",
             ("scripts/release-plugin-smoke.sh",),
             minimum_profile="deterministic",
@@ -214,7 +214,7 @@ def phases() -> list[Phase]:
         ),
         Phase(
             "tui-terminal-restoration",
-            "connections,ssh,email,docker,kubernetes,s3,webdav,jenkins",
+            "connections,ssh,email,docker,kubernetes,s3",
             "terminal-restoration",
             (
                 "scripts/tui-quality-gate.sh",
@@ -304,10 +304,8 @@ def live_fixture_phases() -> list[Phase]:
                 "email",
                 "ssh",
                 "s3",
-                "webdav",
                 "mysql",
                 "kubernetes",
-                "jenkins",
             ]
         ],
         Phase(

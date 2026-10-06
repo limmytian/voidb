@@ -7,7 +7,6 @@ cd "$ROOT"
 cargo test -p voidb-core local_filesystem_boundary_
 cargo test -p voidb-plugin-ssh local_filesystem_boundary_
 cargo test -p voidb-plugin-s3 local_filesystem_boundary_
-cargo test -p voidb-plugin-webdav local_filesystem_boundary_
 cargo test -p voidb-cli local_filesystem_boundary_
 cargo test -p voidb-cli default_grant_fails_closed_on_non_read_only_capabilities
 
