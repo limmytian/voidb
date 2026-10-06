@@ -98,14 +98,6 @@ const PLUGIN_EXPERIENCE: &[PluginExperience] = &[
         known_limit: "Real-provider SMTP/IMAP interoperability and TLS evidence remain opt-in.",
     },
     PluginExperience {
-        plugin_id: "jenkins",
-        release_posture: "release_candidate",
-        standalone_tui: true,
-        tui_context_handoff: "Bounded current-view share with local operation review",
-        validation_coverage: "`scripts/check-infrastructure-live-session-conformance.sh`; Jenkins plugin tests; `scripts/tui-quality-gate.sh`",
-        known_limit: "Controller-specific Pipeline and authentication behavior still needs opt-in live evidence.",
-    },
-    PluginExperience {
         plugin_id: "kubernetes",
         release_posture: "release_candidate",
         standalone_tui: true,

@@ -681,7 +681,7 @@ fn agent_command() -> Command {
                             Arg::new("capability")
                                 .required(true)
                                 .value_name("PLUGIN.CAPABILITY")
-                                .help("Qualified capability, for example jenkins.jobs"),
+                                .help("Qualified capability, for example docker.containers"),
                         )
                         .arg(
                             Arg::new("profile")
@@ -5892,7 +5892,6 @@ fn register_session_factories(
             | "elasticsearch"
             | "docker"
             | "kubernetes"
-            | "jenkins"
             | "s3"
             | "webdav"
             | "email"
@@ -5979,13 +5978,6 @@ fn register_session_factories(
             voidb_plugin_kubernetes::K8sAgentSessionFactory::new(
                 serde_json::from_value(config)
                     .map_err(|_| anyhow!("granted Kubernetes profile configuration is invalid"))?,
-            ),
-        )),
-        #[cfg(feature = "jenkins")]
-        "jenkins" => host.register_factory(Arc::new(
-            voidb_plugin_jenkins::JenkinsAgentSessionFactory::new(
-                serde_json::from_value(config)
-                    .map_err(|_| anyhow!("granted Jenkins profile configuration is invalid"))?,
             ),
         )),
         #[cfg(feature = "s3")]
@@ -7014,11 +7006,11 @@ mod tests {
                 "voidb-cli",
                 "agent",
                 "exec",
-                "jenkins.jobs",
+                "docker.containers",
                 "--profile",
-                "prod-jenkins",
+                "prod-docker",
                 "--input-json",
-                r#"{"folder":"platform"}"#,
+                r#"{"all":true}"#,
                 "--page-limit",
                 "25",
             ])
@@ -7026,18 +7018,18 @@ mod tests {
         let (_, agent) = matches.subcommand().expect("agent command");
         let (_, exec) = agent.subcommand().expect("exec command");
         let input = parse_agent_exec_input(exec).expect("agent exec input");
-        let argv = agent_exec_argv(exec, "jenkins.jobs", "profile:jenkins", &input);
+        let argv = agent_exec_argv(exec, "docker.containers", "profile:docker", &input);
 
         assert_eq!(
             argv,
             vec![
                 "invoke",
                 "run",
-                "jenkins.jobs",
+                "docker.containers",
                 "--profile",
-                "id:profile:jenkins",
+                "id:profile:docker",
                 "--input-json",
-                r#"{"folder":"platform"}"#,
+                r#"{"all":true}"#,
                 "--format",
                 "json",
                 "--page-limit",
@@ -7056,9 +7048,9 @@ mod tests {
                 "voidb-cli",
                 "agent",
                 "exec",
-                "jenkins.jobs",
+                "docker.containers",
                 "--profile",
-                "prod-jenkins",
+                "prod-docker",
                 "--client-id",
                 "agent",
                 "--task-id",
@@ -7076,13 +7068,13 @@ mod tests {
         assert_eq!(principal.task_id, "task-123");
         assert_eq!(principal.instance_id.as_deref(), Some("desktop"));
 
-        let (scope, risk) = exact_agent_exec_scope("jenkins", "jenkins.jobs", json!({}))
-            .expect("exact Jenkins scope");
+        let (scope, risk) = exact_agent_exec_scope("docker", "docker.containers", json!({}))
+            .expect("exact Docker scope");
         assert_eq!(risk, voidb_core::CapabilityRiskLevel::ReadOnly);
         assert!(matches!(
             scope,
             AgentAuthorizationScope::ExactInvocation { capability_id, .. }
-                if capability_id == "jenkins.jobs"
+                if capability_id == "docker.containers"
         ));
     }
 
@@ -7107,7 +7099,7 @@ mod tests {
             assert!(!help.contains(hidden), "exec help exposed {hidden}");
         }
         for visible in [
-            "jenkins.jobs",
+            "docker.containers",
             "--profile",
             "--input-json",
             "--purpose",
@@ -7155,12 +7147,12 @@ mod tests {
     #[test]
     fn agent_exec_jit_prompt_exposes_the_interactive_cli_review_path() {
         let prompt = agent_exec_review_prompt(
-            "jenkins",
+            "docker",
             "prod\u{1b}[31m",
             "voidb-cli agent request review auth-request:00000000-0000-4000-8000-000000000000",
         );
 
-        assert!(prompt.contains("Authorization required for jenkins/prod"));
+        assert!(prompt.contains("Authorization required for docker/prod"));
         assert!(prompt.contains("password prompt hides input"));
         assert!(prompt.contains(
             "voidb-cli agent request review auth-request:00000000-0000-4000-8000-000000000000"
@@ -7860,29 +7852,6 @@ mod tests {
         assert!(validate_grant_capabilities("ssh", &full_access, stateless, false).is_err());
         assert!(validate_grant_capabilities("ssh", &full_access, stateless, true).is_ok());
 
-        let (preset, jenkins_full_access) =
-            resolve_authorization_scope("jenkins", stateless, Some("full_access"), None)
-                .expect("central Jenkins full-access scope");
-        assert_eq!(preset, AgentAuthorizationPresetKind::FullAccess);
-        assert_eq!(jenkins_full_access.len(), 9);
-        for capability in [
-            "jenkins.jobs",
-            "jenkins.job_detail",
-            "jenkins.pipeline",
-            "jenkins.trigger_build",
-            "jenkins.abort_build",
-            "jenkins.cancel_queue_item",
-        ] {
-            assert!(jenkins_full_access.contains(&capability.into()));
-        }
-        assert!(!jenkins_full_access.contains(&"*".into()));
-        assert!(
-            validate_grant_capabilities("jenkins", &jenkins_full_access, stateless, false).is_err()
-        );
-        assert!(
-            validate_grant_capabilities("jenkins", &jenkins_full_access, stateless, true).is_ok()
-        );
-
         let (preset, custom) =
             resolve_authorization_scope("ssh", stateless, None, Some(vec!["ssh.sftp_rm".into()]))
                 .expect("explicit capabilities infer Custom");
@@ -7971,9 +7940,9 @@ mod tests {
                 "agent",
                 "authorize",
                 "--profile",
-                "jenkins",
+                "docker",
                 "--plugin",
-                "jenkins",
+                "docker",
                 "--preset",
                 "full_access",
                 "--allow-destructive",
@@ -8142,7 +8111,6 @@ mod tests {
             "kubernetes",
             "mongodb",
             "elasticsearch",
-            "jenkins",
             "sync",
         ] {
             let definitions = resolved_authorization_capabilities(Some(plugin_id))
@@ -8322,7 +8290,6 @@ mod tests {
             "kubernetes",
             "mongodb",
             "elasticsearch",
-            "jenkins",
         ] {
             let definitions = resolved_authorization_capabilities(Some(plugin_id))
                 .unwrap_or_else(|error| panic!("{plugin_id} catalog failed: {error}"));
@@ -10051,12 +10018,12 @@ mod tests {
         );
 
         let scope = AgentAuthorizationScope::ExactInvocation {
-            capability_id: "jenkins.jobs".into(),
+            capability_id: "docker.containers".into(),
             normalized_input: json!({}),
             invocation_fingerprint: "fingerprint".into(),
         };
         let summary = format_review_scope_summary(&scope);
-        assert!(summary.contains("Exact invocation: 'jenkins.jobs'"));
+        assert!(summary.contains("Exact invocation: 'docker.containers'"));
 
         let scope_cap = AgentAuthorizationScope::Capability {
             capability_id: "mysql.query".into(),

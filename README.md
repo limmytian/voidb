@@ -166,7 +166,7 @@ VoidB's plugin system allows support for any protocol or data source:
 | Kubernetes | Kubernetes API | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-kubernetes` |
 | WebDAV | WebDAV storage | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-webdav` |
 | S3 | S3-compatible object storage | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-s3` |
-| Jenkins | Jenkins CI | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-jenkins` |
+| Jenkins | Jenkins CI | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-jenkins](https://github.com/limmytian/voidb-plugin-jenkins) |
 | Sync | Encrypted config sync client | CLI client/server library surface | `crates/plugins/voidb-plugin-sync` |
 
 ### Create Your Own Plugin

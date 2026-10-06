@@ -113,30 +113,6 @@ fn fixtures() -> Vec<LiveFixture> {
             }),
             resume: None,
         },
-        LiveFixture {
-            event_capability: "jenkins.console_follow",
-            start: json!({
-                "resource": { "job_full_name": SECRET, "build_number": 7 },
-                "parameters": { "poll_interval_ms": 250 }
-            }),
-            resume: Some((AgentLiveSessionCursorKind::ByteOffset, "128")),
-        },
-        LiveFixture {
-            event_capability: "jenkins.build_wait",
-            start: json!({
-                "resource": { "job_full_name": SECRET, "build_number": 7 },
-                "parameters": { "poll_interval_ms": 250 }
-            }),
-            resume: None,
-        },
-        LiveFixture {
-            event_capability: "jenkins.queue_watch",
-            start: json!({
-                "resource": { "queue_id": 7 },
-                "parameters": { "poll_interval_ms": 250 }
-            }),
-            resume: None,
-        },
     ]
 }
 
@@ -430,7 +406,6 @@ async fn infrastructure_live_sessions_pass_shared_conformance() {
         family_counts,
         BTreeMap::from([
             ("docker".into(), 5),
-            ("jenkins".into(), 3),
             ("kubernetes".into(), 4),
         ])
     );
@@ -541,8 +516,6 @@ fn infrastructure_snapshot_and_live_capabilities_remain_cli_parity_pairs() {
         ("docker.inspect_container", "docker.stats_follow"),
         ("kubernetes.list", "kubernetes.watch_events"),
         ("kubernetes.logs", "kubernetes.logs_follow"),
-        ("jenkins.console", "jenkins.console_follow"),
-        ("jenkins.activity", "jenkins.queue_watch"),
     ] {
         let snapshot = capability_definition(snapshot);
         let live = capability_definition(live);

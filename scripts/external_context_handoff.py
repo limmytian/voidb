@@ -105,28 +105,6 @@ PLUGIN_CASES = (
             },
         },
     ),
-    PluginCase(
-        plugin_id="jenkins",
-        fixture="crates/plugins/voidb-plugin-jenkins/fixtures/jenkins_tui_operations.json",
-        first_frame_marker="Jenkins Builds",
-        deny_key=b"n",
-        context_env="VOIDB_JENKINS_AGENT_CONTEXT_DIR",
-        operation={
-            "kind": "capability_call",
-            "capability_id": "jenkins.trigger_build",
-            "input_summary": {
-                "action": "trigger",
-                "job_full_name": "api",
-                "target_label": "api",
-            },
-            "rationale": "Exercise the existing Jenkins review plan.",
-            "risk": "review",
-            "target": {
-                "kind": "capability",
-                "capability_id": "jenkins.trigger_build",
-            },
-        },
-    ),
 )
 
 

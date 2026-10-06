@@ -392,7 +392,7 @@ impl AgentSessionHost {
             })
             .map(|entry| entry.view.clone())
             .collect::<Vec<_>>();
-        sessions.sort_by(|left, right| left.created_at.cmp(&right.created_at));
+        sessions.sort_by_key(|left| left.created_at);
         sessions
     }
 

@@ -75,8 +75,6 @@ fn build_cli_manager() -> CliPluginManager {
     cli_manager.register(voidb_plugin_docker::create_docker_cli_plugin());
     #[cfg(feature = "kubernetes")]
     cli_manager.register(voidb_plugin_kubernetes::create_k8s_cli_plugin());
-    #[cfg(feature = "jenkins")]
-    cli_manager.register(voidb_plugin_jenkins::create_jenkins_cli_plugin());
     #[cfg(feature = "webdav")]
     cli_manager.register(voidb_plugin_webdav::create_webdav_cli_plugin());
     #[cfg(feature = "s3")]
@@ -442,10 +440,10 @@ mod tests {
                 "--task-id",
                 "task-1",
                 "--plugin",
-                "jenkins",
+                "docker",
                 "--generation",
                 "1",
-                "context:jenkins:1:1",
+                "context:docker:1:1",
             ],
         ] {
             let matches = parse_cli(&args);

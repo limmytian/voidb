@@ -44,7 +44,7 @@ impl CliPlugin for ContextCliPlugin {
                     Arg::new("plugin")
                         .long("plugin")
                         .value_name("PLUGIN_ID")
-                        .value_parser(["ssh", "docker", "kubernetes", "jenkins"])
+                        .value_parser(["ssh", "docker", "kubernetes"])
                         .help("Only discover contexts owned by one supported plugin"),
                 ),
             context_reference_command(
@@ -291,7 +291,7 @@ fn context_reference_command(command: Command) -> Command {
                 .long("plugin")
                 .required(true)
                 .value_name("PLUGIN_ID")
-                .value_parser(["ssh", "docker", "kubernetes", "jenkins"])
+                .value_parser(["ssh", "docker", "kubernetes"])
                 .help("Owning plugin ID"),
         )
         .arg(
@@ -399,6 +399,7 @@ fn principal_component(
     }
 }
 
+#[allow(clippy::vec_init_then_push)]
 fn default_catalog() -> Result<AgentContextStoreCatalog, AgentContextProtocolError> {
     let mut roots = Vec::new();
     #[cfg(feature = "ssh")]
@@ -412,11 +413,6 @@ fn default_catalog() -> Result<AgentContextStoreCatalog, AgentContextProtocolErr
     roots.push((
         "kubernetes",
         voidb_plugin_kubernetes::kubernetes_agent_context_store_root(),
-    ));
-    #[cfg(feature = "jenkins")]
-    roots.push((
-        "jenkins",
-        voidb_plugin_jenkins::jenkins_agent_context_store_root(),
     ));
 
     let mut sources = Vec::with_capacity(roots.len());
@@ -556,12 +552,12 @@ mod tests {
             "--task-id",
             "task-1",
             "--plugin",
-            "jenkins",
+            "docker",
             "--generation",
             "2",
             "--timeout-ms",
             "250",
-            "context:jenkins:1:1",
+            "context:docker:1:1",
         ]);
         assert_eq!(*wait.get_one::<u64>("timeout-ms").unwrap(), 250);
         assert_eq!(

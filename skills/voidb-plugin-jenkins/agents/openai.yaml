@@ -1,4 +1,0 @@
-interface:
-  display_name: "VoidB Jenkins Plugin"
-  short_description: "Guide for VoidB Jenkins work"
-  default_prompt: "Use $voidb-plugin-jenkins to update the VoidB Jenkins plugin, capabilities, CLI, or build TUI."

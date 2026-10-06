@@ -74,14 +74,13 @@ depends on. Examples:
 - Sync beta readiness or object-sync boundary changes:
   `scripts/release-sync-smoke.sh` and `cargo test -p voidb-core object_sync`
 - DuckDB table loading or service changes: `cargo test -p voidb-plugin-duckdb`
-- Docker/Kubernetes/Jenkins external-agent context and operation review:
+- Docker/Kubernetes external-agent context and operation review:
   `scripts/check-external-agent-interaction.sh`,
   `scripts/check-infrastructure-live-session-conformance.sh`,
   `cargo test -p voidb-core external_context`,
   `cargo test -p voidb-cli builtin::context`,
   `cargo test -p voidb-plugin-docker`,
-  `cargo test -p voidb-plugin-kubernetes`,
-  `cargo test -p voidb-plugin-jenkins`, and `git diff --check`
+  `cargo test -p voidb-plugin-kubernetes`, and `git diff --check`
 - Redis/MongoDB/Elasticsearch live-session or cursor changes:
   `scripts/check-data-search-live-session-conformance.sh`. Use
   `scripts/check-data-search-live-session-conformance.sh --live` when a local
@@ -349,15 +348,14 @@ DuckDB and Redis Release Readiness.
 
 ## Operations Plugin Capability Gates
 
-Docker, Kubernetes, MongoDB, Elasticsearch, and Jenkins expose agent-facing
+Docker, Kubernetes, MongoDB, and Elasticsearch expose agent-facing
 infrastructure, document/search, and CI capabilities. Changes to their generic
 invoke registration, bounded output contracts, destructive gates, or fixture
 promotion status should run:
 
 ```bash
 cargo test -p voidb-plugin-docker -p voidb-plugin-kubernetes \
-  -p voidb-plugin-mongodb -p voidb-plugin-elasticsearch \
-  -p voidb-plugin-jenkins capabilities
+  -p voidb-plugin-mongodb -p voidb-plugin-elasticsearch capabilities
 cargo test -p voidb-cli invoke
 git diff --check
 ```
@@ -366,26 +364,18 @@ These checks are secret-free and do not require live targets. Fixture-backed
 promotion results are recorded in
 Fixture-Backed Operations Plugin Promotion Smoke 2026-07-05.
 Docker completed disposable daemon smoke in Req50; Kubernetes, MongoDB,
-Elasticsearch, and Jenkins were still fixture-pending at that point. Req67
+and Elasticsearch were still fixture-pending at that point. Req67
 completed Kubernetes local kind fixture-backed capability evidence in
 Kubernetes Release Readiness. Req68
 completed MongoDB local fixture-backed capability evidence in
 MongoDB Release Readiness. Req69 completed
 Elasticsearch local fixture-backed capability evidence in
-Elasticsearch Release Readiness. Jenkins
-has Req70 local Jenkins fixture-backed capability evidence in
-Jenkins Release Readiness. Use the local
+Elasticsearch Release Readiness. Use the local
 fixture probe first when those fixtures are provisioned through the shared local
 Docker harness:
 
 ```bash
 scripts/local-fixture-smoke.sh run --fixture probe
-```
-
-For Jenkins release-candidate checks after capability changes, run:
-
-```bash
-scripts/jenkins-fixture-smoke.sh --report target/tmp/jenkins-fixture-smoke-evidence.md
 ```
 
 For MongoDB release-candidate checks after capability changes, run:
@@ -469,8 +459,7 @@ cargo test -p voidb-cli agent_broker
 
 # SSH live PTY sharing and infrastructure current-view sharing
 cargo test -p voidb-plugin-ssh
-cargo test -p voidb-plugin-docker -p voidb-plugin-kubernetes \
-  -p voidb-plugin-jenkins --no-fail-fast
+cargo test -p voidb-plugin-docker -p voidb-plugin-kubernetes --no-fail-fast
 
 # Capability-only data, search, storage, and messaging plugins
 cargo test -p voidb-core sql_contract
@@ -543,7 +532,7 @@ evidence artifact must stay under `target/tmp`; do not commit generated
 share-store records or fixture credentials.
 
 Changes to the shared non-PTY context-share contract used by SSH, Docker,
-Kubernetes, or Jenkins should run:
+or Kubernetes should run:
 
 ```bash
 cargo test -p voidb-core assist
@@ -551,8 +540,7 @@ cargo test -p voidb-core external_context
 cargo test -p voidb-cli builtin::context
 cargo test -p voidb-core session
 cargo test -p voidb-plugin-ssh
-cargo test -p voidb-plugin-docker -p voidb-plugin-kubernetes \
-  -p voidb-plugin-jenkins --no-fail-fast
+cargo test -p voidb-plugin-docker -p voidb-plugin-kubernetes --no-fail-fast
 scripts/check-external-agent-interaction.sh
 scripts/check-external-context-handoff.sh
 git diff --check

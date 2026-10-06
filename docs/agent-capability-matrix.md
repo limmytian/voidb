@@ -15,7 +15,6 @@ The committed output is `docs/agent-capability-matrix.md`. Regenerate with `carg
 | `duckdb` | beta | 9 | destructive:2, read_only:7 | both, stateless | 30000, 60000 | 1 | yes | no | None; capability and agent-owned session only | DuckDB plugin tests; CLI invoke tests; Core SQL contract | Bundled native DuckDB makes clean builds and full gates materially slower. |
 | `elasticsearch` | release_candidate | 11 | destructive:2, read_only:9 | session_only, stateless | 30000 | 1 | yes | no | None; capability and agent-owned session only | `scripts/check-data-search-live-session-conformance.sh`; Elasticsearch plugin tests | Disposable target evidence remains an opt-in promotion gate. |
 | `email` | release_candidate | 13 | destructive:1, external_side_effect:4, read_only:8 | session_only, stateless | 5000, 30000, 60000, 120000 | 1 | yes | yes | None; capability and agent-owned session only | Email plugin tests; `scripts/email-fixture-smoke.sh`; `scripts/tui-quality-gate.sh` | Real-provider SMTP/IMAP interoperability and TLS evidence remain opt-in. |
-| `jenkins` | release_candidate | 12 | destructive:3, read_only:9 | session_only, stateless | 30000 | 3 | yes | yes | Bounded current-view share with local operation review | `scripts/check-infrastructure-live-session-conformance.sh`; Jenkins plugin tests; `scripts/tui-quality-gate.sh` | Controller-specific Pipeline and authentication behavior still needs opt-in live evidence. |
 | `kubernetes` | release_candidate | 16 | destructive:4, external_side_effect:2, read_only:10 | session_only, stateless | 30000 | 4 | yes | yes | Bounded current-view share with local operation review | `scripts/check-infrastructure-live-session-conformance.sh`; Kubernetes plugin tests; `scripts/tui-quality-gate.sh` | Cluster-specific RBAC and admission behavior still needs an opt-in disposable fixture. |
 | `mongodb` | release_candidate | 15 | destructive:6, read_only:9 | both, session_only, stateless | 30000 | 2 | yes | no | None; capability and agent-owned session only | `scripts/check-data-search-live-session-conformance.sh`; MongoDB plugin tests | Replica-set and provider-specific behavior remains an opt-in live-fixture claim. |
 | `mysql` | release_candidate | 9 | destructive:2, read_only:7 | both, stateless | 30000, 60000 | 1 | yes | no | None; capability and agent-owned session only | MySQL plugin tests; CLI invoke tests; Core SQL contract; MySQL fixture smoke | Server-version and provider-specific compatibility still requires fixture evidence. |
@@ -82,18 +81,6 @@ The committed output is `docs/agent-capability-matrix.md`. Regenerate with `carg
 | `email.search` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
 | `email.send` | external_side_effect | stateless | 120000 | no | invoke caller-token/SIGINT | yes | declared | — |
 | `email.set_flags` | external_side_effect | stateless | 60000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `jenkins.abort_build` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `jenkins.activity` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `jenkins.build_wait` | read_only | session_only | 30000 | yes | session call-only cancel + stop-observation close | no | declared | 1 |
-| `jenkins.cancel_queue_item` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `jenkins.console` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `jenkins.console_follow` | read_only | session_only | 30000 | yes | session call-only cancel + stop-observation close | no | declared | 1 |
-| `jenkins.diagnostics` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `jenkins.job_detail` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `jenkins.jobs` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `jenkins.pipeline` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `jenkins.queue_watch` | read_only | session_only | 30000 | yes | session call-only cancel + stop-observation close | no | declared | 1 |
-| `jenkins.trigger_build` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
 | `kubernetes.apply` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
 | `kubernetes.contexts` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
 | `kubernetes.delete` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |

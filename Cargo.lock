@@ -7214,7 +7214,6 @@ dependencies = [
  "voidb-plugin-duckdb",
  "voidb-plugin-elasticsearch",
  "voidb-plugin-email",
- "voidb-plugin-jenkins",
  "voidb-plugin-kubernetes",
  "voidb-plugin-mongodb",
  "voidb-plugin-mysql",
@@ -7334,25 +7333,6 @@ dependencies = [
  "sha2",
  "tokio",
  "tracing",
- "voidb-core",
-]
-
-[[package]]
-name = "voidb-plugin-jenkins"
-version = "0.3.0-rc.1"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "clap",
- "crossterm",
- "ratatui",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "uuid",
  "voidb-core",
 ]
 

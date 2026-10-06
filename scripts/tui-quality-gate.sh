@@ -17,8 +17,8 @@ Usage: scripts/tui-quality-gate.sh [--out DIR] [--skip-build] [--cli-bin PATH] [
 
 Runs the retained standalone TUI automated release gate:
 - fixture-backed evidence generation for SSH, S3, WebDAV, Docker, Kubernetes,
-  Jenkins, and Email structural assertions;
-- real-PTY journeys for those seven TUIs plus Connection Manager, including
+  and Email structural assertions;
+- real-PTY journeys for those six TUIs plus Connection Manager, including
   warm p50/p95 thresholds, idle CPU/repaint, cancellation, and cleanup;
 - trend-friendly JSON/Markdown reports and a manifest of retained artifacts.
 
@@ -152,11 +152,6 @@ plugins = [
         "id": "kubernetes",
         "kind": "kubernetes_tui_fixture_evidence",
         "fixture": "crates/plugins/voidb-plugin-kubernetes/fixtures/kubernetes_tui_operations.json",
-    },
-    {
-        "id": "jenkins",
-        "kind": "jenkins_tui_fixture_evidence",
-        "fixture": "crates/plugins/voidb-plugin-jenkins/fixtures/jenkins_tui_operations.json",
     },
     {
         "id": "email",

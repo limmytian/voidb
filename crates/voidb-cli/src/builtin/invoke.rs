@@ -44,8 +44,6 @@ use voidb_plugin_elasticsearch::{
 };
 #[cfg(feature = "email")]
 use voidb_plugin_email::{EmailConfig, email_capabilities, invoke_email_capability};
-#[cfg(feature = "jenkins")]
-use voidb_plugin_jenkins::{JenkinsConfig, invoke_jenkins_capability, jenkins_capabilities};
 #[cfg(feature = "kubernetes")]
 use voidb_plugin_kubernetes::{K8sConfig, invoke_kubernetes_capability, kubernetes_capabilities};
 #[cfg(feature = "mongodb")]
@@ -94,8 +92,6 @@ const SUPPORTED_INVOKE_PLUGINS: &[&str] = &[
     "mongodb",
     #[cfg(feature = "elasticsearch")]
     "elasticsearch",
-    #[cfg(feature = "jenkins")]
-    "jenkins",
     #[cfg(feature = "sync")]
     "sync",
 ];
@@ -253,9 +249,9 @@ fn handle_matrix(matches: &ArgMatches) -> Result<(), VoidbError> {
     #[cfg(not(feature = "full"))]
     {
         let _ = matches;
-        return Err(VoidbError::Plugin(
+        Err(VoidbError::Plugin(
             "Capability matrix generation requires the 'full' feature flag: cargo run -p voidb-cli --features full -- invoke matrix".into(),
-        ));
+        ))
     }
     #[cfg(feature = "full")]
     {
@@ -1439,17 +1435,6 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
-        #[cfg(feature = "jenkins")]
-        "jenkins" => {
-            let config = parse_jenkins_config(connection).map_err(|error| *error)?;
-            invoke_with_timeout(
-                invoke_jenkins_capability(&config, invocation),
-                timeout_ms,
-                &capability.plugin_id,
-                &capability.id,
-            )
-            .await
-        }
         #[cfg(feature = "sync")]
         "sync" => {
             invoke_with_timeout(
@@ -1610,13 +1595,6 @@ fn parse_elasticsearch_config(
     parse_plugin_config(connection, "elasticsearch", "Elasticsearch")
 }
 
-#[cfg(feature = "jenkins")]
-fn parse_jenkins_config(
-    connection: &ConnectionConfig,
-) -> Result<JenkinsConfig, Box<CapabilityError>> {
-    parse_plugin_config(connection, "jenkins", "Jenkins")
-}
-
 fn parse_plugin_config<T>(
     connection: &ConnectionConfig,
     expected_plugin_id: &str,
@@ -1759,8 +1737,6 @@ fn capabilities_for_plugin(
         "mongodb" => Ok(mongodb_capabilities()),
         #[cfg(feature = "elasticsearch")]
         "elasticsearch" => Ok(elasticsearch_capabilities()),
-        #[cfg(feature = "jenkins")]
-        "jenkins" => Ok(jenkins_capabilities()),
         #[cfg(feature = "sync")]
         "sync" => Ok(sync_capabilities()),
         _ => {
@@ -1798,8 +1774,6 @@ pub(crate) fn builtin_capabilities() -> Vec<CapabilityDefinition> {
     capabilities.extend(mongodb_capabilities());
     #[cfg(feature = "elasticsearch")]
     capabilities.extend(elasticsearch_capabilities());
-    #[cfg(feature = "jenkins")]
-    capabilities.extend(jenkins_capabilities());
     #[cfg(feature = "sync")]
     capabilities.extend(sync_capabilities());
     capabilities.sort_by_key(CapabilityDefinition::qualified_id);
@@ -3071,11 +3045,6 @@ mod tests {
         assert!(
             capabilities
                 .iter()
-                .any(|capability| capability.qualified_id() == "jenkins.jobs")
-        );
-        assert!(
-            capabilities
-                .iter()
                 .any(|capability| capability.qualified_id() == "sync.status")
         );
     }
@@ -3115,7 +3084,7 @@ mod tests {
         use voidb_core::CapabilityExecutionMode;
 
         let capabilities = supported_capabilities(&empty_discovery());
-        assert_eq!(capabilities.len(), 180);
+        assert_eq!(capabilities.len(), 168);
         assert!(capabilities.iter().all(|capability| {
             !capability.supports_session_execution() || capability.session_handoff.is_some()
         }));
@@ -3140,9 +3109,6 @@ mod tests {
                 "docker.stats_follow",
                 "elasticsearch.search_stream_read",
                 "email.idle",
-                "jenkins.build_wait",
-                "jenkins.console_follow",
-                "jenkins.queue_watch",
                 "kubernetes.exec_input",
                 "kubernetes.exec_read",
                 "kubernetes.exec_resize",
@@ -3278,7 +3244,6 @@ mod tests {
                 "duckdb": [9, 7, 0, 2],
                 "elasticsearch": [11, 10, 1, 0],
                 "email": [13, 12, 1, 0],
-                "jenkins": [12, 9, 3, 0],
                 "kubernetes": [16, 10, 6, 0],
                 "mongodb": [15, 12, 2, 1],
                 "mysql": [9, 7, 0, 2],
@@ -3987,58 +3952,6 @@ mod tests {
             "boolean"
         );
         assert!(raw_api.output_schema.to_string().contains("body_summary"));
-    }
-
-    #[test]
-    fn jenkins_automation_beta_catalog_is_bounded_and_gated() {
-        let discovery = empty_discovery();
-        let jenkins = capabilities_for_plugin("jenkins", &discovery).expect("jenkins capabilities");
-
-        for id in ["trigger_build", "abort_build", "cancel_queue_item"] {
-            let capability = find_capability(&jenkins, id);
-            assert!(capability.destructive, "jenkins.{id} is destructive");
-            assert!(
-                capability.supports_dry_run,
-                "jenkins.{id} supports dry-run promotion gate"
-            );
-            assert_eq!(capability.risk, CapabilityRiskLevel::Destructive);
-            assert_permission(capability, "connection.write");
-        }
-
-        assert_permission(
-            find_capability(&jenkins, "trigger_build"),
-            "jenkins.builds.trigger",
-        );
-        assert_permission(
-            find_capability(&jenkins, "abort_build"),
-            "jenkins.builds.abort",
-        );
-        assert_permission(
-            find_capability(&jenkins, "cancel_queue_item"),
-            "jenkins.queue.cancel",
-        );
-        assert_output_page_contract(find_capability(&jenkins, "jobs"), 200);
-        assert_output_page_contract(find_capability(&jenkins, "job_detail"), 200);
-        assert_output_page_contract(find_capability(&jenkins, "activity"), 200);
-        assert_output_page_contract(find_capability(&jenkins, "pipeline"), 200);
-
-        let console = find_capability(&jenkins, "console");
-        assert!(!console.destructive);
-        assert!(!console.supports_dry_run);
-        assert_eq!(
-            console.input_schema["properties"]["max_bytes"]["maximum"],
-            json!(512 * 1024)
-        );
-        assert_eq!(
-            console.output_schema["properties"]["next_offset"]["type"],
-            "integer"
-        );
-
-        let diagnostics = find_capability(&jenkins, "diagnostics");
-        let encoded = serde_json::to_string(diagnostics).expect("serialize diagnostics");
-        assert!(!encoded.contains("token"));
-        assert!(!encoded.contains("crumb"));
-        assert!(!encoded.contains("url\""));
     }
 
     #[test]
@@ -4976,70 +4889,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn jenkins_policy_denials_have_redacted_audit_context() {
-        for (capability_ref, input, sensitive_value) in [
-            (
-                "jenkins.trigger_build",
-                json!({ "job_full_name": "prod/deploy-secret" }),
-                "prod/deploy-secret",
-            ),
-            (
-                "jenkins.abort_build",
-                json!({ "job_full_name": "prod/deploy-secret", "build_number": 42 }),
-                "prod/deploy-secret",
-            ),
-            (
-                "jenkins.cancel_queue_item",
-                json!({ "queue_id": 4242 }),
-                "4242",
-            ),
-        ] {
-            let decision = CapabilityPolicyDecision {
-                outcome: PolicyDecisionOutcome::RequiresAcknowledgement,
-                risk: CapabilityRiskLevel::Destructive,
-                reason: PolicyReason {
-                    category: CapabilityErrorCategory::Policy,
-                    code: "policy.destructive_denied_by_default".into(),
-                    message: "Profile policy blocks this destructive capability.".into(),
-                    details: json!({
-                        "qualified_id": capability_ref,
-                        "profile": "ci"
-                    }),
-                    redaction: RedactionStatus::NotRequired,
-                },
-                required_approval: None,
-                matched_approval_id: None,
-            };
-            let error = capability_error(
-                CapabilityErrorCategory::Policy,
-                "policy.destructive_denied_by_default",
-                "Profile policy blocks this destructive capability.",
-                json!({
-                    "qualified_id": capability_ref,
-                    "profile": "ci"
-                }),
-                None,
-                false,
-            );
-            let event = invoke_error_audit_event(
-                Some(capability_ref),
-                Some("ci"),
-                Some(audit_json_summary(&input)),
-                None,
-                Some(&decision),
-                &error,
-            );
-
-            assert_eq!(event.status, AuditEventStatus::Blocked);
-            assert_eq!(
-                event.metadata["policy_decision"]["outcome"],
-                "requires_acknowledgement"
-            );
-            assert!(!encoded_audit_context(&event).contains(sensitive_value));
-        }
-    }
-
     #[tokio::test]
     async fn email_diagnostics_does_not_open_target_connection() {
         let ctx = CliContext::new(AppConfig {
@@ -5217,40 +5066,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn jenkins_trigger_dry_run_does_not_open_target_connection() {
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![jenkins_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let data = run_invocation(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "jenkins.trigger_build".into(),
-                profile_ref: "ci".into(),
-                input: json!({ "job_full_name": "folder/build" }),
-                timeout_ms: None,
-                dry_run: true,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect("jenkins trigger dry-run");
-        let encoded = serde_json::to_string(&data).expect("serialize data");
-
-        assert_eq!(data.plugin_id, "jenkins");
-        assert_eq!(data.output["dry_run"], true);
-        assert_eq!(data.output["operation"], "trigger_build");
-        assert_eq!(data.output_summary["dry_run"], true);
-        assert_eq!(data.runtime.kind, "builtin");
-        assert!(!encoded.contains("jenkins-token"));
-        assert!(!encoded.contains("ci.example.invalid"));
-    }
-
-    #[tokio::test]
     async fn destructive_operations_require_ack_or_dry_run_for_operations_plugins() {
         let docker_ctx = CliContext::new(AppConfig {
             connections: vec![docker_connection()],
@@ -5372,35 +5187,6 @@ mod tests {
         assert_eq!(es_error.category, CapabilityErrorCategory::Policy);
         assert_eq!(es_error.code, "policy.destructive_denied_by_default");
         assert_eq!(es_error.details["qualified_id"], "elasticsearch.raw_api");
-
-        let jenkins_ctx = CliContext::new(AppConfig {
-            connections: vec![jenkins_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let jenkins_error = run_invocation(
-            &jenkins_ctx,
-            InvokeRunOptions {
-                capability_ref: "jenkins.abort_build".into(),
-                profile_ref: "ci".into(),
-                input: json!({
-                    "job_full_name": "folder/build",
-                    "build_number": 42
-                }),
-                timeout_ms: None,
-                dry_run: false,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect_err("jenkins destructive denied");
-
-        assert_eq!(jenkins_error.category, CapabilityErrorCategory::Policy);
-        assert_eq!(jenkins_error.code, "policy.destructive_denied_by_default");
-        assert_eq!(jenkins_error.details["qualified_id"], "jenkins.abort_build");
     }
 
     #[tokio::test]
@@ -6160,24 +5946,6 @@ mod tests {
                 "auth": {
                     "type": "Bearer",
                     "token": "es-token"
-                },
-                "timeout": 1,
-                "verify_ssl": false
-            })),
-        }
-    }
-
-    fn jenkins_connection() -> ConnectionConfig {
-        ConnectionConfig {
-            name: "ci".into(),
-            db_type: DatabaseType::Plugin,
-            plugin_id: Some("jenkins".into()),
-            plugin_config: Some(json!({
-                "url": "https://ci.example.invalid/jenkins",
-                "auth": {
-                    "type": "Basic",
-                    "username": "agent",
-                    "token": "jenkins-token"
                 },
                 "timeout": 1,
                 "verify_ssl": false

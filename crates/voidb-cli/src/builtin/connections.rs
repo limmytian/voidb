@@ -316,90 +316,10 @@ pub(crate) async fn test_connection_by_plugin(
             Ok("connected".to_string())
         }
 
-        // === Jenkins ===
-        #[cfg(feature = "jenkins")]
-        "jenkins" => voidb_plugin_jenkins::test_connection(conn)
-            .await
-            .map_err(|e| e.to_string()),
-
         // === Unsupported ===
         other => Err(format!(
             "Connection testing is not supported for plugin '{}'",
             other
         )),
-    }
-}
-
-#[cfg(all(test, feature = "jenkins"))]
-mod tests {
-    use serde_json::json;
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    use tokio::net::TcpListener;
-    use voidb_core::{ConnectionConfig, DatabaseType};
-
-    use super::test_connection_by_plugin;
-
-    #[cfg(feature = "jenkins")]
-    #[tokio::test]
-    async fn dispatches_jenkins_connection_test() {
-        let listener = TcpListener::bind("127.0.0.1:0")
-            .await
-            .expect("bind Jenkins fixture server");
-        let address = listener.local_addr().expect("fixture server address");
-
-        let server = tokio::spawn(async move {
-            let (mut stream, _) = listener.accept().await.expect("accept Jenkins request");
-            let mut request = Vec::new();
-            loop {
-                let mut chunk = [0; 512];
-                let bytes_read = stream
-                    .read(&mut chunk)
-                    .await
-                    .expect("read Jenkins request");
-                assert!(bytes_read > 0, "Jenkins request ended before its headers");
-                request.extend_from_slice(&chunk[..bytes_read]);
-                if request.windows(4).any(|window| window == b"\r\n\r\n") {
-                    break;
-                }
-            }
-            let request = String::from_utf8_lossy(&request);
-            assert!(
-                request.starts_with("GET /api/json?tree=nodeName,nodeDescription,url HTTP/1.1")
-            );
-
-            let body =
-                r#"{"nodeName":"fixture-controller","nodeDescription":"","url":"http://fixture/"}"#;
-            let response = format!(
-                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
-                body.len(),
-                body
-            );
-            stream
-                .write_all(response.as_bytes())
-                .await
-                .expect("write Jenkins response");
-        });
-
-        let connection = ConnectionConfig {
-            name: "fixture-jenkins".into(),
-            db_type: DatabaseType::Plugin,
-            plugin_id: Some("jenkins".into()),
-            plugin_config: Some(json!({
-                "url": format!("http://{address}"),
-                "auth": { "type": "None" },
-                "timeout": 5,
-                "verify_ssl": true
-            })),
-        };
-
-        let result = test_connection_by_plugin("jenkins", &connection)
-            .await
-            .expect("Jenkins test is dispatched");
-
-        assert_eq!(
-            result,
-            format!("Jenkins node 'fixture-controller' at http://{address}")
-        );
-        server.await.expect("Jenkins fixture server completes");
     }
 }
