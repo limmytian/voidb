@@ -3024,7 +3024,7 @@ mod tests {
         use voidb_core::CapabilityExecutionMode;
 
         let capabilities = supported_capabilities(&empty_discovery());
-        assert_eq!(capabilities.len(), 154);
+        assert_eq!(capabilities.len(), 141);
         assert!(capabilities.iter().all(|capability| {
             !capability.supports_session_execution() || capability.session_handoff.is_some()
         }));
