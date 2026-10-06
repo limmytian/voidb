@@ -44,18 +44,11 @@ depends on. Examples:
 - PostgreSQL SQL capabilities:
   `cargo test -p voidb-plugin-postgres capabilities`,
   `cargo test -p voidb-cli invoke`, and `cargo test -p voidb-core sql_contract`
-- DuckDB SQL capabilities:
-  `cargo test -p voidb-plugin-duckdb`, `cargo test -p voidb-cli invoke`, and
-  `cargo test -p voidb-core sql_contract`
 - DuckDB/Redis release-readiness decisions:
   `cargo test -p voidb-plugin-duckdb`,
   `cargo test -p voidb-plugin-redis`,
   `cargo test -p voidb-cli duckdb_and_redis_release_readiness_catalog`, and
   `cargo test -p voidb-core sql_contract`
-- Email capability readiness:
-  `cargo test -p voidb-plugin-email`,
-  `cargo test -p voidb-cli email_release_readiness_catalog_is_complete_bounded_and_gated`, and
-  `cargo test -p voidb-cli email_diagnostics`
 - SSH capabilities, profile metadata, or host-key policy:
   `cargo test -p voidb-plugin-ssh`, `cargo test -p voidb-cli invoke`,
   `cargo test -p voidb-core profile_adapter`, and
@@ -124,7 +117,7 @@ identifiers are restricted to fixture state and redacted evidence.
 
 ## Promoted Plugin Smoke Helper
 
-Release-candidate preparation for Email, SSH, S3, WebDAV, and MySQL can use
+Release-candidate preparation for SSH, S3, and MySQL can use
 the secret-free helper:
 
 ```bash
@@ -134,10 +127,8 @@ scripts/release-plugin-smoke.sh
 To focus one plugin:
 
 ```bash
-scripts/release-plugin-smoke.sh --plugin email
 scripts/release-plugin-smoke.sh --plugin ssh
 scripts/release-plugin-smoke.sh --plugin s3
-scripts/release-plugin-smoke.sh --plugin webdav
 ```
 
 The helper intentionally runs only local deterministic tests and
@@ -677,7 +668,7 @@ slice summary and keep the diff limited to the selected warning group.
 | Agent capability matrix | Pull request touching built-in capability metadata, session handoffs, standalone TUI registration, or readiness posture | `scripts/check-agent-capability-matrix.sh` | Regenerates the repository-owned matrix from runtime definitions and fails on added, removed, changed, or undocumented rows. |
 | Fast core | Pull request, every push | `cargo test -p voidb-core` | Catches shared API, crypto, config, widget regressions. |
 | Fast CLI | Pull request touching `crates/voidb-cli` | `cargo test -p voidb-cli` | Catches profile, invoke, audit, and plugin command regressions. |
-| Promoted plugin smoke | Release-candidate prep or plugin smoke doc changes | `scripts/release-plugin-smoke.sh` | Runs secret-free focused checks for Email, SSH, S3, WebDAV, and MySQL; local fixture wrappers cover promoted Docker-backed services such as Kubernetes and MongoDB when provisioned; live service commands stay opt-in. |
+| Promoted plugin smoke | Release-candidate prep or plugin smoke doc changes | `scripts/release-plugin-smoke.sh` | Runs secret-free focused checks for SSH, S3, and MySQL; local fixture wrappers cover promoted Docker-backed services such as Kubernetes and MongoDB when provisioned; live service commands stay opt-in. |
 | Sync smoke | Release-candidate prep or sync client/server changes | `scripts/release-sync-smoke.sh` | Runs sync plugin e2e tests and standalone sync server smoke with disposable local state. |
 | Package smoke | Release-candidate prep or package automation changes | `scripts/stage-release-artifacts.sh --build`; `scripts/package-smoke.sh --artifact-root target/package/voidb-<version>-<platform>` | Stages default TUI, CLI, and sync-server artifacts; verifies checksums, manifest consistency, executable bits, CLI and sync-server entry points, and TUI prerequisites. Use Package CI Matrix for macOS, Linux, Windows, and runner-skip rules. |
 | First protocol pair | Pull request touching SQLite/Redis capabilities or generic invoke | `cargo test -p voidb-plugin-sqlite`; `cargo test -p voidb-plugin-redis`; `cargo test -p voidb-cli invoke` | Proves the SQLite/Redis reference capability pair, including pagination, dry-run, structured target errors, and redaction. |
@@ -702,14 +693,7 @@ HTTP 502 and must pass an immediate exact rerun before the failure is classified
 as transient. No deterministic DuckDB or heavy-plugin failures are known.
 
 The observed warnings that remain accepted are unrelated to current release
-gates:
-
-- `voidb-plugin-email/examples/test_imap_raw.rs`: unused `mut`
-
-The previously recorded TUI test-helper, sync-server `collapsible_if`, and
-`imap-proto v0.10.2` future-incompatibility warnings were resolved during the
-warning-budget cleanup. Req71 upgraded Email to exact-pinned
-`imap 3.0.0-alpha.15`, which resolves `imap-proto 0.16.7`.
+gates.
 
 As of 2026-07-05, `cargo clippy --workspace --all-targets --no-deps` exits
 successfully, but the workspace still has non-blocking clippy warnings. The

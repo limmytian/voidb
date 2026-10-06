@@ -10,7 +10,6 @@ members = [
     "crates/voidb-tui",
     "crates/voidb-cli",
     "crates/plugins/voidb-plugin-mysql",
-    "crates/plugins/voidb-plugin-email",
     "crates/plugins/voidb-plugin-postgres",
     "crates/plugins/voidb-plugin-sqlite",
     "crates/plugins/voidb-plugin-redis",

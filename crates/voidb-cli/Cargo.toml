@@ -15,7 +15,6 @@ voidb-core = { path = "../voidb-core" }
 voidb-plugin-mysql = { path = "../plugins/voidb-plugin-mysql", optional = true }
 voidb-plugin-postgres = { path = "../plugins/voidb-plugin-postgres", optional = true }
 voidb-plugin-sqlite = { path = "../plugins/voidb-plugin-sqlite", optional = true }
-voidb-plugin-email = { path = "../plugins/voidb-plugin-email", optional = true }
 voidb-plugin-redis = { path = "../plugins/voidb-plugin-redis", optional = true }
 voidb-plugin-ssh = { path = "../plugins/voidb-plugin-ssh", optional = true }
 voidb-plugin-docker = { path = "../plugins/voidb-plugin-docker", optional = true }
@@ -54,11 +53,10 @@ s3 = ["dep:voidb-plugin-s3"]
 elasticsearch = ["dep:voidb-plugin-elasticsearch"]
 mongodb = ["dep:voidb-plugin-mongodb"]
 duckdb = ["dep:voidb-plugin-duckdb"]
-email = ["dep:voidb-plugin-email"]
 sync = ["dep:voidb-plugin-sync"]
 all-dbs = ["mysql", "postgres", "sqlite", "redis", "duckdb", "mongodb", "elasticsearch"]
 all-infra = ["ssh", "docker", "kubernetes", "s3"]
-full = ["all-dbs", "all-infra", "email", "sync"]
+full = ["all-dbs", "all-infra", "sync"]
 
 [dev-dependencies]
 toml = "0.8"

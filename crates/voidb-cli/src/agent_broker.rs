@@ -5894,7 +5894,6 @@ fn register_session_factories(
             | "kubernetes"
             | "s3"
             | "webdav"
-            | "email"
     ) {
         return Ok(());
     }
@@ -5985,13 +5984,6 @@ fn register_session_factories(
             serde_json::from_value(config)
                 .map_err(|_| anyhow!("granted S3 profile configuration is invalid"))?,
         ))),
-        #[cfg(feature = "email")]
-        "email" => {
-            host.register_factory(Arc::new(voidb_plugin_email::EmailAgentSessionFactory::new(
-                serde_json::from_value(config)
-                    .map_err(|_| anyhow!("granted Email profile configuration is invalid"))?,
-            )))
-        }
         _ => {}
     }
     Ok(())
@@ -8096,7 +8088,6 @@ mod tests {
             "duckdb",
             "ssh",
             "s3",
-            "email",
             "sync",
             "docker",
             "kubernetes",
@@ -8275,7 +8266,6 @@ mod tests {
             "duckdb",
             "ssh",
             "s3",
-            "email",
             "docker",
             "kubernetes",
             "mongodb",

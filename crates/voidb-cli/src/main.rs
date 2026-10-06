@@ -65,8 +65,6 @@ fn build_cli_manager() -> CliPluginManager {
     cli_manager.register(voidb_plugin_sqlite::create_sqlite_cli_plugin());
 
     // Other plugins
-    #[cfg(feature = "email")]
-    cli_manager.register(voidb_plugin_email::create_email_cli_plugin());
     #[cfg(feature = "redis")]
     cli_manager.register(voidb_plugin_redis::create_redis_cli_plugin());
     #[cfg(feature = "ssh")]

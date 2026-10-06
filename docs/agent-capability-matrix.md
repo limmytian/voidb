@@ -67,19 +67,6 @@ The committed output is `docs/agent-capability-matrix.md`. Regenerate with `carg
 | `elasticsearch.raw_api` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
 | `elasticsearch.search` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
 | `elasticsearch.search_stream_read` | read_only | session_only | 30000 | yes | session call-and-source cancel + stop-observation close | no | declared | 1 |
-| `email.attachments` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `email.delete` | destructive | stateless | 60000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `email.diagnostics` | read_only | stateless | 5000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `email.download_attachment` | external_side_effect | stateless | 120000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `email.draft` | read_only | stateless | 5000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `email.fetch` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `email.folders` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `email.idle` | read_only | session_only | 30000 | yes | session call-only cancel + stop-observation close | no | declared | 1 |
-| `email.list` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `email.move` | external_side_effect | stateless | 60000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `email.search` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `email.send` | external_side_effect | stateless | 120000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `email.set_flags` | external_side_effect | stateless | 60000 | no | invoke caller-token/SIGINT | yes | declared | — |
 | `kubernetes.apply` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
 | `kubernetes.contexts` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
 | `kubernetes.delete` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |

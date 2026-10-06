@@ -10,7 +10,7 @@ INVOKE_SMOKE=0
 
 usage() {
   cat <<'EOF'
-Usage: scripts/release-plugin-smoke.sh [--plugin all|email|ssh|s3|webdav] [--no-diff-check]
+Usage: scripts/release-plugin-smoke.sh [--plugin all|ssh|s3] [--no-diff-check]
 
 Runs focused, secret-free plugin smoke checks for release-candidate preparation.
 External service smoke is intentionally documented, not run here.
@@ -59,11 +59,6 @@ run() {
   "$@"
 }
 
-smoke_email() {
-  run cargo test -p voidb-plugin-email --quiet
-  INVOKE_SMOKE=1
-}
-
 smoke_ssh() {
   run cargo test -p voidb-plugin-ssh capabilities --quiet
   run cargo test -p voidb-plugin-ssh service --quiet
@@ -80,12 +75,8 @@ smoke_s3() {
 
 case "${PLUGIN}" in
   all)
-    smoke_email
     smoke_ssh
     smoke_s3
-    ;;
-  email)
-    smoke_email
     ;;
   ssh)
     smoke_ssh

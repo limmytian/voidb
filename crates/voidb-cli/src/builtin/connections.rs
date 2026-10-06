@@ -296,18 +296,6 @@ pub(crate) async fn test_connection_by_plugin(
                 .map_err(|e| e.to_string())
         }
 
-        // === Email — new_direct() then connect_direct() ===
-        #[cfg(feature = "email")]
-        "email" => {
-            let config: voidb_plugin_email::EmailConfig = parse_plugin_config(conn)?;
-            let mut svc = voidb_plugin_email::EmailService::new_direct()
-                .map_err(|e| e.to_string())?;
-            svc.connect_direct(config)
-                .await
-                .map_err(|e| e.to_string())?;
-            Ok("connected".to_string())
-        }
-
         // === Unsupported ===
         other => Err(format!(
             "Connection testing is not supported for plugin '{}'",

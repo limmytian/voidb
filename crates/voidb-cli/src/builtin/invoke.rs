@@ -42,8 +42,6 @@ use voidb_plugin_duckdb::{DuckDbConfig, duckdb_capabilities, invoke_duckdb_capab
 use voidb_plugin_elasticsearch::{
     EsConfig, elasticsearch_capabilities, invoke_elasticsearch_capability,
 };
-#[cfg(feature = "email")]
-use voidb_plugin_email::{EmailConfig, email_capabilities, invoke_email_capability};
 #[cfg(feature = "kubernetes")]
 use voidb_plugin_kubernetes::{K8sConfig, invoke_kubernetes_capability, kubernetes_capabilities};
 #[cfg(feature = "mongodb")]
@@ -78,8 +76,6 @@ const SUPPORTED_INVOKE_PLUGINS: &[&str] = &[
     "ssh",
     #[cfg(feature = "s3")]
     "s3",
-    #[cfg(feature = "email")]
-    "email",
     #[cfg(feature = "docker")]
     "docker",
     #[cfg(feature = "kubernetes")]
@@ -1365,17 +1361,6 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
-        #[cfg(feature = "email")]
-        "email" => {
-            let config = parse_email_config(connection).map_err(|error| *error)?;
-            invoke_with_timeout(
-                invoke_email_capability(&config, invocation),
-                timeout_ms,
-                &capability.plugin_id,
-                &capability.id,
-            )
-            .await
-        }
         #[cfg(feature = "docker")]
         "docker" => {
             let config = parse_docker_config(connection).map_err(|error| *error)?;
@@ -1540,11 +1525,6 @@ fn parse_s3_config(connection: &ConnectionConfig) -> Result<S3Config, Box<Capabi
     parse_plugin_config(connection, "s3", "S3")
 }
 
-#[cfg(feature = "email")]
-fn parse_email_config(connection: &ConnectionConfig) -> Result<EmailConfig, Box<CapabilityError>> {
-    parse_plugin_config(connection, "email", "Email")
-}
-
 #[cfg(feature = "docker")]
 fn parse_docker_config(
     connection: &ConnectionConfig,
@@ -1703,8 +1683,6 @@ fn capabilities_for_plugin(
         "ssh" => Ok(ssh_capabilities()),
         #[cfg(feature = "s3")]
         "s3" => Ok(s3_capabilities()),
-        #[cfg(feature = "email")]
-        "email" => Ok(email_capabilities()),
         #[cfg(feature = "docker")]
         "docker" => Ok(docker_capabilities()),
         #[cfg(feature = "kubernetes")]
@@ -1738,8 +1716,6 @@ pub(crate) fn builtin_capabilities() -> Vec<CapabilityDefinition> {
     capabilities.extend(ssh_capabilities());
     #[cfg(feature = "s3")]
     capabilities.extend(s3_capabilities());
-    #[cfg(feature = "email")]
-    capabilities.extend(email_capabilities());
     #[cfg(feature = "docker")]
     capabilities.extend(docker_capabilities());
     #[cfg(feature = "kubernetes")]
@@ -2989,11 +2965,6 @@ mod tests {
         assert!(
             capabilities
                 .iter()
-                .any(|capability| capability.qualified_id() == "email.diagnostics")
-        );
-        assert!(
-            capabilities
-                .iter()
                 .any(|capability| capability.qualified_id() == "docker.list_containers")
         );
         assert!(
@@ -3077,7 +3048,6 @@ mod tests {
                 "docker.logs_follow",
                 "docker.stats_follow",
                 "elasticsearch.search_stream_read",
-                "email.idle",
                 "kubernetes.exec_input",
                 "kubernetes.exec_read",
                 "kubernetes.exec_resize",
@@ -3208,7 +3178,6 @@ mod tests {
                 "docker": [18, 8, 10, 0],
                 "duckdb": [9, 7, 0, 2],
                 "elasticsearch": [11, 10, 1, 0],
-                "email": [13, 12, 1, 0],
                 "kubernetes": [16, 10, 6, 0],
                 "mongodb": [15, 12, 2, 1],
                 "mysql": [9, 7, 0, 2],
@@ -3595,94 +3564,6 @@ mod tests {
             assert!(fields.iter().any(|field| field.path == "/local_root"));
             assert!(fields.iter().any(|field| field.path == "/local_path"));
         }
-    }
-
-    #[test]
-    fn email_release_readiness_catalog_is_complete_bounded_and_gated() {
-        let discovery = empty_discovery();
-        let email = capabilities_for_plugin("email", &discovery).expect("email capabilities");
-
-        for id in ["diagnostics", "folders", "list", "search", "fetch"] {
-            let capability = find_capability(&email, id);
-            assert!(!capability.destructive, "email.{id} is read-only");
-            assert!(
-                !capability.supports_dry_run,
-                "email.{id} does not advertise fake dry-run support"
-            );
-            assert_eq!(capability.risk, CapabilityRiskLevel::ReadOnly);
-            assert_permission(capability, "connection.read");
-            assert_permission(capability, &format!("email.{id}"));
-        }
-
-        for (id, risk) in [
-            ("send", CapabilityRiskLevel::ExternalSideEffect),
-            ("move", CapabilityRiskLevel::ExternalSideEffect),
-            ("delete", CapabilityRiskLevel::Destructive),
-            ("set_flags", CapabilityRiskLevel::ExternalSideEffect),
-            (
-                "download_attachment",
-                CapabilityRiskLevel::ExternalSideEffect,
-            ),
-        ] {
-            let capability = find_capability(&email, id);
-            assert_eq!(capability.risk, risk);
-            assert!(capability.supports_dry_run);
-            assert!(capability.requires_acknowledgement());
-            assert_permission(capability, &format!("email.{id}"));
-            assert!(capability.authorization.approval_schema.is_some());
-        }
-        let idle = find_capability(&email, "idle");
-        assert_eq!(idle.execution_mode, CapabilityExecutionMode::SessionOnly);
-        assert!(idle.streaming);
-        assert!(idle.session_handoff.is_some());
-        let draft = find_capability(&email, "draft");
-        assert_eq!(draft.risk, CapabilityRiskLevel::ReadOnly);
-        assert!(!draft.connection_required);
-
-        let diagnostics = find_capability(&email, "diagnostics");
-        let required = diagnostics
-            .output_schema
-            .get("required")
-            .and_then(|value| value.as_array())
-            .expect("diagnostics required fields");
-        for field in [
-            "verify_tls",
-            "delete_deferred",
-            "send_deferred",
-            "network_checked",
-        ] {
-            assert!(
-                required.iter().any(|value| value == field),
-                "diagnostics output requires {field}"
-            );
-        }
-
-        let list = find_capability(&email, "list");
-        assert_eq!(list.default_timeout_ms, Some(30_000));
-        assert_eq!(
-            list.output_schema["properties"]["limit"]["maximum"],
-            json!(100)
-        );
-        assert_eq!(
-            list.output_schema["properties"]["next_cursor"]["type"][0],
-            "string"
-        );
-
-        let fetch = find_capability(&email, "fetch");
-        assert!(fetch.description.contains("without marking it read"));
-        assert_eq!(
-            fetch.input_schema["properties"]["max_text_bytes"]["maximum"],
-            json!(256 * 1024)
-        );
-        assert_eq!(
-            fetch.input_schema["properties"]["include_html"]["default"],
-            json!(false)
-        );
-
-        let encoded = serde_json::to_string(&email).expect("serialize email catalog");
-        assert!(!encoded.contains("password"));
-        assert!(!encoded.contains("mail-secret"));
-        assert!(!encoded.contains("user@example.com"));
     }
 
     #[test]
@@ -4655,17 +4536,6 @@ mod tests {
                 }),
                 "ada@example.com",
             ),
-            (
-                "email.send",
-                "mail",
-                json!({
-                    "to": ["private-recipient@example.com"],
-                    "subject": "private-subject",
-                    "text_body": "PRIVATE_EMAIL_BODY",
-                    "idempotency_key": "audit-email-send-0001"
-                }),
-                "PRIVATE_EMAIL_BODY",
-            ),
         ] {
             let decision = CapabilityPolicyDecision {
                 outcome: PolicyDecisionOutcome::RequiresAcknowledgement,
@@ -4710,50 +4580,7 @@ mod tests {
             );
             let encoded = encoded_audit_context(&event);
             assert!(!encoded.contains(sensitive_value));
-            if capability_ref == "email.send" {
-                for sensitive in [
-                    "private-recipient@example.com",
-                    "private-subject",
-                    "PRIVATE_EMAIL_BODY",
-                ] {
-                    assert!(!encoded.contains(sensitive));
-                }
-            }
         }
-    }
-
-    #[tokio::test]
-    async fn email_diagnostics_does_not_open_target_connection() {
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![email_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let data = run_invocation(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "email.diagnostics".into(),
-                profile_ref: "mail".into(),
-                input: json!({}),
-                timeout_ms: None,
-                dry_run: false,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect("email diagnostics");
-        let encoded = serde_json::to_string(&data).expect("serialize");
-
-        assert_eq!(data.plugin_id, "email");
-        assert_eq!(data.output["network_checked"], false);
-        assert_eq!(data.output["delete_deferred"], false);
-        assert_eq!(data.output["send_deferred"], false);
-        assert_eq!(data.runtime.kind, "builtin");
-        assert!(!encoded.contains("mail-secret"));
-        assert!(!encoded.contains("user@example.com"));
     }
 
     #[tokio::test]
@@ -5667,30 +5494,6 @@ mod tests {
                     "type": "Auto"
                 },
                 "timeout": 30
-            })),
-        }
-    }
-
-    fn email_connection() -> ConnectionConfig {
-        ConnectionConfig {
-            name: "mail".into(),
-            db_type: DatabaseType::Plugin,
-            plugin_id: Some("email".into()),
-            plugin_config: Some(json!({
-                "email": "user@example.com",
-                "password": "mail-secret",
-                "protocol": "IMAP",
-                "receive": {
-                    "host": "imap.example.com",
-                    "port": 993
-                },
-                "smtp": {
-                    "host": "smtp.example.com",
-                    "port": 587
-                },
-                "receive_security": "SSL/TLS",
-                "smtp_security": "STARTTLS",
-                "verify_tls": true
             })),
         }
     }

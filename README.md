@@ -160,12 +160,12 @@ VoidB's plugin system allows support for any protocol or data source:
 | MongoDB | MongoDB | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-mongodb` |
 | DuckDB | DuckDB | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-duckdb` |
 | Elasticsearch | Elasticsearch | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-elasticsearch` |
-| Email | IMAP/POP3 + SMTP | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-email` |
 | SSH | SSH/SFTP | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-ssh` |
 | Docker | Docker Engine | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-docker` |
 | Kubernetes | Kubernetes API | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-kubernetes` |
-| WebDAV | WebDAV storage | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-webdav` |
 | S3 | S3-compatible object storage | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-s3` |
+| WebDAV | WebDAV storage | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-webdav](https://github.com/limmytian/voidb-plugin-webdav) |
+| Email | IMAP/POP3 + SMTP | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-email](https://github.com/limmytian/voidb-plugin-email) |
 | Jenkins | Jenkins CI | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-jenkins](https://github.com/limmytian/voidb-plugin-jenkins) |
 | Sync | Encrypted config sync client | CLI client/server library surface | `crates/plugins/voidb-plugin-sync` |
 
@@ -231,7 +231,7 @@ VoidB uses independent frontend boundaries over a shared capability core:
 See these for complete examples of autonomous plugins:
 - `crates/plugins/voidb-plugin-mysql/src/table_plugin.rs` - MySQL legacy table viewer/editor
 - `crates/plugins/voidb-plugin-postgres/src/table_plugin.rs` - PostgreSQL legacy table viewer/editor
-- `crates/plugins/voidb-plugin-email/src/cli_plugin.rs` - Email standalone TUI and CLI registration
+- `crates/plugins/voidb-plugin-redis/src/cli_plugin.rs` - Redis standalone TUI and CLI registration
 
 See [Plugin Development Guide](docs/plugin-development-guide.md) and
 [Plugin-Owned TUI Development Guide](docs/plugin-owned-tui-development-guide.md)

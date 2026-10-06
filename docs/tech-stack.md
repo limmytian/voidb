@@ -73,15 +73,6 @@
 | k8s-openapi | 0.24 | Kubernetes API types (v1.32) | `voidb-plugin-kubernetes`, `voidb-tui`, `voidb-cli` |
 | rust-s3 | 0.37 | S3-compatible object storage client | `voidb-plugin-s3` |
 | reqwest | 0.12 | HTTP client (json, native-tls features) | `voidb-plugin-elasticsearch` |
-| reqwest_dav | 0.3 | WebDAV client | `voidb-plugin-webdav` |
-
-### Email
-| Crate | Version | Purpose | Used In |
-|---|---|---|---|
-| imap | 3.0.0-alpha.15 | IMAP email client | `voidb-plugin-email` |
-| native-tls | 0.2 | TLS support for IMAP/SMTP | `voidb-plugin-email` |
-| lettre | 0.11 | SMTP email sending (tokio1-native-tls, builder, smtp-transport) | `voidb-plugin-email` |
-| mailparse | 0.15 | MIME email parsing | `voidb-plugin-email` |
 
 ### Utilities
 | Crate | Version | Purpose | Used In |

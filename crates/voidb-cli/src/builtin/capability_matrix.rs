@@ -90,14 +90,6 @@ const PLUGIN_EXPERIENCE: &[PluginExperience] = &[
         known_limit: "Disposable target evidence remains an opt-in promotion gate.",
     },
     PluginExperience {
-        plugin_id: "email",
-        release_posture: "release_candidate",
-        standalone_tui: true,
-        tui_context_handoff: "None; capability and agent-owned session only",
-        validation_coverage: "Email plugin tests; `scripts/email-fixture-smoke.sh`; `scripts/tui-quality-gate.sh`",
-        known_limit: "Real-provider SMTP/IMAP interoperability and TLS evidence remain opt-in.",
-    },
-    PluginExperience {
         plugin_id: "kubernetes",
         release_posture: "release_candidate",
         standalone_tui: true,
