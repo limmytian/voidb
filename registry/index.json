@@ -3,7 +3,7 @@
   "schema_version": 1,
   "registry_name": "VoidB Official Plugin Registry",
   "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
-  "updated_at": "2026-10-07T16:23:48.318394Z",
+  "updated_at": "2026-10-07T19:14:37.665081Z",
   "plugins": [
     {
       "id": "docker",
