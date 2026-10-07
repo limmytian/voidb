@@ -444,6 +444,42 @@ pub struct ProcessPluginPackageValidation {
     pub warnings: Vec<ProcessPluginDiagnostic>,
 }
 
+/// Archive format for packaging offline process plugins.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ProcessPluginPackageFormat {
+    TarZst,
+    Tar,
+}
+
+impl ProcessPluginPackageFormat {
+    pub fn extension(&self) -> &'static str {
+        match self {
+            Self::TarZst => "tar.zst",
+            Self::Tar => "tar",
+        }
+    }
+}
+
+/// Metadata of an entry included in a packaged process-plugin archive.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ProcessPluginPackagedFile {
+    pub path: String,
+    pub size: u64,
+}
+
+/// Metadata output from packaging a process plugin.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ProcessPluginPackageResult {
+    pub plugin_id: String,
+    pub version: String,
+    pub archive_path: PathBuf,
+    pub format: ProcessPluginPackageFormat,
+    pub package_digest: String,
+    pub total_size: u64,
+    pub files: Vec<ProcessPluginPackagedFile>,
+}
+
 /// Structured package validation failure for stable CLI JSON output.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ProcessPluginPackageValidationError {
@@ -1578,6 +1614,245 @@ fn digest_relative_path(path: &Path) -> String {
         })
         .collect::<Vec<_>>()
         .join("/")
+}
+
+/// Package a validated plugin directory into a standalone offline distribution archive (.tar or .tar.zst).
+pub fn package_process_plugin(
+    source_dir: impl AsRef<Path>,
+    output_path: impl AsRef<Path>,
+    format: ProcessPluginPackageFormat,
+) -> Result<ProcessPluginPackageResult, ProcessPluginPackageValidationError> {
+    let source_dir = source_dir.as_ref();
+    let output_path = output_path.as_ref();
+
+    let source_root = fs::canonicalize(source_dir).map_err(|error| {
+        ProcessPluginPackageValidationError::io(
+            "canonicalize package source directory",
+            source_dir,
+            error,
+        )
+    })?;
+    if !source_root.is_dir() {
+        return Err(ProcessPluginPackageValidationError::new(
+            "package.source_not_directory",
+            "Plugin package source is not a directory.",
+            json!({ "path": redact_source_locator(source_dir) }),
+        ));
+    }
+
+    ensure_package_tree_safe(&source_root)?;
+    let package_root = locate_single_package_root(&source_root)?;
+
+    // Read manifest to get plugin id and version
+    let manifest_content = fs::read_to_string(package_root.join(MANIFEST_FILE_NAME)).map_err(|error| {
+        ProcessPluginPackageValidationError::io(
+            "read package manifest",
+            &package_root.join(MANIFEST_FILE_NAME),
+            error,
+        )
+    })?;
+    let toml_value = manifest_content.parse::<toml::Value>().map_err(|error| {
+        ProcessPluginPackageValidationError::new(
+            "manifest.toml_invalid",
+            "Plugin manifest is not valid TOML.",
+            json!({ "message": error.to_string() }),
+        )
+    })?;
+    let plugin_id = manifest_id_from_value(&toml_value).ok_or_else(|| {
+        ProcessPluginPackageValidationError::new(
+            "manifest.id_missing",
+            "Plugin manifest must declare an id field.",
+            json!({ "manifest_path": package_root.join(MANIFEST_FILE_NAME) }),
+        )
+    })?;
+    let version = toml_value
+        .get("version")
+        .and_then(|v| v.as_str())
+        .map(String::from)
+        .unwrap_or_else(|| "0.1.0".into());
+
+    if let Some(parent) = output_path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        fs::create_dir_all(parent).map_err(|error| {
+            ProcessPluginPackageValidationError::io(
+                "create package output directory",
+                parent,
+                error,
+            )
+        })?;
+    }
+
+    // Collect all files to include in archive
+    let mut file_entries = Vec::new();
+    collect_package_files(&package_root, &package_root, &mut file_entries)?;
+    file_entries.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let output_file = File::create(output_path).map_err(|error| {
+        ProcessPluginPackageValidationError::io("create output archive file", output_path, error)
+    })?;
+
+    let mut packaged_files = Vec::new();
+    let mut total_size = 0_u64;
+
+    match format {
+        ProcessPluginPackageFormat::TarZst => {
+            let zstd_encoder = zstd::stream::write::Encoder::new(output_file, 10).map_err(|error| {
+                ProcessPluginPackageValidationError::new(
+                    "package.zstd_init_failed",
+                    "Failed to initialize zstd compression encoder.",
+                    json!({ "message": error.to_string() }),
+                )
+            })?;
+            let mut tar_builder = tar::Builder::new(zstd_encoder);
+            tar_builder.mode(tar::HeaderMode::Deterministic);
+
+            for (rel_path, abs_path, is_exec) in &file_entries {
+                let mut f = File::open(abs_path).map_err(|error| {
+                    ProcessPluginPackageValidationError::io("read file for packaging", abs_path, error)
+                })?;
+                let mut bytes = Vec::new();
+                f.read_to_end(&mut bytes).map_err(|error| {
+                    ProcessPluginPackageValidationError::io("read file content for packaging", abs_path, error)
+                })?;
+
+                let size = bytes.len() as u64;
+                total_size += size;
+                packaged_files.push(ProcessPluginPackagedFile {
+                    path: rel_path.clone(),
+                    size,
+                });
+
+                let mut header = tar::Header::new_gnu();
+                header.set_size(size);
+                header.set_mode(if *is_exec { 0o755 } else { 0o644 });
+                header.set_mtime(0);
+                header.set_cksum();
+                tar_builder
+                    .append_data(&mut header, rel_path, &bytes[..])
+                    .map_err(|error| {
+                        ProcessPluginPackageValidationError::new(
+                            "package.tar_append_failed",
+                            "Failed to append file entry to tar archive.",
+                            json!({ "path": rel_path, "message": error.to_string() }),
+                        )
+                    })?;
+            }
+
+            let zstd_encoder = tar_builder.into_inner().map_err(|error| {
+                ProcessPluginPackageValidationError::new(
+                    "package.tar_finish_failed",
+                    "Failed to finalize tar archive stream.",
+                    json!({ "message": error.to_string() }),
+                )
+            })?;
+            zstd_encoder.finish().map_err(|error| {
+                ProcessPluginPackageValidationError::new(
+                    "package.zstd_finish_failed",
+                    "Failed to finish zstd compressed archive.",
+                    json!({ "message": error.to_string() }),
+                )
+            })?;
+        }
+        ProcessPluginPackageFormat::Tar => {
+            let mut tar_builder = tar::Builder::new(output_file);
+            tar_builder.mode(tar::HeaderMode::Deterministic);
+
+            for (rel_path, abs_path, is_exec) in &file_entries {
+                let mut f = File::open(abs_path).map_err(|error| {
+                    ProcessPluginPackageValidationError::io("read file for packaging", abs_path, error)
+                })?;
+                let mut bytes = Vec::new();
+                f.read_to_end(&mut bytes).map_err(|error| {
+                    ProcessPluginPackageValidationError::io("read file content for packaging", abs_path, error)
+                })?;
+
+                let size = bytes.len() as u64;
+                total_size += size;
+                packaged_files.push(ProcessPluginPackagedFile {
+                    path: rel_path.clone(),
+                    size,
+                });
+
+                let mut header = tar::Header::new_gnu();
+                header.set_size(size);
+                header.set_mode(if *is_exec { 0o755 } else { 0o644 });
+                header.set_mtime(0);
+                header.set_cksum();
+                tar_builder
+                    .append_data(&mut header, rel_path, &bytes[..])
+                    .map_err(|error| {
+                        ProcessPluginPackageValidationError::new(
+                            "package.tar_append_failed",
+                            "Failed to append file entry to tar archive.",
+                            json!({ "path": rel_path, "message": error.to_string() }),
+                        )
+                    })?;
+            }
+
+            tar_builder.finish().map_err(|error| {
+                ProcessPluginPackageValidationError::new(
+                    "package.tar_finish_failed",
+                    "Failed to finalize tar archive stream.",
+                    json!({ "message": error.to_string() }),
+                )
+            })?;
+        }
+    }
+
+    let package_digest = digest_file(output_path)?;
+
+    Ok(ProcessPluginPackageResult {
+        plugin_id,
+        version,
+        archive_path: output_path.to_path_buf(),
+        format,
+        package_digest,
+        total_size,
+        files: packaged_files,
+    })
+}
+
+fn collect_package_files(
+    root: &Path,
+    current: &Path,
+    entries: &mut Vec<(String, PathBuf, bool)>,
+) -> Result<(), ProcessPluginPackageValidationError> {
+    let read_entries = fs::read_dir(current).map_err(|error| {
+        ProcessPluginPackageValidationError::io("read package directory entries", current, error)
+    })?;
+
+    for entry in read_entries.filter_map(Result::ok) {
+        let entry_path = entry.path();
+        let metadata = fs::symlink_metadata(&entry_path).map_err(|error| {
+            ProcessPluginPackageValidationError::io("read file metadata", &entry_path, error)
+        })?;
+
+        if metadata.file_type().is_dir() {
+            // Ignore hidden/dot directories like .git or .voidb-install
+            if !is_dot_prefixed(&entry_path) {
+                collect_package_files(root, &entry_path, entries)?;
+            }
+        } else if metadata.file_type().is_file() {
+            let relative = entry_path.strip_prefix(root).unwrap_or(&entry_path);
+            let rel_str = digest_relative_path(relative);
+            let is_exec = is_executable_metadata(&metadata);
+            entries.push((rel_str, entry_path, is_exec));
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(unix)]
+fn is_executable_metadata(metadata: &fs::Metadata) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    metadata.permissions().mode() & 0o111 != 0
+}
+
+#[cfg(not(unix))]
+fn is_executable_metadata(_metadata: &fs::Metadata) -> bool {
+    false
 }
 
 fn discover_root(root: &ProcessPluginRoot) -> Vec<ProcessPluginCandidate> {

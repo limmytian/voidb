@@ -15,13 +15,13 @@ use voidb_core::plugin::cli::{CliContext, CliPlugin};
 use voidb_core::{
     ProcessPluginCandidate, ProcessPluginCandidateState, ProcessPluginDiagnostic,
     ProcessPluginDiscovery, ProcessPluginInstallRecord, ProcessPluginManifest,
-    ProcessPluginPackageSource, ProcessPluginPackageValidation,
-    ProcessPluginPackageValidationError, ProcessPluginPreviousVersionRecord, ProcessPluginRoot,
-    ProcessPluginRootKind, VoidbError, cleanup_process_plugin_package_staging,
-    default_user_process_plugin_install_root, discover_process_plugins,
-    discover_process_plugins_from_roots, process_plugin_install_record_path,
-    read_process_plugin_install_record, validate_process_plugin_package,
-    write_process_plugin_install_record,
+    ProcessPluginPackageFormat, ProcessPluginPackageResult, ProcessPluginPackageSource,
+    ProcessPluginPackageValidation, ProcessPluginPackageValidationError,
+    ProcessPluginPreviousVersionRecord, ProcessPluginRoot, ProcessPluginRootKind, VoidbError,
+    cleanup_process_plugin_package_staging, default_user_process_plugin_install_root,
+    discover_process_plugins, discover_process_plugins_from_roots, package_process_plugin,
+    process_plugin_install_record_path, read_process_plugin_install_record,
+    validate_process_plugin_package, write_process_plugin_install_record,
 };
 
 const PLUGIN_CLI_SCHEMA_VERSION: u32 = 1;
@@ -139,6 +139,32 @@ impl CliPlugin for PluginCliPlugin {
                 )
                 .arg(format_arg())
                 .arg(install_root_arg()),
+            Command::new("package")
+                .about("Package a process-plugin directory into an offline distribution archive (.tar.zst or .tar)")
+                .arg(
+                    Arg::new("source")
+                        .required(true)
+                        .value_name("DIR")
+                        .value_parser(clap::value_parser!(PathBuf))
+                        .help("Local plugin directory to package"),
+                )
+                .arg(
+                    Arg::new("output")
+                        .long("output")
+                        .short('o')
+                        .value_name("PATH")
+                        .value_parser(clap::value_parser!(PathBuf))
+                        .help("Output package file path (default: dist/<plugin-id>-<version>.<ext>)"),
+                )
+                .arg(
+                    Arg::new("archive-format")
+                        .long("archive-format")
+                        .value_name("FORMAT")
+                        .value_parser(["tar.zst", "tar"])
+                        .default_value("tar.zst")
+                        .help("Archive compression format: tar.zst (default) or tar"),
+                )
+                .arg(format_arg()),
         ]
     }
 
@@ -164,6 +190,7 @@ impl CliPlugin for PluginCliPlugin {
             "disable" => handle_lifecycle(matches, PluginLifecycleOperation::Disable),
             "enable" => handle_lifecycle(matches, PluginLifecycleOperation::Enable),
             "uninstall" => handle_lifecycle(matches, PluginLifecycleOperation::Uninstall),
+            "package" => handle_package(matches),
             _ => Err(VoidbError::Plugin(format!("Unknown command: {}", command))),
         }
     }
@@ -324,6 +351,53 @@ fn handle_lifecycle(
     match apply_lifecycle_operation(&plugin_id, install_root, operation) {
         Ok(result) => print_lifecycle_result(format, result),
         Err(error) => print_plugin_error(*error),
+    }
+}
+
+fn handle_package(matches: &ArgMatches) -> Result<(), VoidbError> {
+    let format = output_format(matches)?;
+    let source_dir = matches
+        .get_one::<PathBuf>("source")
+        .expect("required by clap")
+        .clone();
+    let archive_format_str = matches
+        .get_one::<String>("archive-format")
+        .map(String::as_str)
+        .unwrap_or("tar.zst");
+    let package_format = match archive_format_str {
+        "tar" => ProcessPluginPackageFormat::Tar,
+        _ => ProcessPluginPackageFormat::TarZst,
+    };
+
+    // First validate package source directory
+    let temp_staging_root = match default_user_process_plugin_install_root() {
+        Some(root) => root,
+        None => std::env::temp_dir().join("voidb-packaging-validation"),
+    };
+    let validation = match validate_process_plugin_package(
+        ProcessPluginPackageSource::local_directory(&source_dir),
+        &temp_staging_root,
+    ) {
+        Ok(validation) => validation,
+        Err(error) => return print_plugin_error(package_validation_error_to_plugin_error(error)),
+    };
+    cleanup_validated_staging(&validation);
+
+    // Determine output path
+    let output_path = if let Some(out) = matches.get_one::<PathBuf>("output") {
+        out.clone()
+    } else {
+        PathBuf::from("dist").join(format!(
+            "{}-{}.{}",
+            validation.plugin_id,
+            validation.version,
+            package_format.extension()
+        ))
+    };
+
+    match package_process_plugin(&source_dir, &output_path, package_format) {
+        Ok(result) => print_package_result(format, result),
+        Err(error) => print_plugin_error(package_validation_error_to_plugin_error(error)),
     }
 }
 
@@ -951,6 +1025,31 @@ fn print_lifecycle_table(data: &PluginLifecycleOperationData, warnings: &[Plugin
     for warning in warnings {
         println!("warning\t{}\t{}", warning.code, warning.message);
     }
+}
+
+fn print_package_result(
+    format: PluginOutputFormat,
+    result: ProcessPluginPackageResult,
+) -> Result<(), VoidbError> {
+    match format {
+        PluginOutputFormat::Json => print_json(&success_envelope(result)),
+        PluginOutputFormat::Table => {
+            print_package_table(&result);
+            Ok(())
+        }
+    }
+}
+
+fn print_package_table(result: &ProcessPluginPackageResult) {
+    println!("Field\tValue");
+    println!("operation\tpackage");
+    println!("plugin_id\t{}", result.plugin_id);
+    println!("version\t{}", result.version);
+    println!("archive_path\t{}", result.archive_path.display());
+    println!("format\t{}", result.format.extension());
+    println!("package_digest\t{}", result.package_digest);
+    println!("total_size\t{}", result.total_size);
+    println!("file_count\t{}", result.files.len());
 }
 
 fn plugin_list_items(
@@ -1784,6 +1883,42 @@ mod tests {
         )]);
         assert_eq!(
             enabled_discovery.candidates[0].state,
+            ProcessPluginCandidateState::Available
+        );
+    }
+
+    #[test]
+    fn package_creates_archive_and_validates_cleanly() {
+        let source = TempDir::new("package-source");
+        let dist = TempDir::new("package-dist");
+        write_valid_plugin(source.path(), "redis", "redis", "0.1.0", "connection.read");
+
+        let archive_path = dist.path().join("redis-0.1.0.tar.zst");
+        let result = package_process_plugin(
+            source.path().join("redis"),
+            &archive_path,
+            ProcessPluginPackageFormat::TarZst,
+        )
+        .expect("package plugin");
+
+        assert_eq!(result.plugin_id, "redis");
+        assert_eq!(result.version, "0.1.0");
+        assert!(archive_path.is_file());
+        assert!(!result.package_digest.is_empty());
+        assert!(!result.files.is_empty());
+
+        // Now install from the packaged archive into a fresh install root
+        let install_root = TempDir::new("packaged-install-root");
+        let installed = install_plugin_package(
+            ProcessPluginPackageSource::local_archive(&archive_path),
+            install_root.path().to_path_buf(),
+        )
+        .expect("install packaged archive");
+
+        assert_eq!(installed.data.plugin.id, "redis");
+        assert_eq!(installed.data.plugin.installed_version, "0.1.0");
+        assert_eq!(
+            installed.data.plugin.candidate_state,
             ProcessPluginCandidateState::Available
         );
     }
