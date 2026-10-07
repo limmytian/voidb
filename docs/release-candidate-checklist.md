@@ -43,13 +43,11 @@ It complements:
 | Sync client/server smoke | Yes, while Sync is documented or shipped | `scripts/release-sync-smoke.sh` | Release Sync Smoke |
 | Stable object Sync claim | Only if release notes or UI copy call Sync stable/default | `cargo test -p voidb-core object_sync`, plus the stable object sync gate in Release Sync Smoke | Release Sync Smoke |
 | Security release gate | Yes | Commands in [Security Release Checklist](security-release-checklist.md) | [Security Release Checklist](security-release-checklist.md) |
-| Process-plugin runtime gate | Yes, while process plugins are enabled | `cargo test -p voidb-core process_plugin`; `cargo test -p voidb-core process_plugin_runtime`; `cargo test -p voidb-cli plugin`; `cargo test -p voidb-cli invoke` | [CI Check Tiers](ci-checks.md) |
+| Process-plugin runtime & tooling gate | Yes, while process plugins are enabled | `cargo test -p voidb-core process_plugin`; `cargo test -p voidb-core process_plugin_runtime`; `cargo test -p voidb-cli plugin`; `cargo test -p voidb-cli invoke`; `cargo test -p voidb-process-plugin-sdk` | [CI Check Tiers](ci-checks.md) |
 | External-agent interaction boundary | Yes | `scripts/check-external-agent-interaction.sh`; focused SSH/infrastructure/capability-only plugin groups from the CI guide | External-Agent Interaction Evidence |
-| First protocol pair | Yes, for capability contract confidence | `cargo test -p voidb-plugin-sqlite`; `cargo test -p voidb-plugin-redis`; `cargo test -p voidb-cli invoke`; `git diff --check` | [CI Check Tiers](ci-checks.md) |
-| MySQL capability smoke | Yes, for MySQL release candidate status | `cargo check -p voidb-plugin-mysql --example fixture_smoke`; `cargo test -p voidb-plugin-mysql`; `cargo test -p voidb-cli invoke`; `cargo test -p voidb-core sql_contract`; `scripts/mysql-fixture-smoke.sh --report target/tmp/mysql-fixture-smoke-evidence.md`; `git diff --check` | MySQL Release Readiness |
+| Core protocol & RDBMS baseline | Yes, for core database contract confidence | `cargo test -p voidb-plugin-sqlite`; `cargo test -p voidb-plugin-redis`; `cargo test -p voidb-plugin-mysql`; `cargo test -p voidb-plugin-postgres`; `cargo test -p voidb-plugin-duckdb`; `cargo test -p voidb-cli invoke`; `git diff --check` | [CI Check Tiers](ci-checks.md) |
+| Decoupled long-tail protocol plugins | Verified in independent repos | Independent CI checks in `voidb-plugin-jenkins`, `voidb-plugin-webdav`, `voidb-plugin-email`, `voidb-plugin-s3`, `voidb-plugin-kubernetes`, `voidb-plugin-docker`, `voidb-plugin-elasticsearch`, `voidb-plugin-mongodb` | External Process Plugin Workflow |
 | SSH capability smoke | Yes, for SSH release candidate status | `cargo check -p voidb-plugin-ssh --example fixture_smoke`; `cargo test -p voidb-plugin-ssh`; `cargo test -p voidb-cli invoke`; `cargo test -p voidb-core profile_adapter`; `cargo test -p voidb-core profile_store`; `scripts/ssh-fixture-smoke.sh --report target/tmp/ssh-fixture-smoke-evidence.md` | SSH Release Readiness |
-| S3 capability smoke | Yes, for S3 release candidate status | `cargo check -p voidb-plugin-s3 --example fixture_smoke`; `cargo test -p voidb-plugin-s3`; `cargo test -p voidb-cli invoke`; `scripts/s3-fixture-smoke.sh --report target/tmp/s3-fixture-smoke-evidence.md` | S3 Release Readiness |
-| WebDAV capability smoke | Yes, for WebDAV release candidate status | `cargo check -p voidb-plugin-webdav --example fixture_smoke`; `cargo test -p voidb-plugin-webdav`; `cargo test -p voidb-cli invoke`; `scripts/webdav-fixture-smoke.sh --report target/tmp/webdav-fixture-smoke-evidence.md` | WebDAV Release Readiness |
 | Default native Connection Manager | Yes | `cargo test -p voidb-tui`; manual `cargo run` smoke | [Connection Manager TUI](connection-manager-tui.md) |
 | Retained standalone TUI gate | Yes, while retained standalone TUIs are shipped | `scripts/tui-quality-gate.sh`; retain its full output on failure; use `--cli-bin` and `--tui-bin` for staged/package binaries | [TUI CI And Real-Terminal Coverage](tui-terminal-coverage.md) |
 | Future plugin TUI UX gate | Only if a new plugin-owned TUI is accepted | `cargo test -p voidb-core tui_launch`; plugin-owned PTY/lifecycle test target | [Plugin-Owned TUI Development Guide](plugin-owned-tui-development-guide.md) |
@@ -181,88 +179,26 @@ Release candidate validation:
 ## Latest Rehearsal Result
 
 Latest final validation record:
-Final Pre-Release Validation 2026-07-05
-records Task Weaver requirement 75 slice 1 for commit
-`4019a9db0590d5aee2444f833a50c8f28510eba1`.
-
-Historical final tag readiness record:
-Release Tag Readiness 2026-07-05
-summarizes Task Weaver requirement 53 and remains the source for the latest
-real-terminal packaged TUI smoke evidence.
+Final Open-Source Decoupling and RC Validation 2026-10-07
+records Task Weaver requirement `93f1d929-f0ef-4e45-b475-5504a292b7c0` for commit
+`bc75a46`.
 
 Supporting evidence:
 
-- Final Pre-Release Validation 2026-07-05
-  records the clean-worktree rerun of promoted plugin smoke, Sync smoke, full
-  workspace tests, full clippy, darwin-arm64 package staging, and package
-  smoke from requirement 75.
-- Release Publish Handoff 2026-07-05
-  records the human-controlled tag, artifact, platform, checksum, residual-risk,
-  and non-publishing handoff boundary from requirement 75.
-- Release Candidate Baseline Report 2026-07-05
-  records the secret-free baseline gates from requirement 46.
-- All-Plugin RC Readiness Report 2026-07-05
-  records plugin dispositions from requirement 52.
-- Fixture-Backed Operations Plugin Promotion Smoke 2026-07-05
-  records Docker fixture smoke and skipped operations fixtures from requirement
-  50.
-- Beta Plugin Fixture Promotion Report 2026-07-05
-  records Req55 skipped fixture evidence for Email, Redis, Kubernetes, MongoDB,
-  Elasticsearch, and Jenkins. Redis was later superseded by Req61 fixture
-  evidence in DuckDB and Redis Release Readiness;
-  Email was later superseded by Req62 fixture evidence in
-  Email Release Readiness. S3 was later
-  superseded by Req64 fixture evidence in
-  S3 Release Readiness. WebDAV was later
-  superseded by Req65 fixture evidence in
-  WebDAV Release Readiness. Kubernetes was later
-  superseded by Req67 fixture evidence in
-  Kubernetes Release Readiness. MongoDB was
-  later superseded by Req68 fixture evidence in
-  MongoDB Release Readiness. Elasticsearch was
-  later superseded by Req69 fixture evidence in
-  Elasticsearch Release Readiness.
-  Jenkins was later superseded by Req70 fixture evidence in
-  Jenkins Release Readiness.
+- Final Open-Source Decoupling & Hardening (Waves 1 to 6) successfully moved
+  Jenkins, WebDAV, Email, S3, Kubernetes, Docker, Elasticsearch, and MongoDB into
+  independent open-source repositories under `https://github.com/limmytian/`.
+- Process-Plugin SDK published readiness and `cargo-generate` template completed
+  in `crates/voidb-process-plugin-sdk` and `templates/process-plugin-template`.
+- CLI packaging (`voidb-cli plugin package`) and distribution tooling completed
+  supporting `.tar.zst` and `.tar` with sha256 digests and integrity verification.
+- Third-party developer guide published in `docs/process-plugin-development-guide.md`.
+- Full workspace tests (`cargo test --workspace --no-fail-fast`) pass cleanly with 0 failures.
+- Full workspace Clippy (`cargo clippy --workspace --all-targets --no-deps`) passes with strict 0 warnings.
+- Agent capability matrix check (`scripts/check-agent-capability-matrix.sh`) is current and drift-free.
 
 Current go/no-go: **GO to prepare the human-controlled `v0.3.0-rc.1` publish
 handoff after release notes include the documented waivers**.
-
-Do not tag or upload artifacts automatically. The latest deterministic package
-manifest was generated from commit `4019a9d`. If the release owner selects a
-later docs-only commit for the tag, regenerate package metadata so
-`artifact-manifest.json` records the selected tag commit.
-
-The human-controlled tag and upload checklist is in
-Release Publish Handoff 2026-07-05.
-
-Passed release-candidate evidence:
-
-- Focused security, credential, dry-run/destructive invoke, SSH, process-plugin,
-  plugin CLI, generic invoke, and SQL contract gates passed in the 2026-07-05
-  RC baseline and plugin readiness slices.
-- Req75 reran `scripts/release-plugin-smoke.sh`,
-  `scripts/release-sync-smoke.sh`,
-  `cargo test --workspace --no-fail-fast`, and
-  `cargo clippy --workspace --all-targets --no-deps` from a clean detached
-  worktree at `4019a9d`; all passed.
-- `cargo test --manifest-path voidb-sync-server/Cargo.toml` and
-  `cargo clippy --manifest-path voidb-sync-server/Cargo.toml --all-targets --no-deps`
-  passed.
-- Default TUI package artifacts passed real-terminal smoke on disposable config
-  state.
-- CLI and sync-server package artifacts passed help/version smoke. Req75 reran
-  darwin-arm64 package staging and package smoke from a clean worktree; the
-  generated manifest recorded `git.dirty: false`.
-- Req74 added Linux x64 Docker package-smoke evidence with
-  `scripts/linux-package-smoke.sh --docker-platform linux/amd64 --package-platform linux-x64 --report target/tmp/linux-package-smoke-evidence.md`.
-- Cargo package versions, `Cargo.lock`, binary version output, changelog target
-  section, and intended tag name agree on `0.3.0-rc.1`.
-
-No deterministic blocking items remain for the human publish handoff. The
-release owner still needs to choose the exact tag commit, regenerate package
-metadata if choosing a post-validation docs-only commit, and complete the
-manual publish actions.
 
 Accepted residual risks only if disclosed in release notes:
 
