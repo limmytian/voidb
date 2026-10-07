@@ -123,23 +123,6 @@ def phases() -> list[Phase]:
             artifact_hints=("target/tmp/data-search-live-session-fixtures",),
         ),
         Phase(
-            "infrastructure-sessions",
-            "docker,kubernetes,jenkins",
-            "stream-and-session-lifecycle",
-            ("scripts/check-infrastructure-live-session-conformance.sh",),
-            minimum_profile="deterministic",
-            correlation_kind="session",
-        ),
-        Phase(
-            "external-context-handoff",
-            "docker,kubernetes,jenkins",
-            "context-handoff-and-mutation-review",
-            ("scripts/check-external-context-handoff.sh",),
-            minimum_profile="deterministic",
-            correlation_kind="session",
-            artifact_hints=("target/tmp/external-context-handoff",),
-        ),
-        Phase(
             "local-transfer-boundary",
             "ssh",
             "local-transfer-and-cancellation",
@@ -158,7 +141,7 @@ def phases() -> list[Phase]:
         ),
         Phase(
             "tui-terminal-restoration-quick",
-            "connections,ssh,docker,kubernetes",
+            "connections,ssh",
             "terminal-restoration",
             (
                 "scripts/tui-quality-gate.sh",
@@ -214,7 +197,7 @@ def phases() -> list[Phase]:
         ),
         Phase(
             "tui-terminal-restoration",
-            "connections,ssh,docker,kubernetes",
+            "connections,ssh",
             "terminal-restoration",
             (
                 "scripts/tui-quality-gate.sh",
@@ -303,7 +286,6 @@ def live_fixture_phases() -> list[Phase]:
             for plugin in [
                 "ssh",
                 "mysql",
-                "kubernetes",
             ]
         ],
         Phase(

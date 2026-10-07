@@ -14,8 +14,6 @@ members = [
     "crates/plugins/voidb-plugin-sqlite",
     "crates/plugins/voidb-plugin-redis",
     "crates/plugins/voidb-plugin-ssh",
-    "crates/plugins/voidb-plugin-docker",
-    "crates/plugins/voidb-plugin-kubernetes",
     "crates/plugins/voidb-plugin-elasticsearch",
     "crates/plugins/voidb-plugin-mongodb",
     "crates/plugins/voidb-plugin-duckdb",

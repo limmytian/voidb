@@ -161,9 +161,9 @@ VoidB's plugin system allows support for any protocol or data source:
 | DuckDB | DuckDB | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-duckdb` |
 | Elasticsearch | Elasticsearch | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-elasticsearch` |
 | SSH | SSH/SFTP | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-ssh` |
-| Docker | Docker Engine | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-docker` |
-| Kubernetes | Kubernetes API | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-kubernetes` |
-| S3 | S3-compatible object storage | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-s3` |
+| Docker | Docker Engine | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-docker](https://github.com/limmytian/voidb-plugin-docker) |
+| Kubernetes | Kubernetes API | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-kubernetes](https://github.com/limmytian/voidb-plugin-kubernetes) |
+| S3 | S3-compatible object storage | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-s3](https://github.com/limmytian/voidb-plugin-s3) |
 | WebDAV | WebDAV storage | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-webdav](https://github.com/limmytian/voidb-plugin-webdav) |
 | Email | IMAP/POP3 + SMTP | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-email](https://github.com/limmytian/voidb-plugin-email) |
 | Jenkins | Jenkins CI | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-jenkins](https://github.com/limmytian/voidb-plugin-jenkins) |

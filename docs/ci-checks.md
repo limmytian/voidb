@@ -67,13 +67,6 @@ depends on. Examples:
 - Sync beta readiness or object-sync boundary changes:
   `scripts/release-sync-smoke.sh` and `cargo test -p voidb-core object_sync`
 - DuckDB table loading or service changes: `cargo test -p voidb-plugin-duckdb`
-- Docker/Kubernetes external-agent context and operation review:
-  `scripts/check-external-agent-interaction.sh`,
-  `scripts/check-infrastructure-live-session-conformance.sh`,
-  `cargo test -p voidb-core external_context`,
-  `cargo test -p voidb-cli builtin::context`,
-  `cargo test -p voidb-plugin-docker`,
-  `cargo test -p voidb-plugin-kubernetes`, and `git diff --check`
 - Redis/MongoDB/Elasticsearch live-session or cursor changes:
   `scripts/check-data-search-live-session-conformance.sh`. Use
   `scripts/check-data-search-live-session-conformance.sh --live` when a local
@@ -323,14 +316,12 @@ DuckDB and Redis Release Readiness.
 
 ## Operations Plugin Capability Gates
 
-Docker, Kubernetes, MongoDB, and Elasticsearch expose agent-facing
-infrastructure, document/search, and CI capabilities. Changes to their generic
-invoke registration, bounded output contracts, destructive gates, or fixture
-promotion status should run:
+MongoDB and Elasticsearch expose agent-facing document/search capabilities.
+Changes to their generic invoke registration, bounded output contracts,
+destructive gates, or fixture promotion status should run:
 
 ```bash
-cargo test -p voidb-plugin-docker -p voidb-plugin-kubernetes \
-  -p voidb-plugin-mongodb -p voidb-plugin-elasticsearch capabilities
+cargo test -p voidb-plugin-mongodb -p voidb-plugin-elasticsearch capabilities
 cargo test -p voidb-cli invoke
 git diff --check
 ```
@@ -432,9 +423,8 @@ cargo test -p voidb-core assist
 cargo test -p voidb-core session
 cargo test -p voidb-cli agent_broker
 
-# SSH live PTY sharing and infrastructure current-view sharing
+# SSH live PTY sharing
 cargo test -p voidb-plugin-ssh
-cargo test -p voidb-plugin-docker -p voidb-plugin-kubernetes --no-fail-fast
 
 # Capability-only data, search, storage, and messaging plugins
 cargo test -p voidb-core sql_contract
@@ -506,8 +496,7 @@ behavior, blocked takeover contexts, and marker-based secret-leak scanning. The
 evidence artifact must stay under `target/tmp`; do not commit generated
 share-store records or fixture credentials.
 
-Changes to the shared non-PTY context-share contract used by SSH, Docker,
-or Kubernetes should run:
+Changes to the shared non-PTY context-share contract used by SSH should run:
 
 ```bash
 cargo test -p voidb-core assist
@@ -515,9 +504,7 @@ cargo test -p voidb-core external_context
 cargo test -p voidb-cli builtin::context
 cargo test -p voidb-core session
 cargo test -p voidb-plugin-ssh
-cargo test -p voidb-plugin-docker -p voidb-plugin-kubernetes --no-fail-fast
 scripts/check-external-agent-interaction.sh
-scripts/check-external-context-handoff.sh
 git diff --check
 ```
 

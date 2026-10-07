@@ -78,30 +78,6 @@ for document in "${historical_evidence[@]}"; do
   fi
 done
 
-for plugin in docker kubernetes jenkins; do
-  source="crates/plugins/voidb-plugin-${plugin}/src/tui.rs"
-  rg -Fq '"external_agent_interaction"' "$source" \
-    || fail "${plugin} lacks external-agent evidence"
-  rg -Fq 'uppercase_a_is_not_an_operation_shortcut' "$source" \
-    || fail "${plugin} does not lock out the retired uppercase shortcut"
-  rg -Fq 'external_agent_operation_stages_existing_' "$source" \
-    || fail "${plugin} does not prove reuse of its local operation plan"
-  rg -Fq 'external_agent_operation_can_be_denied_without_staging' "$source" \
-    || fail "${plugin} does not prove local denial"
-done
-
-handoff_harness='scripts/external_context_handoff.py'
-[[ -x 'scripts/check-external-context-handoff.sh' ]] \
-  || fail 'external context handoff conformance wrapper is missing or not executable'
-for scenario in allow deny timeout replay multi_action crash_recovery; do
-  rg -Fq "\"${scenario}\"" "$handoff_harness" \
-    || fail "external context handoff matrix is missing ${scenario}"
-done
-for plugin in docker kubernetes jenkins; do
-  rg -Fq "plugin_id=\"${plugin}\"" "$handoff_harness" \
-    || fail "external context handoff matrix is missing ${plugin}"
-done
-
 ssh_source='crates/plugins/voidb-plugin-ssh/src/tui.rs'
 rg -Fq '"external_agent_interaction"' "$ssh_source" \
   || fail 'SSH lacks external-agent session-share evidence'

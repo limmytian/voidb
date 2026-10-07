@@ -44,7 +44,7 @@ impl CliPlugin for ContextCliPlugin {
                     Arg::new("plugin")
                         .long("plugin")
                         .value_name("PLUGIN_ID")
-                        .value_parser(["ssh", "docker", "kubernetes"])
+                        .value_parser(["ssh"])
                         .help("Only discover contexts owned by one supported plugin"),
                 ),
             context_reference_command(
@@ -291,7 +291,7 @@ fn context_reference_command(command: Command) -> Command {
                 .long("plugin")
                 .required(true)
                 .value_name("PLUGIN_ID")
-                .value_parser(["ssh", "docker", "kubernetes"])
+                .value_parser(["ssh"])
                 .help("Owning plugin ID"),
         )
         .arg(
@@ -404,16 +404,6 @@ fn default_catalog() -> Result<AgentContextStoreCatalog, AgentContextProtocolErr
     let mut roots = Vec::new();
     #[cfg(feature = "ssh")]
     roots.push(("ssh", voidb_plugin_ssh::ssh_agent_context_store_root()));
-    #[cfg(feature = "docker")]
-    roots.push((
-        "docker",
-        voidb_plugin_docker::docker_agent_context_store_root(),
-    ));
-    #[cfg(feature = "kubernetes")]
-    roots.push((
-        "kubernetes",
-        voidb_plugin_kubernetes::kubernetes_agent_context_store_root(),
-    ));
 
     let mut sources = Vec::with_capacity(roots.len());
     for (plugin_id, root) in roots {
@@ -495,10 +485,10 @@ mod tests {
                 "--task-id",
                 "task-1",
                 "--plugin",
-                "docker",
+                "ssh",
                 "--generation",
                 "4",
-                "context:docker:1:1",
+                "context:ssh:1:1",
             ])
             .unwrap();
         let reference = AgentContextRef::new(
@@ -507,7 +497,7 @@ mod tests {
             *parsed.get_one::<u64>("generation").unwrap(),
         )
         .unwrap();
-        assert_eq!(reference.plugin_id, "docker");
+        assert_eq!(reference.plugin_id, "ssh");
         assert_eq!(reference.generation, 4);
     }
 
@@ -521,20 +511,20 @@ mod tests {
             "--task-id",
             "task-1",
             "--plugin",
-            "docker",
+            "ssh",
             "--generation",
             "4",
             "--operation-request-id",
-            "operation:docker:1",
+            "operation:ssh:1",
             "--summary",
             "Review stop",
             "--operations-json",
-            r#"[{"kind":"capability_call","capability_id":"docker.container_action","input_summary":{"action":"stop"},"rationale":"review","risk":"destructive","target":{"kind":"capability","capability_id":"docker.container_action"}}]"#,
-            "context:docker:1:1",
+            r#"[{"kind":"capability_call","capability_id":"ssh.exec","input_summary":{"command":"uptime"},"rationale":"review","risk":"destructive","target":{"kind":"capability","capability_id":"ssh.exec"}}]"#,
+            "context:ssh:1:1",
         ]);
         assert_eq!(
             reference_from_matches(&operation).unwrap(),
-            AgentContextRef::new("docker", "context:docker:1:1", 4).unwrap()
+            AgentContextRef::new("ssh", "context:ssh:1:1", 4).unwrap()
         );
         let operations = serde_json::from_str::<Vec<AgentOperation>>(
             operation
@@ -552,12 +542,12 @@ mod tests {
             "--task-id",
             "task-1",
             "--plugin",
-            "docker",
+            "ssh",
             "--generation",
             "2",
             "--timeout-ms",
             "250",
-            "context:docker:1:1",
+            "context:ssh:1:1",
         ]);
         assert_eq!(*wait.get_one::<u64>("timeout-ms").unwrap(), 250);
         assert_eq!(

@@ -11,10 +11,8 @@ The committed output is `docs/agent-capability-matrix.md`. Regenerate with `carg
 | Plugin | Posture | Capabilities | Risks | Modes | Timeouts (ms) | Stream | Agent session | Standalone TUI | TUI context handoff | Validation | Known limit |
 |---|---|---:|---|---|---|---:|---|---|---|---|---|
 | `connections` | platform | 0 |  |  |  | 0 | no | yes | Profile metadata, credential approval, and JIT authorization only | `cargo test -p voidb-tui`; `scripts/tui-quality-gate.sh` | Owns no target driver, live capability session, or target operation dispatch. |
-| `docker` | release_candidate | 18 | destructive:2, external_side_effect:4, read_only:12 | session_only, stateless | 30000 | 5 | yes | yes | Bounded current-view share with local operation review | `scripts/check-infrastructure-live-session-conformance.sh`; Docker plugin tests; `scripts/tui-quality-gate.sh` | Provider-specific daemon behavior still requires an opt-in disposable live fixture. |
 | `duckdb` | beta | 9 | destructive:2, read_only:7 | both, stateless | 30000, 60000 | 1 | yes | no | None; capability and agent-owned session only | DuckDB plugin tests; CLI invoke tests; Core SQL contract | Bundled native DuckDB makes clean builds and full gates materially slower. |
 | `elasticsearch` | release_candidate | 11 | destructive:2, read_only:9 | session_only, stateless | 30000 | 1 | yes | no | None; capability and agent-owned session only | `scripts/check-data-search-live-session-conformance.sh`; Elasticsearch plugin tests | Disposable target evidence remains an opt-in promotion gate. |
-| `kubernetes` | release_candidate | 16 | destructive:4, external_side_effect:2, read_only:10 | session_only, stateless | 30000 | 4 | yes | yes | Bounded current-view share with local operation review | `scripts/check-infrastructure-live-session-conformance.sh`; Kubernetes plugin tests; `scripts/tui-quality-gate.sh` | Cluster-specific RBAC and admission behavior still needs an opt-in disposable fixture. |
 | `mongodb` | release_candidate | 15 | destructive:6, read_only:9 | both, session_only, stateless | 30000 | 2 | yes | no | None; capability and agent-owned session only | `scripts/check-data-search-live-session-conformance.sh`; MongoDB plugin tests | Replica-set and provider-specific behavior remains an opt-in live-fixture claim. |
 | `mysql` | release_candidate | 9 | destructive:2, read_only:7 | both, stateless | 30000, 60000 | 1 | yes | no | None; capability and agent-owned session only | MySQL plugin tests; CLI invoke tests; Core SQL contract; MySQL fixture smoke | Server-version and provider-specific compatibility still requires fixture evidence. |
 | `postgres` | release_candidate | 9 | destructive:2, read_only:7 | both, stateless | 30000, 60000 | 1 | yes | no | None; capability and agent-owned session only | PostgreSQL plugin tests; CLI invoke tests; Core SQL contract | Live PostgreSQL fixture coverage remains opt-in. |
@@ -27,24 +25,6 @@ The committed output is `docs/agent-capability-matrix.md`. Regenerate with `carg
 
 | Capability | Risk | Mode | Timeout (ms) | Stream | Cancellation | Dry run | Authorization | Live protocol |
 |---|---|---|---:|---|---|---|---|---:|
-| `docker.attach_input` | external_side_effect | session_only | 30000 | no | session call-only cancel + detach-remote close | no | declared | 1 |
-| `docker.attach_read` | read_only | session_only | 30000 | yes | session call-only cancel + detach-remote close | no | declared | 1 |
-| `docker.attach_resize` | external_side_effect | session_only | 30000 | no | session call-only cancel + detach-remote close | no | declared | 1 |
-| `docker.container_action` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `docker.diagnostics` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `docker.events_follow` | read_only | session_only | 30000 | yes | session call-only cancel + stop-observation close | no | declared | 1 |
-| `docker.exec_input` | external_side_effect | session_only | 30000 | no | session call-only cancel + terminate-remote close | no | declared | 1 |
-| `docker.exec_read` | read_only | session_only | 30000 | yes | session call-only cancel + terminate-remote close | no | declared | 1 |
-| `docker.exec_resize` | external_side_effect | session_only | 30000 | no | session call-only cancel + terminate-remote close | no | declared | 1 |
-| `docker.exec_signal` | destructive | session_only | 30000 | no | session call-only cancel + terminate-remote close | no | declared | 1 |
-| `docker.inspect_container` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `docker.list_containers` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `docker.list_images` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `docker.list_networks` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `docker.list_volumes` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `docker.logs` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `docker.logs_follow` | read_only | session_only | 30000 | yes | session call-only cancel + stop-observation close | no | declared | 1 |
-| `docker.stats_follow` | read_only | session_only | 30000 | yes | session call-only cancel + stop-observation close | no | declared | 1 |
 | `duckdb.catalogs` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
 | `duckdb.describe_table` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
 | `duckdb.exec` | destructive | both | 30000 | no | invoke caller-token/SIGINT; session call-cancel + close | yes | declared | — |
@@ -65,22 +45,6 @@ The committed output is `docs/agent-capability-matrix.md`. Regenerate with `carg
 | `elasticsearch.raw_api` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
 | `elasticsearch.search` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
 | `elasticsearch.search_stream_read` | read_only | session_only | 30000 | yes | session call-and-source cancel + stop-observation close | no | declared | 1 |
-| `kubernetes.apply` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `kubernetes.contexts` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `kubernetes.delete` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `kubernetes.diagnostics` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `kubernetes.exec_input` | external_side_effect | session_only | 30000 | no | session call-only cancel + terminate-remote close | no | declared | 1 |
-| `kubernetes.exec_read` | read_only | session_only | 30000 | yes | session call-only cancel + terminate-remote close | no | declared | 1 |
-| `kubernetes.exec_resize` | external_side_effect | session_only | 30000 | no | session call-only cancel + terminate-remote close | no | declared | 1 |
-| `kubernetes.get_yaml` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `kubernetes.list` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `kubernetes.logs` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `kubernetes.logs_follow` | read_only | session_only | 30000 | yes | session call-only cancel + stop-observation close | no | declared | 1 |
-| `kubernetes.namespaces` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `kubernetes.port_forward_events` | read_only | session_only | 30000 | yes | session call-only cancel + detach-remote close | no | declared | 1 |
-| `kubernetes.restart` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `kubernetes.scale` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `kubernetes.watch_events` | read_only | session_only | 30000 | yes | session call-only cancel + stop-observation close | no | declared | 1 |
 | `mongodb.aggregate` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
 | `mongodb.bulk_write` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
 | `mongodb.change_stream_read` | read_only | session_only | 30000 | yes | session call-and-source cancel + stop-observation close | no | declared | 1 |

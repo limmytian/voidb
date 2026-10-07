@@ -113,8 +113,8 @@ async fn main() -> Result<()> {
     )?;
 
     let profile_store = profile_store(&voidb_dir);
-    remove_if_exists(&profile_store.profiles_path())?;
-    remove_if_exists(&profile_store.credentials_path())?;
+    remove_if_exists(profile_store.profiles_path())?;
+    remove_if_exists(profile_store.credentials_path())?;
 
     let (pull_ok, _) = ops::pull_objects(login.session.clone(), pushed_cfg)
         .await
@@ -164,7 +164,7 @@ async fn main() -> Result<()> {
     }
     assert_file_excludes(
         "pulled credential store",
-        &profile_store.credentials_path(),
+        profile_store.credentials_path(),
         &["hosted-super-secret-password", "hosted-db.internal.example"],
     )?;
 

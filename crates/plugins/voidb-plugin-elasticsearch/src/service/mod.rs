@@ -50,6 +50,7 @@ use index::EsIndexService;
 ///
 /// - `Channel`: TUI mode — commands sent over mpsc; results returned as events.
 /// - `Direct`: CLI mode — each async method awaits the operation directly.
+#[allow(clippy::large_enum_variant)]
 enum ServiceMode {
     /// TUI channel-based mode (non-blocking from the plugin's perspective).
     Channel {

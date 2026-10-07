@@ -66,14 +66,6 @@ const PLUGIN_EXPERIENCE: &[PluginExperience] = &[
         known_limit: "Owns no target driver, live capability session, or target operation dispatch.",
     },
     PluginExperience {
-        plugin_id: "docker",
-        release_posture: "release_candidate",
-        standalone_tui: true,
-        tui_context_handoff: "Bounded current-view share with local operation review",
-        validation_coverage: "`scripts/check-infrastructure-live-session-conformance.sh`; Docker plugin tests; `scripts/tui-quality-gate.sh`",
-        known_limit: "Provider-specific daemon behavior still requires an opt-in disposable live fixture.",
-    },
-    PluginExperience {
         plugin_id: "duckdb",
         release_posture: "beta",
         standalone_tui: false,
@@ -88,14 +80,6 @@ const PLUGIN_EXPERIENCE: &[PluginExperience] = &[
         tui_context_handoff: "None; capability and agent-owned session only",
         validation_coverage: "`scripts/check-data-search-live-session-conformance.sh`; Elasticsearch plugin tests",
         known_limit: "Disposable target evidence remains an opt-in promotion gate.",
-    },
-    PluginExperience {
-        plugin_id: "kubernetes",
-        release_posture: "release_candidate",
-        standalone_tui: true,
-        tui_context_handoff: "Bounded current-view share with local operation review",
-        validation_coverage: "`scripts/check-infrastructure-live-session-conformance.sh`; Kubernetes plugin tests; `scripts/tui-quality-gate.sh`",
-        known_limit: "Cluster-specific RBAC and admission behavior still needs an opt-in disposable fixture.",
     },
     PluginExperience {
         plugin_id: "mongodb",

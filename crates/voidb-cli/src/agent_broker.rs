@@ -5890,8 +5890,6 @@ fn register_session_factories(
             | "redis"
             | "mongodb"
             | "elasticsearch"
-            | "docker"
-            | "kubernetes"
             | "webdav"
     ) {
         return Ok(());
@@ -5962,20 +5960,6 @@ fn register_session_factories(
                 serde_json::from_value(config).map_err(|_| {
                     anyhow!("granted Elasticsearch profile configuration is invalid")
                 })?,
-            ),
-        )),
-        #[cfg(feature = "docker")]
-        "docker" => host.register_factory(Arc::new(
-            voidb_plugin_docker::DockerAgentSessionFactory::new(
-                serde_json::from_value(config)
-                    .map_err(|_| anyhow!("granted Docker profile configuration is invalid"))?,
-            ),
-        )),
-        #[cfg(feature = "kubernetes")]
-        "kubernetes" => host.register_factory(Arc::new(
-            voidb_plugin_kubernetes::K8sAgentSessionFactory::new(
-                serde_json::from_value(config)
-                    .map_err(|_| anyhow!("granted Kubernetes profile configuration is invalid"))?,
             ),
         )),
         _ => {}
@@ -6675,10 +6659,6 @@ fn append_agent_audit(
     _metadata: serde_json::Value,
 ) {
 }
-
-#[cfg(all(test, feature = "full"))]
-#[path = "infrastructure_live_session_conformance.rs"]
-mod infrastructure_live_session_conformance;
 
 #[cfg(all(test, feature = "full"))]
 #[path = "data_search_live_session_conformance.rs"]
@@ -8081,8 +8061,6 @@ mod tests {
             "duckdb",
             "ssh",
             "sync",
-            "docker",
-            "kubernetes",
             "mongodb",
             "elasticsearch",
             "sync",
@@ -8257,8 +8235,6 @@ mod tests {
             "postgres",
             "duckdb",
             "ssh",
-            "docker",
-            "kubernetes",
             "mongodb",
             "elasticsearch",
         ] {

@@ -256,14 +256,6 @@ pub(crate) async fn test_connection_by_plugin(
                 .map_err(|e| e.to_string())
         }
 
-        // === Kubernetes ===
-        #[cfg(feature = "kubernetes")]
-        "kubernetes" => {
-            voidb_plugin_kubernetes::test_connection(conn)
-                .await
-                .map_err(|e| e.to_string())
-        }
-
         // === Elasticsearch ===
         #[cfg(feature = "elasticsearch")]
         "elasticsearch" => {

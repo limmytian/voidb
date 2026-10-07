@@ -355,6 +355,7 @@ impl BrowserService {
     /// Connects to the source, fetches DDL + schema + optional data for
     /// each table, builds clipboard entries, and writes to the shared
     /// clipboard. Emits progress events for the TUI.
+    #[allow(clippy::too_many_arguments)]
     async fn copy_tables_to_clipboard(
         &self,
         source_url: &str,
@@ -623,6 +624,7 @@ impl BrowserService {
     ///
     /// Creates a temporary pool for the source URL and copies each table's
     /// DDL and data from the source into the new target database.
+    #[allow(clippy::too_many_arguments)]
     async fn paste_database(
         &self,
         target_database: &str,

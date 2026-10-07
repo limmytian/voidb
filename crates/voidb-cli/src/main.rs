@@ -69,10 +69,6 @@ fn build_cli_manager() -> CliPluginManager {
     cli_manager.register(voidb_plugin_redis::create_redis_cli_plugin());
     #[cfg(feature = "ssh")]
     cli_manager.register(voidb_plugin_ssh::create_ssh_cli_plugin());
-    #[cfg(feature = "docker")]
-    cli_manager.register(voidb_plugin_docker::create_docker_cli_plugin());
-    #[cfg(feature = "kubernetes")]
-    cli_manager.register(voidb_plugin_kubernetes::create_k8s_cli_plugin());
     #[cfg(feature = "elasticsearch")]
     cli_manager.register(voidb_plugin_elasticsearch::create_es_cli_plugin());
     #[cfg(feature = "mongodb")]
@@ -321,10 +317,10 @@ mod tests {
                 "--task-id",
                 "task-1",
                 "--plugin",
-                "docker",
+                "ssh",
                 "--generation",
                 "1",
-                "context:docker:1:1",
+                "context:ssh:1:1",
             ],
         ] {
             let matches = parse_cli(&args);
@@ -375,10 +371,10 @@ mod tests {
                 "--task-id",
                 "task-1",
                 "--plugin",
-                "docker",
+                "ssh",
                 "--generation",
                 "1",
-                "context:docker:1:1",
+                "context:ssh:1:1",
             ],
         ] {
             let matches = parse_cli(&args);
@@ -434,10 +430,10 @@ mod tests {
                 "--task-id",
                 "task-1",
                 "--plugin",
-                "docker",
+                "ssh",
                 "--generation",
                 "1",
-                "context:docker:1:1",
+                "context:ssh:1:1",
             ],
         ] {
             let matches = parse_cli(&args);

@@ -34,16 +34,12 @@ use voidb_core::{
     discover_process_plugins, evaluate_capability_policy, grant_credentials_for_invocation,
     local_cli_actor, profile_names_equal, redact_text_with_json,
 };
-#[cfg(feature = "docker")]
-use voidb_plugin_docker::{DockerConfig, docker_capabilities, invoke_docker_capability};
 #[cfg(feature = "duckdb")]
 use voidb_plugin_duckdb::{DuckDbConfig, duckdb_capabilities, invoke_duckdb_capability};
 #[cfg(feature = "elasticsearch")]
 use voidb_plugin_elasticsearch::{
     EsConfig, elasticsearch_capabilities, invoke_elasticsearch_capability,
 };
-#[cfg(feature = "kubernetes")]
-use voidb_plugin_kubernetes::{K8sConfig, invoke_kubernetes_capability, kubernetes_capabilities};
 #[cfg(feature = "mongodb")]
 use voidb_plugin_mongodb::{MongoConfig, invoke_mongodb_capability, mongodb_capabilities};
 #[cfg(feature = "mysql")]
@@ -72,10 +68,6 @@ const SUPPORTED_INVOKE_PLUGINS: &[&str] = &[
     "duckdb",
     #[cfg(feature = "ssh")]
     "ssh",
-    #[cfg(feature = "docker")]
-    "docker",
-    #[cfg(feature = "kubernetes")]
-    "kubernetes",
     #[cfg(feature = "mongodb")]
     "mongodb",
     #[cfg(feature = "elasticsearch")]
@@ -1346,28 +1338,6 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
-        #[cfg(feature = "docker")]
-        "docker" => {
-            let config = parse_docker_config(connection).map_err(|error| *error)?;
-            invoke_with_timeout(
-                invoke_docker_capability(&config, invocation),
-                timeout_ms,
-                &capability.plugin_id,
-                &capability.id,
-            )
-            .await
-        }
-        #[cfg(feature = "kubernetes")]
-        "kubernetes" => {
-            let config = parse_kubernetes_config(connection).map_err(|error| *error)?;
-            invoke_with_timeout(
-                invoke_kubernetes_capability(&config, invocation),
-                timeout_ms,
-                &capability.plugin_id,
-                &capability.id,
-            )
-            .await
-        }
         #[cfg(feature = "mongodb")]
         "mongodb" => {
             let config = parse_mongodb_config(connection).map_err(|error| *error)?;
@@ -1503,20 +1473,6 @@ fn parse_duckdb_config(
 #[cfg(feature = "ssh")]
 fn parse_ssh_config(connection: &ConnectionConfig) -> Result<SshConfig, Box<CapabilityError>> {
     parse_plugin_config(connection, "ssh", "SSH")
-}
-
-#[cfg(feature = "docker")]
-fn parse_docker_config(
-    connection: &ConnectionConfig,
-) -> Result<DockerConfig, Box<CapabilityError>> {
-    parse_plugin_config(connection, "docker", "Docker")
-}
-
-#[cfg(feature = "kubernetes")]
-fn parse_kubernetes_config(
-    connection: &ConnectionConfig,
-) -> Result<K8sConfig, Box<CapabilityError>> {
-    parse_plugin_config_with_aliases(connection, &["kubernetes", "k8s"], "Kubernetes")
 }
 
 #[cfg(feature = "mongodb")]
@@ -1661,10 +1617,6 @@ fn capabilities_for_plugin(
         "duckdb" => Ok(duckdb_capabilities()),
         #[cfg(feature = "ssh")]
         "ssh" => Ok(ssh_capabilities()),
-        #[cfg(feature = "docker")]
-        "docker" => Ok(docker_capabilities()),
-        #[cfg(feature = "kubernetes")]
-        "kubernetes" => Ok(kubernetes_capabilities()),
         #[cfg(feature = "mongodb")]
         "mongodb" => Ok(mongodb_capabilities()),
         #[cfg(feature = "elasticsearch")]
@@ -1692,10 +1644,6 @@ pub(crate) fn builtin_capabilities() -> Vec<CapabilityDefinition> {
     capabilities.extend(duckdb_capabilities());
     #[cfg(feature = "ssh")]
     capabilities.extend(ssh_capabilities());
-    #[cfg(feature = "docker")]
-    capabilities.extend(docker_capabilities());
-    #[cfg(feature = "kubernetes")]
-    capabilities.extend(kubernetes_capabilities());
     #[cfg(feature = "mongodb")]
     capabilities.extend(mongodb_capabilities());
     #[cfg(feature = "elasticsearch")]
@@ -2936,16 +2884,6 @@ mod tests {
         assert!(
             capabilities
                 .iter()
-                .any(|capability| capability.qualified_id() == "docker.list_containers")
-        );
-        assert!(
-            capabilities
-                .iter()
-                .any(|capability| capability.qualified_id() == "kubernetes.list")
-        );
-        assert!(
-            capabilities
-                .iter()
                 .any(|capability| capability.qualified_id() == "mongodb.find")
         );
         assert!(
@@ -3008,23 +2946,7 @@ mod tests {
         assert_eq!(
             session_only,
             vec![
-                "docker.attach_input",
-                "docker.attach_read",
-                "docker.attach_resize",
-                "docker.events_follow",
-                "docker.exec_input",
-                "docker.exec_read",
-                "docker.exec_resize",
-                "docker.exec_signal",
-                "docker.logs_follow",
-                "docker.stats_follow",
                 "elasticsearch.search_stream_read",
-                "kubernetes.exec_input",
-                "kubernetes.exec_read",
-                "kubernetes.exec_resize",
-                "kubernetes.logs_follow",
-                "kubernetes.port_forward_events",
-                "kubernetes.watch_events",
                 "mongodb.change_stream_read",
                 "mongodb.cursor_read",
                 "redis.monitor_read",
@@ -3144,10 +3066,8 @@ mod tests {
         assert_eq!(
             serde_json::to_value(snapshot).expect("serialize catalog snapshot"),
             json!({
-                "docker": [18, 8, 10, 0],
                 "duckdb": [9, 7, 0, 2],
                 "elasticsearch": [11, 10, 1, 0],
-                "kubernetes": [16, 10, 6, 0],
                 "mongodb": [15, 12, 2, 1],
                 "mysql": [9, 7, 0, 2],
                 "postgres": [9, 7, 0, 2],
@@ -3342,26 +3262,25 @@ mod tests {
 
     #[test]
     fn side_effecting_live_start_guidance_requests_grant_and_open_acknowledgements() {
-        let definitions = kubernetes_capabilities();
-        let capability = find_capability(&definitions, "port_forward_events");
+        let definitions = ssh_capabilities();
+        let capability = find_capability(&definitions, "terminal_read");
         let guidance = session_handoff_guidance(capability, "id:profile:test", &empty_discovery());
 
         assert_eq!(guidance["requires_destructive_acknowledgement"], false);
-        assert_eq!(guidance["requires_start_acknowledgement"], true);
-        assert_eq!(guidance["requires_destructive_grant"], true);
+        assert_eq!(guidance["requires_start_acknowledgement"], false);
+        assert_eq!(guidance["requires_destructive_grant"], false);
         let authorize = guidance["authorize_args"]
             .as_array()
             .expect("authorize args");
         assert!(
             authorize
                 .iter()
-                .any(|argument| argument == "--allow-destructive")
+                .any(|argument| argument == "--preset")
         );
-        assert!(authorize.iter().any(|argument| argument == "--yes"));
         let open = guidance["session_open_args"]
             .as_array()
             .expect("session open args");
-        assert!(open.iter().any(|argument| argument == "--yes"));
+        assert!(open.iter().any(|argument| argument == "session"));
     }
 
     #[test]
@@ -3533,57 +3452,11 @@ mod tests {
     }
 
     #[test]
-    fn container_and_document_beta_catalog_is_bounded_and_gated() {
+    fn document_beta_catalog_is_bounded_and_gated() {
         let discovery = empty_discovery();
-        let docker = capabilities_for_plugin("docker", &discovery).expect("docker capabilities");
-        let kubernetes =
-            capabilities_for_plugin("kubernetes", &discovery).expect("kubernetes capabilities");
         let mongodb = capabilities_for_plugin("mongodb", &discovery).expect("mongodb capabilities");
         let elasticsearch = capabilities_for_plugin("elasticsearch", &discovery)
             .expect("elasticsearch capabilities");
-
-        let docker_action = find_capability(&docker, "container_action");
-        assert!(docker_action.destructive);
-        assert!(docker_action.supports_dry_run);
-        assert_eq!(docker_action.risk, CapabilityRiskLevel::Destructive);
-        assert_permission(docker_action, "connection.write");
-        assert_permission(docker_action, "docker.containers.lifecycle");
-        assert_output_page_contract(find_capability(&docker, "list_containers"), 500);
-        assert_output_page_contract(find_capability(&docker, "list_images"), 500);
-        assert_eq!(
-            find_capability(&docker, "logs").input_schema["properties"]["tail"]["maximum"],
-            json!(5_000)
-        );
-        assert_eq!(
-            find_capability(&docker, "logs").input_schema["properties"]["max_bytes"]["maximum"],
-            json!(1024 * 1024)
-        );
-        assert_eq!(
-            find_capability(&docker, "inspect_container").output_schema["properties"]["raw_omitted"]
-                ["type"],
-            "boolean"
-        );
-
-        for id in ["delete", "scale", "restart", "apply"] {
-            let capability = find_capability(&kubernetes, id);
-            assert!(capability.destructive, "kubernetes.{id} is destructive");
-            assert!(
-                capability.supports_dry_run,
-                "kubernetes.{id} supports dry-run promotion gate"
-            );
-            assert_eq!(capability.risk, CapabilityRiskLevel::Destructive);
-            assert_permission(capability, "connection.write");
-        }
-        assert_output_page_contract(find_capability(&kubernetes, "namespaces"), 500);
-        assert_output_page_contract(find_capability(&kubernetes, "list"), 500);
-        assert_eq!(
-            find_capability(&kubernetes, "get_yaml").input_schema["properties"]["max_bytes"]["maximum"],
-            json!(1024 * 1024)
-        );
-        assert_eq!(
-            find_capability(&kubernetes, "logs").input_schema["properties"]["tail"]["maximum"],
-            json!(5_000)
-        );
 
         for id in ["insert", "update", "delete", "create_index", "run_command"] {
             let capability = find_capability(&mongodb, id);
@@ -4280,20 +4153,6 @@ mod tests {
     fn mutation_policy_denials_have_redacted_audit_context() {
         for (capability_ref, profile_ref, input, sensitive_value) in [
             (
-                "docker.container_action",
-                "docker",
-                json!({ "id": "prod-container-123", "action": "remove" }),
-                "prod-container-123",
-            ),
-            (
-                "kubernetes.apply",
-                "cluster",
-                json!({
-                    "yaml": "apiVersion: v1\nkind: Secret\nmetadata:\n  name: prod-secret\n"
-                }),
-                "prod-secret",
-            ),
-            (
                 "mongodb.insert",
                 "mongo",
                 json!({
@@ -4358,72 +4217,6 @@ mod tests {
             let encoded = encoded_audit_context(&event);
             assert!(!encoded.contains(sensitive_value));
         }
-    }
-
-    #[tokio::test]
-    async fn docker_container_action_dry_run_does_not_open_daemon_connection() {
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![docker_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let data = run_invocation(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "docker.container_action".into(),
-                profile_ref: "docker".into(),
-                input: json!({ "id": "abc123", "action": "restart" }),
-                timeout_ms: None,
-                dry_run: true,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect("docker dry-run");
-
-        assert_eq!(data.plugin_id, "docker");
-        assert_eq!(data.output["dry_run"], true);
-        assert_eq!(data.output["operation"], "container_action");
-        assert_eq!(data.output_summary["dry_run"], true);
-        assert_eq!(data.runtime.kind, "builtin");
-    }
-
-    #[tokio::test]
-    async fn kubernetes_apply_dry_run_does_not_open_cluster_connection() {
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![kubernetes_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let data = run_invocation(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "kubernetes.apply".into(),
-                profile_ref: "cluster".into(),
-                input: json!({
-                    "yaml": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: agent-probe\n"
-                }),
-                timeout_ms: None,
-                dry_run: true,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect("kubernetes apply dry-run");
-
-        assert_eq!(data.plugin_id, "kubernetes");
-        assert_eq!(data.output["dry_run"], true);
-        assert_eq!(data.output["operation"], "apply");
-        assert_eq!(data.output["details"]["kind"], "ConfigMap");
-        assert_eq!(data.runtime.kind, "builtin");
-        let encoded = serde_json::to_string(&data).expect("serialize data");
-        assert!(!encoded.contains("cluster-token"));
     }
 
     #[tokio::test]
@@ -4500,68 +4293,6 @@ mod tests {
         assert_eq!(data.runtime.kind, "builtin");
         assert!(!encoded.contains("ada@example.com"));
         assert!(!encoded.contains("es-token"));
-    }
-
-    #[tokio::test]
-    async fn destructive_operations_require_ack_or_dry_run_for_operations_plugins() {
-        let docker_ctx = CliContext::new(AppConfig {
-            connections: vec![docker_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let docker_error = run_invocation(
-            &docker_ctx,
-            InvokeRunOptions {
-                capability_ref: "docker.container_action".into(),
-                profile_ref: "docker".into(),
-                input: json!({ "id": "abc123", "action": "remove" }),
-                timeout_ms: None,
-                dry_run: false,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect_err("docker destructive denied");
-
-        assert_eq!(docker_error.category, CapabilityErrorCategory::Policy);
-        assert_eq!(docker_error.code, "policy.destructive_denied_by_default");
-        assert_eq!(
-            docker_error.details["qualified_id"],
-            "docker.container_action"
-        );
-
-        let k8s_ctx = CliContext::new(AppConfig {
-            connections: vec![kubernetes_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let k8s_error = run_invocation(
-            &k8s_ctx,
-            InvokeRunOptions {
-                capability_ref: "kubernetes.delete".into(),
-                profile_ref: "cluster".into(),
-                input: json!({
-                    "resource_type": "pod",
-                    "name": "agent-probe",
-                    "namespace": "default"
-                }),
-                timeout_ms: None,
-                dry_run: false,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect_err("kubernetes destructive denied");
-
-        assert_eq!(k8s_error.category, CapabilityErrorCategory::Policy);
-        assert_eq!(k8s_error.code, "policy.destructive_denied_by_default");
-        assert_eq!(k8s_error.details["qualified_id"], "kubernetes.delete");
     }
 
     #[tokio::test]
@@ -5252,43 +4983,6 @@ mod tests {
                     "private_key_path": "/home/deploy/.ssh/id_ed25519",
                     "passphrase": "key-passphrase"
                 }
-            })),
-        }
-    }
-
-    fn docker_connection() -> ConnectionConfig {
-        ConnectionConfig {
-            name: "docker".into(),
-            db_type: DatabaseType::Plugin,
-            plugin_id: Some("docker".into()),
-            plugin_config: Some(json!({
-                "connection": {
-                    "type": "Socket",
-                    "path": "/no/such/docker.sock"
-                },
-                "timeout": 1
-            })),
-        }
-    }
-
-    fn kubernetes_connection() -> ConnectionConfig {
-        ConnectionConfig {
-            name: "cluster".into(),
-            db_type: DatabaseType::Plugin,
-            plugin_id: Some("kubernetes".into()),
-            plugin_config: Some(json!({
-                "connection": {
-                    "type": "Direct",
-                    "api_url": "https://127.0.0.1:1",
-                    "auth": {
-                        "type": "Token",
-                        "token": "cluster-token"
-                    },
-                    "verify_ssl": false,
-                    "ca_cert": null
-                },
-                "default_namespace": "default",
-                "timeout": 1
             })),
         }
     }
