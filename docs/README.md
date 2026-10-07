@@ -5,6 +5,7 @@ VoidB is a terminal-based database management tool with vim-style keybindings an
 ## Documentation
 
 - [5 分钟开发一个 VoidB 插件](quickstart-process-plugin.md) - 快速上手：编写基于 stdio-jsonrpc 的多语言独立进程插件
+- [Process Plugin Development and Certification Guide](process-plugin-development-guide.md) - Specification, cargo-generate template, packaging tooling, and certification checklist
 - [Plugin Development Guide](plugin-development-guide.md) - Comprehensive guide: architecture, traits, service-layer convention, patterns, checklist
 - [Security Notes](security.md) - Credential encryption behavior, default-passphrase risk, and recommended UX surface
 - [Master Password UX and Credential Protection State](master-password-ux.md) - CLI/TUI setup, unlock, forget, recovery, and protection-state rules
