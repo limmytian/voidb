@@ -1151,12 +1151,15 @@ fn extract_process_plugin_archive(
             )
         })?;
         extract_tar_stream(decoder, destination)
+    } else if archive_name.ends_with(".tar.gz") || archive_name.ends_with(".tgz") {
+        let decoder = flate2::read::GzDecoder::new(file);
+        extract_tar_stream(decoder, destination)
     } else if archive_name.ends_with(".tar") {
         extract_tar_stream(file, destination)
     } else {
         Err(ProcessPluginPackageValidationError::new(
             "package.archive_unsupported",
-            "Plugin package archive must be a .tar or .tar.zst file.",
+            "Plugin package archive must be a .tar, .tar.gz, or .tar.zst file.",
             json!({ "path": redact_source_locator(archive_path) }),
         ))
     }

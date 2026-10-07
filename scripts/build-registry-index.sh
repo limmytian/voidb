@@ -29,7 +29,14 @@ for plugin in "${PLUGINS[@]}"; do
     echo "Warning: Plugin repository not found at ${plugin_repo}, skipping." >&2
     continue
   fi
-  INPUT_PATHS+=("${plugin_repo}")
+
+  # Prefer actual packaged distribution archive in dist/ if available
+  pkg_archive="${plugin_repo}/dist/${plugin}-0.3.0.tar.gz"
+  if [ -f "${pkg_archive}" ]; then
+    INPUT_PATHS+=("${pkg_archive}")
+  else
+    INPUT_PATHS+=("${plugin_repo}")
+  fi
 done
 
 if [ ${#INPUT_PATHS[@]} -eq 0 ]; then
