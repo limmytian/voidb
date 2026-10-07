@@ -5684,6 +5684,7 @@ dependencies = [
  "csv",
  "dirs",
  "ed25519-dalek",
+ "flate2",
  "hex",
  "jsonschema",
  "once_cell",

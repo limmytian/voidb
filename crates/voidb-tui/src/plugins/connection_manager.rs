@@ -35,6 +35,7 @@ use voidb_core::{
 };
 
 use super::connection_dialog::{ConnType, ConnectionDialog};
+use super::plugin_manager::PluginManagerState;
 
 /// Connection Manager Plugin
 pub struct ConnectionManagerPlugin {
@@ -88,6 +89,8 @@ pub struct ConnectionManagerPlugin {
     /// Redacted profile catalog loading failure, if the profile store is unavailable.
     profile_catalog_error: Option<String>,
     capability_browser: Option<CapabilityBrowserState>,
+    /// Interactive Plugin Manager & Marketplace modal
+    plugin_manager: Option<PluginManagerState>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -250,6 +253,7 @@ impl ConnectionManagerPlugin {
             profile_catalog_entries: Vec::new(),
             profile_catalog_error: None,
             capability_browser: None,
+            plugin_manager: None,
         }
     }
 
@@ -1032,6 +1036,15 @@ impl Plugin for ConnectionManagerPlugin {
             self.capability_rx = None;
         }
 
+        if let Some(pm) = &mut self.plugin_manager
+            && pm.poll_async()
+        {
+            // If operation completed, request render if caps available
+            if let Some(caps) = &self.caps {
+                let _ = caps.tabs.request_render();
+            }
+        }
+
         // Check for dialog test result
         let mut dialog_test_result = None;
         if let Some(rx) = &self.dialog_test_rx
@@ -1175,7 +1188,14 @@ impl Plugin for ConnectionManagerPlugin {
                 code, modifiers, ..
             }) = event
             {
-                if self.capability_browser.is_some() {
+                if let Some(pm) = &mut self.plugin_manager {
+                    if matches!(code, KeyCode::Esc) || (!pm.search_active && matches!(code, KeyCode::Char('q'))) {
+                        self.plugin_manager = None;
+                        self.status_message = Some("Plugin manager closed".to_string());
+                    } else {
+                        pm.handle_key(code);
+                    }
+                } else if self.capability_browser.is_some() {
                     self.handle_capability_browser_key(code);
                 } else
                 // Help popup intercepts events
@@ -1519,6 +1539,12 @@ impl Plugin for ConnectionManagerPlugin {
                         KeyCode::Char('c') => {
                             self.open_capability_browser();
                         }
+                        KeyCode::Char('p') => {
+                            let mut pm = PluginManagerState::new();
+                            pm.load_or_fetch_registry();
+                            self.plugin_manager = Some(pm);
+                            self.status_message = None;
+                        }
                         KeyCode::Char('m') => {
                             self.open_credential_dialog();
                         }
@@ -1562,6 +1588,10 @@ impl Plugin for ConnectionManagerPlugin {
                                         HelpEntry {
                                             key: "c",
                                             desc: "Capability browser",
+                                        },
+                                        HelpEntry {
+                                            key: "p",
+                                            desc: "Plugin manager & marketplace",
                                         },
                                         HelpEntry {
                                             key: "m",
@@ -1646,11 +1676,15 @@ impl Plugin for ConnectionManagerPlugin {
             self.render_credential_dialog(frame, area, dialog);
         }
 
+        if let Some(pm) = &mut self.plugin_manager {
+            pm.render(frame, area);
+        }
+
         Ok(())
     }
 
     fn wants_raw_input(&self) -> bool {
-        self.credential_dialog.is_some()
+        self.credential_dialog.is_some() || self.plugin_manager.is_some()
     }
 }
 
@@ -1853,9 +1887,9 @@ impl ConnectionManagerPlugin {
         let help_text = if self.search_active {
             "↑↓: Navigate | Enter: Guidance | Esc: Exit search"
         } else if self.connections.is_empty() {
-            "n: New connection | m: Master password | ?: Help | Ctrl+Q: Quit"
+            "n: New connection | p: Plugins | m: Master password | ?: Help | Ctrl+Q: Quit"
         } else {
-            "↑↓/jk: Navigate | Enter: Guidance | /: Search | n/e/d/t/c | m: Master password | ?: Help"
+            "↑↓/jk: Navigate | Enter: Guidance | /: Search | n/e/d/t/c | p: Plugins | m: Master password | ?: Help"
         };
 
         let help = Paragraph::new(Line::from(vec![Span::styled(
