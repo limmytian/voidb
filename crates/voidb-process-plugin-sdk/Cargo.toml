@@ -3,6 +3,13 @@ name = "voidb-process-plugin-sdk"
 version = "0.3.0-rc.1"
 edition = "2024"
 license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "SDK for building VoidB standalone process plugins with stdio-jsonrpc transport"
+readme = "README.md"
+keywords = ["voidb", "plugin", "sdk", "jsonrpc", "database"]
+categories = ["development-tools", "database-implementations"]
 
 [dependencies]
 voidb-core = { path = "../voidb-core" }

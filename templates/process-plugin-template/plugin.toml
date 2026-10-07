@@ -1,0 +1,29 @@
+id = "{{plugin_name}}"
+name = "{{plugin_title}}"
+version = "0.1.0"
+protocol_version = "1"
+description = "{{plugin_description}}"
+license = "Apache-2.0"
+
+[runtime]
+command = "voidb-plugin-{{plugin_name}}"
+args = ["serve"]
+transport = "stdio-jsonrpc"
+
+[connections]
+profile_schema = "schemas/profile.schema.json"
+secret_classes = ["password"]
+
+[[capabilities]]
+id = "ping"
+description = "Check target connection or health."
+input_schema = "schemas/ping-input.schema.json"
+output_schema = "schemas/ping-output.schema.json"
+permissions = ["connection.read"]
+risk = "read_only"
+destructive = false
+streaming = false
+connection_required = false
+required_secret_classes = []
+supports_dry_run = false
+default_timeout_ms = 5000

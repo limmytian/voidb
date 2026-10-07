@@ -1,0 +1,31 @@
+[package]
+name = "voidb-plugin-{{plugin_name}}"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+authors = ["{{author_name}} <{{author_email}}>"]
+description = "{{plugin_description}}"
+
+[[bin]]
+name = "voidb-plugin-{{plugin_name}}"
+path = "src/main.rs"
+
+[dependencies]
+voidb-process-plugin-sdk = "0.3.0-rc.1"
+voidb-core = "0.3.0-rc.1"
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+clap = { version = "4", features = ["derive"] }
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+
+[[example]]
+name = "export_schemas"
+path = "examples/export_schemas.rs"
+
+[[example]]
+name = "fixture_smoke"
+path = "examples/fixture_smoke.rs"

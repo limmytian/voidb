@@ -1,0 +1,27 @@
+[template]
+cargo_generate_version = ">=0.18.0"
+
+[placeholders.plugin_name]
+type = "string"
+prompt = "Plugin identifier (e.g. redis, mongodb, clickhouse)"
+default = "sample"
+
+[placeholders.plugin_title]
+type = "string"
+prompt = "Plugin human-readable display name"
+default = "Sample Database Plugin"
+
+[placeholders.plugin_description]
+type = "string"
+prompt = "Brief description of the plugin"
+default = "VoidB external process plugin"
+
+[placeholders.author_name]
+type = "string"
+prompt = "Author name"
+default = "Developer"
+
+[placeholders.author_email]
+type = "string"
+prompt = "Author email"
+default = "dev@example.com"
