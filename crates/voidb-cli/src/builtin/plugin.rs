@@ -3306,5 +3306,61 @@ platforms = ["{platform}"]
 
         let record_path = process_plugin_install_record_path(install_root.path(), "myplug");
         assert!(record_path.is_file());
+
+        // Update plugin online to 1.1.0
+        let source_v2 = TempDir::new("online-source-v2");
+        write_valid_plugin(source_v2.path(), "myplug", "myplug", "1.1.0", "storage.read");
+        let pkg_v2_path = dist.path().join("myplug-1.1.0.tar.zst");
+        package_process_plugin(
+            source_v2.path().join("myplug"),
+            &pkg_v2_path,
+            ProcessPluginPackageFormat::TarZst,
+        )
+        .expect("package v2");
+
+        let validation_v2 = validate_process_plugin_package(
+            ProcessPluginPackageSource::local_archive(&pkg_v2_path),
+            &install_root.path().join("staging_v2"),
+        )
+        .expect("validate v2 package");
+
+        let mut entry = index.get_plugin("myplug").unwrap().clone();
+        entry.latest_version = "1.1.0".into();
+        entry.versions.push(RegistryPluginVersion {
+            version: "1.1.0".into(),
+            protocol_version: "1".into(),
+            released_at: Some(Utc::now()),
+            voidb_core: None,
+            platforms: vec![voidb_core::process_plugin::current_platform().into()],
+            signature_scheme: None,
+            packages: vec![RegistryPackageArtifact {
+                filename: "myplug-1.1.0.tar.zst".into(),
+                format: "tar.zst".into(),
+                target: Some(voidb_core::process_plugin::current_platform().into()),
+                url: format!("file://{}", pkg_v2_path.display()),
+                sha256: validation_v2.package_digest,
+                size_bytes: Some(fs::metadata(&pkg_v2_path).map(|m| m.len()).unwrap_or(0)),
+                signature: None,
+            }],
+        });
+        index.upsert_plugin(entry);
+        index.save_to_file(&index_file).expect("save updated index");
+
+        let update_matches = cmd.clone().get_matches_from(vec![
+            "plugin",
+            "update",
+            "myplug",
+            "--registry-url",
+            &format!("file://{}", index_file.display()),
+            "--install-root",
+            install_root.path().to_str().unwrap(),
+        ]);
+        let (_, update_sub) = update_matches.subcommand().unwrap();
+        handle_update(update_sub).await.expect("online update myplug");
+
+        let record = read_process_plugin_install_record(&record_path).expect("read updated record");
+        assert_eq!(record.installed_version, "1.1.0");
+        assert!(record.previous_version.is_some());
+        assert_eq!(record.previous_version.unwrap().version, "1.0.0");
     }
 }
