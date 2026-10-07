@@ -18,8 +18,8 @@ This crate provides:
 
 ```toml
 [dependencies]
-voidb-process-plugin-sdk = "0.3.0-rc.1"
-voidb-core = "0.3.0-rc.1"
+voidb-process-plugin-sdk = "0.3.0"
+voidb-core = "0.3.0"
 ```
 
 ### 2. Implement Your Plugin
