@@ -386,41 +386,48 @@ impl SshSession {
                 }
             }
             SshAuthMethod::Agent => {
-                let mut agent = russh_keys::agent::client::AgentClient::connect_env()
-                    .await
-                    .map_err(|e| anyhow!("Failed to connect to SSH agent: {}", e))?;
-
-                let identities = agent
-                    .request_identities()
-                    .await
-                    .map_err(|e| anyhow!("Failed to list agent identities: {}", e))?;
-
-                if identities.is_empty() {
-                    return Err(anyhow!(
-                        "SSH agent has no identities. Add a key with ssh-add first."
-                    ));
-                }
-
-                let mut authenticated = false;
-                for key in &identities {
-                    match session
-                        .authenticate_publickey_with(&config.username, key.clone(), &mut agent)
+                #[cfg(unix)]
+                {
+                    let mut agent = russh_keys::agent::client::AgentClient::connect_env()
                         .await
-                    {
-                        Ok(true) => {
-                            authenticated = true;
-                            break;
+                        .map_err(|e| anyhow!("Failed to connect to SSH agent: {}", e))?;
+
+                    let identities = agent
+                        .request_identities()
+                        .await
+                        .map_err(|e| anyhow!("Failed to list agent identities: {}", e))?;
+
+                    if identities.is_empty() {
+                        return Err(anyhow!(
+                            "SSH agent has no identities. Add a key with ssh-add first."
+                        ));
+                    }
+
+                    let mut authenticated = false;
+                    for key in &identities {
+                        match session
+                            .authenticate_publickey_with(&config.username, key.clone(), &mut agent)
+                            .await
+                        {
+                            Ok(true) => {
+                                authenticated = true;
+                                break;
+                            }
+                            Ok(false) => continue,
+                            Err(_) => continue,
                         }
-                        Ok(false) => continue,
-                        Err(_) => continue,
+                    }
+
+                    if !authenticated {
+                        return Err(anyhow!(
+                            "SSH agent authentication failed: none of the {} keys were accepted",
+                            identities.len()
+                        ));
                     }
                 }
-
-                if !authenticated {
-                    return Err(anyhow!(
-                        "SSH agent authentication failed: none of the {} keys were accepted",
-                        identities.len()
-                    ));
+                #[cfg(not(unix))]
+                {
+                    return Err(anyhow!("SSH agent authentication is not supported on Windows yet"));
                 }
             }
         }

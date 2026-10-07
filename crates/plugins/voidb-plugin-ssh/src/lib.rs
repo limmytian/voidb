@@ -112,28 +112,35 @@ pub async fn test_connection(
             }
         }
         crate::config::SshAuthMethod::Agent => {
-            let mut agent = russh_keys::agent::client::AgentClient::connect_env()
-                .await
-                .map_err(|e| anyhow!("SSH agent not available: {}", e))?;
-            let identities = agent
-                .request_identities()
-                .await
-                .map_err(|e| anyhow!("Agent list failed: {}", e))?;
-            if identities.is_empty() {
-                return Err(anyhow!("SSH agent has no keys (run ssh-add first)"));
-            }
-            let mut ok = false;
-            for key in &identities {
-                if let Ok(true) = session
-                    .authenticate_publickey_with(&ssh_config.username, key.clone(), &mut agent)
+            #[cfg(unix)]
+            {
+                let mut agent = russh_keys::agent::client::AgentClient::connect_env()
                     .await
-                {
-                    ok = true;
-                    break;
+                    .map_err(|e| anyhow!("SSH agent not available: {}", e))?;
+                let identities = agent
+                    .request_identities()
+                    .await
+                    .map_err(|e| anyhow!("Agent list failed: {}", e))?;
+                if identities.is_empty() {
+                    return Err(anyhow!("SSH agent has no keys (run ssh-add first)"));
+                }
+                let mut ok = false;
+                for key in &identities {
+                    if let Ok(true) = session
+                        .authenticate_publickey_with(&ssh_config.username, key.clone(), &mut agent)
+                        .await
+                    {
+                        ok = true;
+                        break;
+                    }
+                }
+                if !ok {
+                    return Err(anyhow!("SSH agent authentication failed"));
                 }
             }
-            if !ok {
-                return Err(anyhow!("SSH agent authentication failed"));
+            #[cfg(not(unix))]
+            {
+                return Err(anyhow!("SSH agent authentication is not supported on Windows yet"));
             }
         }
     }

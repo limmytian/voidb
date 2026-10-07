@@ -1228,32 +1228,41 @@ async fn connect_and_auth_direct(
             }
         }
         SshAuthMethod::Agent => {
-            let mut agent = russh_keys::agent::client::AgentClient::connect_env()
-                .await
-                .map_err(|e| {
-                    voidb_core::VoidbError::Connection(format!("SSH agent not available: {}", e))
-                })?;
-            let identities = agent.request_identities().await.map_err(|e| {
-                voidb_core::VoidbError::Connection(format!("Agent list failed: {}", e))
-            })?;
-            if identities.is_empty() {
-                return Err(voidb_core::VoidbError::Connection(
-                    "SSH agent has no keys".to_string(),
-                ));
-            }
-            let mut ok = false;
-            for key in &identities {
-                if let Ok(true) = session
-                    .authenticate_publickey_with(&config.username, key.clone(), &mut agent)
+            #[cfg(unix)]
+            {
+                let mut agent = russh_keys::agent::client::AgentClient::connect_env()
                     .await
-                {
-                    ok = true;
-                    break;
+                    .map_err(|e| {
+                        voidb_core::VoidbError::Connection(format!("SSH agent not available: {}", e))
+                    })?;
+                let identities = agent.request_identities().await.map_err(|e| {
+                    voidb_core::VoidbError::Connection(format!("Agent list failed: {}", e))
+                })?;
+                if identities.is_empty() {
+                    return Err(voidb_core::VoidbError::Connection(
+                        "SSH agent has no keys".to_string(),
+                    ));
+                }
+                let mut ok = false;
+                for key in &identities {
+                    if let Ok(true) = session
+                        .authenticate_publickey_with(&config.username, key.clone(), &mut agent)
+                        .await
+                    {
+                        ok = true;
+                        break;
+                    }
+                }
+                if !ok {
+                    return Err(voidb_core::VoidbError::Connection(
+                        "SSH agent authentication failed".to_string(),
+                    ));
                 }
             }
-            if !ok {
+            #[cfg(not(unix))]
+            {
                 return Err(voidb_core::VoidbError::Connection(
-                    "SSH agent authentication failed".to_string(),
+                    "SSH agent authentication is not supported on Windows yet".to_string(),
                 ));
             }
         }
