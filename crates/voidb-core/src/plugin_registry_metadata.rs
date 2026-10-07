@@ -11,6 +11,7 @@ use crate::error::VoidbError;
 
 pub const REGISTRY_SCHEMA_VERSION: u32 = 1;
 pub const REGISTRY_SCHEMA_URI: &str = "https://voidb.dev/schemas/plugin-registry.schema.json";
+pub const DEFAULT_OFFICIAL_REGISTRY_URL: &str = "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json";
 
 /// High-level category for plugin discovery.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -109,7 +110,7 @@ impl Default for PluginRegistryIndex {
             schema: Some(REGISTRY_SCHEMA_URI.to_string()),
             schema_version: REGISTRY_SCHEMA_VERSION,
             registry_name: Some("VoidB Official Plugin Registry".to_string()),
-            registry_url: Some("https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json".to_string()),
+            registry_url: Some(DEFAULT_OFFICIAL_REGISTRY_URL.to_string()),
             updated_at: Utc::now(),
             plugins: Vec::new(),
         }
@@ -186,6 +187,83 @@ impl PluginRegistryIndex {
             Self::from_toml(&content)
         } else {
             Self::from_json(&content)
+        }
+    }
+
+    /// Fetch registry index from a remote HTTP, HTTPS URL, file:// URL, or local path.
+    pub async fn fetch_from_url(url: &str) -> Result<Self, VoidbError> {
+        if let Some(file_path) = url.strip_prefix("file://") {
+            return Self::load_from_file(file_path);
+        }
+        if std::path::Path::new(url).is_file() {
+            return Self::load_from_file(url);
+        }
+
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(15))
+            .build()
+            .map_err(|e| VoidbError::Network(format!("Failed to build HTTP client: {e}")))?;
+
+        let resp = client
+            .get(url)
+            .send()
+            .await
+            .map_err(|e| VoidbError::Network(format!("Failed to fetch registry from '{url}': {e}")))?;
+
+        if !resp.status().is_success() {
+            return Err(VoidbError::Network(format!(
+                "Registry fetch returned HTTP status {}: {}",
+                resp.status(),
+                url
+            )));
+        }
+
+        let content = resp
+            .text()
+            .await
+            .map_err(|e| VoidbError::Network(format!("Failed to read registry response body from '{url}': {e}")))?;
+
+        if url.ends_with(".toml") {
+            Self::from_toml(&content)
+        } else {
+            Self::from_json(&content)
+        }
+    }
+
+    /// Load from local cache file if fresh (less than `ttl`), otherwise fetch from URL and persist cache.
+    pub async fn fetch_with_cache<P: AsRef<Path>>(
+        url: &str,
+        cache_path: P,
+        ttl: std::time::Duration,
+    ) -> Result<Self, VoidbError> {
+        let cache_path = cache_path.as_ref();
+
+        // 1. Check if cache exists and is fresh
+        let is_fresh = std::fs::metadata(cache_path)
+            .and_then(|m| m.modified())
+            .and_then(|mod_time| mod_time.elapsed().map_err(std::io::Error::other))
+            .map(|elapsed| elapsed < ttl)
+            .unwrap_or(false);
+
+        if is_fresh && let Ok(cached) = Self::load_from_file(cache_path) {
+            return Ok(cached);
+        }
+
+        // 2. Fetch remote
+        match Self::fetch_from_url(url).await {
+            Ok(fetched) => {
+                let _ = fetched.save_to_file(cache_path);
+                Ok(fetched)
+            }
+            Err(e) => {
+                // If remote fetch fails, fallback to existing stale cache if present
+                if let Ok(stale) = Self::load_from_file(cache_path) {
+                    tracing::warn!("Failed to fetch remote registry ({e}), using cached fallback: {}", cache_path.display());
+                    Ok(stale)
+                } else {
+                    Err(e)
+                }
+            }
         }
     }
 }

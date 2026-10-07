@@ -204,7 +204,8 @@ pub use plugin_conformance::{
 };
 pub use plugin_registry_metadata::{
     PluginCategory, PluginRegistryIndex, RegistryPackageArtifact, RegistryPluginEntry,
-    RegistryPluginVersion, REGISTRY_SCHEMA_URI, REGISTRY_SCHEMA_VERSION,
+    RegistryPluginVersion, DEFAULT_OFFICIAL_REGISTRY_URL, REGISTRY_SCHEMA_URI,
+    REGISTRY_SCHEMA_VERSION,
 };
 pub use plugin_signing::{
     default_signature_path, generate_signing_keypair, sign_bytes, sign_file, sign_file_detached,

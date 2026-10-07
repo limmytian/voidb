@@ -29,6 +29,9 @@ pub enum VoidbError {
     #[error("Runtime error: {0}")]
     Runtime(String),
 
+    #[error("Network error: {0}")]
+    Network(String),
+
     #[error("Timeout: {0}")]
     Timeout(String),
 
