@@ -1,5 +1,5 @@
 [package]
-name = "voidb-plugin-{{plugin_name}}"
+name = "voidb-plugin-template"
 version = "0.1.0"
 edition = "2024"
 license = "Apache-2.0"
@@ -7,7 +7,7 @@ authors = ["{{author_name}} <{{author_email}}>"]
 description = "{{plugin_description}}"
 
 [[bin]]
-name = "voidb-plugin-{{plugin_name}}"
+name = "voidb-plugin-template"
 path = "src/main.rs"
 
 [dependencies]
