@@ -5,10 +5,15 @@ All notable changes to VoidB will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] - 2026-10-08
 
 ### Added
 
+- Visual Plugin Manager & Online Marketplace in TUI shell (`p` shortcut) with dual-tab (Installed vs Marketplace) navigation, category filtering, search, and async install/update/uninstall operations.
+- Hosted Official Plugin Registry on GitHub (`registry/index.json`) and automated CI dispatch workflow (`update-registry.yml`) linking standalone plugin releases.
+- Online `voidb plugin install <name>` with remote GitHub release download, SHA256 checksum verification, and Ed25519 signature validation.
+- Gzip decompression (`.tar.gz` / `.tgz`) support across plugin archive installation and extraction engine.
+- Complete standalone packaging and GitHub Releases for all 8 external plugins: `s3`, `email`, `docker`, `kubernetes`, `elasticsearch`, `mongodb`, `jenkins`, `webdav`.
 - Central Connection Manager authorization workflow with Read-only,
   Interactive/Execute, and Custom presets; reviewed TTL/use limits; explicit
   destructive consent; inspect, renew, replace, scoped revoke, and revoke-all.
@@ -25,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Interactive SSH authorization requires explicit grant consent and per-call
   destructive acknowledgement. Disposable OpenSSH acceptance verified separate
   persistent `cd` and `ls` calls, SFTP/forwarding lifecycle, and secret scans.
+- Plugin packaging and registry verification gates supply-chain security via SHA-256 and Ed25519 signatures.
 
 ### Fixed
 
