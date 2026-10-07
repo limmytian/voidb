@@ -907,9 +907,9 @@ fn millis_until(now: DateTime<Utc>, later: DateTime<Utc>) -> u64 {
     later.signed_duration_since(now).num_milliseconds().max(1) as u64
 }
 
-fn set_private_directory(path: &Path) -> std::io::Result<()> {
+fn set_private_directory(_path: &Path) -> std::io::Result<()> {
     #[cfg(unix)]
-    fs::set_permissions(path, fs::Permissions::from_mode(0o700))?;
+    fs::set_permissions(_path, fs::Permissions::from_mode(0o700))?;
     Ok(())
 }
 

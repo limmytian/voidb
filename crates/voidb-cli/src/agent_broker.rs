@@ -6,6 +6,8 @@
 //! redacted output. A finite use budget is optional. The master password is
 //! never returned through this API.
 
+#![cfg_attr(not(unix), allow(unused_imports))]
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, OpenOptions};
 use std::io::{BufRead, IsTerminal, Read, Write};
@@ -21,7 +23,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tokio::io::{AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::sync::{Mutex as AsyncMutex, Notify, watch};
-use tokio::task::{AbortHandle, JoinSet};
+#[cfg(unix)]
+use tokio::task::JoinSet;
+use tokio::task::AbortHandle;
 use uuid::Uuid;
 use voidb_core::{
     AGENT_BROKER_LEGACY_PROTOCOL_VERSION, AGENT_BROKER_PROTOCOL_VERSION,
@@ -5481,6 +5485,16 @@ async fn handle_broker_connection(
 
 #[cfg(not(unix))]
 async fn run_broker(_grant_path: &Path) -> anyhow::Result<()> {
+    bail!("agent broker currently requires a Unix-domain socket platform")
+}
+
+#[cfg(not(unix))]
+async fn broker_loop_with_host(
+    _grant_path: &Path,
+    _grant: AgentGrantFile,
+    _session_host: AgentSessionHost,
+    _password: &str,
+) -> anyhow::Result<()> {
     bail!("agent broker currently requires a Unix-domain socket platform")
 }
 
