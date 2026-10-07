@@ -1,0 +1,70 @@
+name: Update Plugin Registry Index
+
+on:
+  repository_dispatch:
+    types: [plugin_released, update_registry]
+  workflow_dispatch:
+    inputs:
+      plugin_id:
+        description: "Optional specific plugin ID to update (leave empty for full sync)"
+        required: false
+        default: ""
+      version:
+        description: "Optional plugin version"
+        required: false
+        default: ""
+
+jobs:
+  update-registry:
+    name: Build & Update Registry Index
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout VoidB Main Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Checkout Standalone Plugin Repositories
+        run: |
+          mkdir -p ../plugins-cache
+          PLUGINS=("s3" "email" "docker" "kubernetes" "elasticsearch" "mongodb" "jenkins" "webdav")
+          for plugin in "${PLUGINS[@]}"; do
+            echo "Checking out voidb-plugin-${plugin}..."
+            git clone --depth 1 "https://github.com/limmytian/voidb-plugin-${plugin}.git" "../voidb-plugin-${plugin}" || true
+          done
+        shell: bash
+
+      - name: Rebuild Registry Index
+        run: |
+          chmod +x scripts/build-registry-index.sh
+          ./scripts/build-registry-index.sh registry/index.json
+        shell: bash
+
+      - name: Validate Registry Manifest with CLI
+        run: |
+          cargo run -p voidb-cli -- plugin registry list --url file://$(pwd)/registry/index.json
+        shell: bash
+
+      - name: Commit & Push Updated Registry
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add registry/index.json
+          if git diff --staged --quiet; then
+            echo "No registry changes detected."
+          else
+            git commit -m "chore(registry): update official plugin index manifest [skip ci]"
+            git push origin main
+          fi
+        shell: bash
