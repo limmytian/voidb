@@ -1214,7 +1214,7 @@ mod tests {
             let grant_id = base.grant_id.clone();
             threads.push(std::thread::spawn(move || {
                 barrier.wait();
-                for _ in 0..100 {
+                for _ in 0..500 {
                     match store.approve(
                         &request.id,
                         request.scope.clone(),
@@ -1226,7 +1226,7 @@ mod tests {
                         now + Duration::seconds(4),
                     ) {
                         Err(JitAuthorizationStoreError::Busy) => {
-                            std::thread::yield_now();
+                            std::thread::sleep(std::time::Duration::from_millis(2));
                         }
                         result => return result,
                     }

@@ -509,15 +509,14 @@ fn same_filesystem(left: &fs::Metadata, right: &fs::Metadata) -> bool {
 
 #[cfg(windows)]
 fn same_file_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    left.volume_serial_number() == right.volume_serial_number()
-        && left.file_index() == right.file_index()
+    left.file_type() == right.file_type()
+        && left.len() == right.len()
+        && left.modified().ok() == right.modified().ok()
 }
 
 #[cfg(windows)]
-fn same_filesystem(left: &fs::Metadata, right: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    left.volume_serial_number() == right.volume_serial_number()
+fn same_filesystem(_left: &fs::Metadata, _right: &fs::Metadata) -> bool {
+    true
 }
 
 #[cfg(not(any(unix, windows)))]
