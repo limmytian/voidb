@@ -891,7 +891,9 @@ fn handle_registry_index(matches: &ArgMatches) -> Result<(), VoidbError> {
         existing_entry.latest_version = version_str.clone();
         if let Some(pos) = existing_entry.versions.iter().position(|v| v.version == version_str) {
             let v = &mut existing_entry.versions[pos];
-            if !v.packages.iter().any(|p| p.filename == artifact.filename) {
+            if let Some(pkg_idx) = v.packages.iter().position(|p| p.filename == artifact.filename) {
+                v.packages[pkg_idx] = artifact;
+            } else {
                 v.packages.push(artifact);
             }
         } else {

@@ -3,7 +3,7 @@
   "schema_version": 1,
   "registry_name": "VoidB Official Plugin Registry",
   "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
-  "updated_at": "2026-10-07T19:18:20.538587Z",
+  "updated_at": "2026-10-07T19:19:25.801313Z",
   "plugins": [
     {
       "id": "docker",
@@ -52,7 +52,8 @@
               "filename": "docker-0.3.0.tar.gz",
               "format": "tar.gz",
               "url": "https://github.com/limmytian/voidb-plugin-docker/releases/download/v0.3.0/docker-0.3.0.tar.gz",
-              "sha256": "sha256:cbbb180520f4c663d94936c1c8f74b97febf7e5de1929de19ffa754a4a6e7097"
+              "sha256": "sha256:7a6cee3cfade56b5b6dc6d8364a1707d4ae9480efb67d32944c3fc2b42356d87",
+              "size_bytes": 1679673
             }
           ]
         }
@@ -98,7 +99,8 @@
               "filename": "elasticsearch-0.3.0.tar.gz",
               "format": "tar.gz",
               "url": "https://github.com/limmytian/voidb-plugin-elasticsearch/releases/download/v0.3.0/elasticsearch-0.3.0.tar.gz",
-              "sha256": "sha256:33a3c348f0d25dacd36e5d0034a5d8aaa1bfd83187a28b5f5f2fff67f0671695"
+              "sha256": "sha256:82c8ca9acf9ad8800973ab704f1b0cfa0efdbab318b2baec1a92faebb359fd3e",
+              "size_bytes": 2004877
             }
           ]
         }
@@ -146,7 +148,8 @@
               "filename": "email-0.3.0.tar.gz",
               "format": "tar.gz",
               "url": "https://github.com/limmytian/voidb-plugin-email/releases/download/v0.3.0/email-0.3.0.tar.gz",
-              "sha256": "sha256:9103618536a5213ef9a3b599d35528d4b27447f232e0b7d0d1fb29655d1b15af"
+              "sha256": "sha256:982b86debb0a5b9d2aeeb9c8f291cb8960626975108b605790b2cddceeaedc87",
+              "size_bytes": 1752454
             }
           ]
         }
@@ -190,7 +193,8 @@
               "filename": "jenkins-0.3.0.tar.gz",
               "format": "tar.gz",
               "url": "https://github.com/limmytian/voidb-plugin-jenkins/releases/download/v0.3.0/jenkins-0.3.0.tar.gz",
-              "sha256": "sha256:c35303a6b59570b0d32b4db21234f24de3835619b2005e288d20d20da28a78f1"
+              "sha256": "sha256:108b53a5bf461c9aad468c6cf560cf72d7c17d42701b52fc146e697c520004b0",
+              "size_bytes": 1985180
             }
           ]
         }
@@ -241,7 +245,8 @@
               "filename": "kubernetes-0.3.0.tar.gz",
               "format": "tar.gz",
               "url": "https://github.com/limmytian/voidb-plugin-kubernetes/releases/download/v0.3.0/kubernetes-0.3.0.tar.gz",
-              "sha256": "sha256:f8575e29a7cb7760742e6eece1996b5f9798f4cb03bf2a715f0db79727d9fafd"
+              "sha256": "sha256:463efab9b951323917f900df6aea341866c359cfc2186dad8863160c66f9200f",
+              "size_bytes": 4187767
             }
           ]
         }
@@ -291,7 +296,8 @@
               "filename": "mongodb-0.3.0.tar.gz",
               "format": "tar.gz",
               "url": "https://github.com/limmytian/voidb-plugin-mongodb/releases/download/v0.3.0/mongodb-0.3.0.tar.gz",
-              "sha256": "sha256:a2fc2c0b51de82b1374360b4f5a55df80cc5925a224378a4dc9318548d983c64"
+              "sha256": "sha256:a4b64a705b3df71957f93ff18ac26fc63d0796875574756f5017ea711d1afc61",
+              "size_bytes": 4885886
             }
           ]
         }
@@ -339,7 +345,8 @@
               "filename": "s3-0.3.0.tar.gz",
               "format": "tar.gz",
               "url": "https://github.com/limmytian/voidb-plugin-s3/releases/download/v0.3.0/s3-0.3.0.tar.gz",
-              "sha256": "sha256:5d020f5d81a6408fc95a333373987082de87a80210b5e0ef442dd075d83e9e84"
+              "sha256": "sha256:aa5b055b1773833af78fcee32ce5475d84a9903812a05a04d748d72eb5c1c2d4",
+              "size_bytes": 2114105
             }
           ]
         }
@@ -384,7 +391,8 @@
               "filename": "webdav-0.3.0.tar.gz",
               "format": "tar.gz",
               "url": "https://github.com/limmytian/voidb-plugin-webdav/releases/download/v0.3.0/webdav-0.3.0.tar.gz",
-              "sha256": "sha256:4051c9758c269436c49e0dcb51b51a35e524e38002d79b676493f35449feb416"
+              "sha256": "sha256:2cdfb002676f77ca51cc76cfd8deb175784a353bfc0c0c67de60ad972606545c",
+              "size_bytes": 3654103
             }
           ]
         }
