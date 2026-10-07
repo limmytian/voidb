@@ -2568,7 +2568,7 @@ fn apply_shadowing(candidates: &mut [ProcessPluginCandidate]) {
     }
 }
 
-fn current_platform() -> &'static str {
+pub fn current_platform() -> &'static str {
     if cfg!(target_os = "macos") {
         "darwin"
     } else if cfg!(target_os = "linux") {

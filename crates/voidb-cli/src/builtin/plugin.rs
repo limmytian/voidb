@@ -88,13 +88,24 @@ impl CliPlugin for PluginCliPlugin {
                         .help("Allow describing non-available candidates"),
                 ),
             Command::new("install")
-                .about("Install a local process-plugin directory or archive")
+                .about("Install a plugin from registry or local path/archive")
                 .arg(
                     Arg::new("source")
                         .required(true)
-                        .value_name("PATH")
-                        .value_parser(clap::value_parser!(PathBuf))
-                        .help("Local plugin directory, .tar, or .tar.zst package"),
+                        .value_name("PLUGIN_OR_PATH")
+                        .help("Plugin ID (from registry), local directory, or archive (.tar, .tar.zst)"),
+                )
+                .arg(
+                    Arg::new("registry-url")
+                        .long("registry-url")
+                        .value_name("URL")
+                        .help("Remote registry index URL (defaults to official repository index)"),
+                )
+                .arg(
+                    Arg::new("version")
+                        .long("version")
+                        .value_name("VERSION")
+                        .help("Specific plugin version to install from registry (defaults to latest)"),
                 )
                 .arg(
                     Arg::new("verify-key")
@@ -111,7 +122,7 @@ impl CliPlugin for PluginCliPlugin {
                 .arg(format_arg())
                 .arg(install_root_arg()),
             Command::new("update")
-                .about("Update an installed process plugin from a local package")
+                .about("Update an installed process plugin from registry or a local package")
                 .arg(
                     Arg::new("plugin")
                         .required(true)
@@ -121,10 +132,21 @@ impl CliPlugin for PluginCliPlugin {
                 .arg(
                     Arg::new("from")
                         .long("from")
-                        .required(true)
                         .value_name("PATH")
                         .value_parser(clap::value_parser!(PathBuf))
-                        .help("Local plugin directory, .tar, or .tar.zst package"),
+                        .help("Optional local plugin directory or archive (.tar, .tar.zst)"),
+                )
+                .arg(
+                    Arg::new("registry-url")
+                        .long("registry-url")
+                        .value_name("URL")
+                        .help("Remote registry index URL (defaults to official repository index)"),
+                )
+                .arg(
+                    Arg::new("version")
+                        .long("version")
+                        .value_name("VERSION")
+                        .help("Target plugin version to update to (defaults to latest available)"),
                 )
                 .arg(
                     Arg::new("verify-key")
@@ -146,6 +168,21 @@ impl CliPlugin for PluginCliPlugin {
                 )
                 .arg(format_arg())
                 .arg(install_root_arg()),
+            Command::new("search")
+                .about("Search plugins in remote or cached registry by keyword")
+                .arg(
+                    Arg::new("query")
+                        .required(true)
+                        .value_name("QUERY")
+                        .help("Search keyword matching plugin id, name, description, category, or tags"),
+                )
+                .arg(
+                    Arg::new("registry-url")
+                        .long("registry-url")
+                        .value_name("URL")
+                        .help("Remote registry index URL"),
+                )
+                .arg(format_arg()),
             Command::new("disable")
                 .about("Disable an installed process plugin without removing package files")
                 .arg(plugin_id_arg())
@@ -351,8 +388,9 @@ impl CliPlugin for PluginCliPlugin {
                 let discovery = discover_process_plugins();
                 handle_describe(matches, &discovery)
             }
-            "install" => handle_install(matches),
-            "update" => handle_update(matches),
+            "install" => handle_install(matches).await,
+            "update" => handle_update(matches).await,
+            "search" => handle_search(matches).await,
             "disable" => handle_lifecycle(matches, PluginLifecycleOperation::Disable),
             "enable" => handle_lifecycle(matches, PluginLifecycleOperation::Enable),
             "uninstall" => handle_lifecycle(matches, PluginLifecycleOperation::Uninstall),
@@ -459,21 +497,62 @@ fn handle_describe(
     }
 }
 
-fn handle_install(matches: &ArgMatches) -> Result<(), VoidbError> {
+async fn handle_install(matches: &ArgMatches) -> Result<(), VoidbError> {
     let format = output_format(matches)?;
     let install_root = install_root_from_matches(matches)?;
-    let source_path = matches
-        .get_one::<PathBuf>("source")
+    let source_arg = matches
+        .get_one::<String>("source")
         .expect("required by clap")
-        .clone();
+        .trim();
+    let registry_url_opt = matches.get_one::<String>("registry-url").map(String::as_str);
+    let version_opt = matches.get_one::<String>("version").map(String::as_str);
     let verify_key = matches.get_one::<String>("verify-key").map(String::as_str);
     let require_signature = matches.get_flag("require-signature");
 
-    if let Err(error) = check_package_signature_gate(&source_path, verify_key, require_signature) {
+    let source_path = PathBuf::from(source_arg);
+    let (effective_path, _download_temp_dir) = if source_path.exists() {
+        (source_path, None)
+    } else {
+        // Source is not a local path; treat as plugin id from registry
+        let plugin_id = source_arg;
+        let (index, source_url) = resolve_registry_index(registry_url_opt).await?;
+        let entry = index.get_plugin(plugin_id).ok_or_else(|| {
+            VoidbError::Plugin(format!(
+                "Plugin '{}' neither exists as a local path nor in registry ({})",
+                plugin_id, source_url
+            ))
+        })?;
+
+        let version_entry = entry.get_version(version_opt).ok_or_else(|| {
+            VoidbError::Plugin(format!(
+                "Version '{:?}' not found for plugin '{}' in registry",
+                version_opt, plugin_id
+            ))
+        })?;
+
+        let current_plat = voidb_core::process_plugin::current_platform();
+        let current_target = std::env::consts::ARCH; // architecture or target
+        let artifact = version_entry
+            .find_matching_package(current_target, current_plat)
+            .ok_or_else(|| {
+                VoidbError::Plugin(format!(
+                    "No compatible artifact found for plugin '{}' ({}) on platform '{}'",
+                    plugin_id, version_entry.version, current_plat
+                ))
+            })?;
+
+        let download_dir = std::env::temp_dir().join(format!("voidb-download-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0)));
+        let dest_file = download_dir.join(&artifact.filename);
+
+        PluginRegistryIndex::download_artifact(artifact, &dest_file).await?;
+        (dest_file, Some(download_dir))
+    };
+
+    if let Err(error) = check_package_signature_gate(&effective_path, verify_key, require_signature) {
         return print_plugin_error(error);
     }
 
-    let source = match ProcessPluginPackageSource::from_path(source_path) {
+    let source = match ProcessPluginPackageSource::from_path(effective_path) {
         Ok(source) => source,
         Err(error) => return print_plugin_error(package_validation_error_to_plugin_error(error)),
     };
@@ -484,26 +563,62 @@ fn handle_install(matches: &ArgMatches) -> Result<(), VoidbError> {
     }
 }
 
-fn handle_update(matches: &ArgMatches) -> Result<(), VoidbError> {
+async fn handle_update(matches: &ArgMatches) -> Result<(), VoidbError> {
     let format = output_format(matches)?;
     let install_root = install_root_from_matches(matches)?;
     let plugin_id = matches
         .get_one::<String>("plugin")
         .expect("required by clap")
         .clone();
-    let source_path = matches
-        .get_one::<PathBuf>("from")
-        .expect("required by clap")
-        .clone();
+    let from_path_opt = matches.get_one::<PathBuf>("from").cloned();
+    let registry_url_opt = matches.get_one::<String>("registry-url").map(String::as_str);
+    let version_opt = matches.get_one::<String>("version").map(String::as_str);
     let verify_key = matches.get_one::<String>("verify-key").map(String::as_str);
     let require_signature = matches.get_flag("require-signature");
     let allow_downgrade = matches.get_flag("allow-downgrade");
 
-    if let Err(error) = check_package_signature_gate(&source_path, verify_key, require_signature) {
+    let (effective_path, _download_temp_dir) = if let Some(from_path) = from_path_opt {
+        (from_path, None)
+    } else {
+        // Resolve from registry
+        let (index, source_url) = resolve_registry_index(registry_url_opt).await?;
+        let entry = index.get_plugin(&plugin_id).ok_or_else(|| {
+            VoidbError::Plugin(format!(
+                "Plugin '{}' not found in registry ({}) for update",
+                plugin_id, source_url
+            ))
+        })?;
+
+        let version_entry = entry.get_version(version_opt).ok_or_else(|| {
+            VoidbError::Plugin(format!(
+                "Version '{:?}' not found for plugin '{}' in registry",
+                version_opt, plugin_id
+            ))
+        })?;
+
+        let current_plat = voidb_core::process_plugin::current_platform();
+        let current_target = std::env::consts::ARCH;
+        let artifact = version_entry
+            .find_matching_package(current_target, current_plat)
+            .ok_or_else(|| {
+                VoidbError::Plugin(format!(
+                    "No compatible artifact found for plugin '{}' ({}) on platform '{}'",
+                    plugin_id, version_entry.version, current_plat
+                ))
+            })?;
+
+        let download_dir = std::env::temp_dir().join(format!("voidb-download-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0)));
+        let dest_file = download_dir.join(&artifact.filename);
+
+        PluginRegistryIndex::download_artifact(artifact, &dest_file).await?;
+        (dest_file, Some(download_dir))
+    };
+
+    if let Err(error) = check_package_signature_gate(&effective_path, verify_key, require_signature) {
         return print_plugin_error(error);
     }
 
-    let source = match ProcessPluginPackageSource::from_path(source_path) {
+    let source = match ProcessPluginPackageSource::from_path(effective_path) {
         Ok(source) => source,
         Err(error) => return print_plugin_error(package_validation_error_to_plugin_error(error)),
     };
@@ -516,6 +631,58 @@ fn handle_update(matches: &ArgMatches) -> Result<(), VoidbError> {
     ) {
         Ok(result) => print_operation_result(format, result),
         Err(error) => print_plugin_error(*error),
+    }
+}
+
+async fn handle_search(matches: &ArgMatches) -> Result<(), VoidbError> {
+    let format = output_format(matches)?;
+    let query = matches
+        .get_one::<String>("query")
+        .expect("required by clap")
+        .to_lowercase();
+    let url_opt = matches.get_one::<String>("registry-url").map(String::as_str);
+
+    let (index, source_url) = resolve_registry_index(url_opt).await?;
+    let mut matches_list = Vec::new();
+
+    for plugin in &index.plugins {
+        let id_match = plugin.id.to_lowercase().contains(&query);
+        let name_match = plugin.name.to_lowercase().contains(&query);
+        let desc_match = plugin.description.as_deref().unwrap_or("").to_lowercase().contains(&query);
+        let tag_match = plugin.tags.iter().any(|t| t.to_lowercase().contains(&query));
+        let cat_match = plugin.category.map(|c| c.as_str().contains(&query)).unwrap_or(false);
+
+        if id_match || name_match || desc_match || tag_match || cat_match {
+            matches_list.push(plugin.clone());
+        }
+    }
+
+    match format {
+        PluginOutputFormat::Json => print_json(&success_envelope(json!({
+            "operation": "plugin.search",
+            "query": query,
+            "source_url": source_url,
+            "count": matches_list.len(),
+            "plugins": matches_list,
+        }))),
+        PluginOutputFormat::Table => {
+            if matches_list.is_empty() {
+                println!("No plugins found matching '{}'", query);
+            } else {
+                println!("ID\tNAME\tLATEST\tCATEGORY\tDESCRIPTION");
+                for p in &matches_list {
+                    println!(
+                        "{}\t{}\t{}\t{}\t{}",
+                        p.id,
+                        p.name,
+                        p.latest_version,
+                        p.category.map(|c| c.as_str()).unwrap_or("-"),
+                        p.description.as_deref().unwrap_or("-")
+                    );
+                }
+            }
+            Ok(())
+        }
     }
 }
 
@@ -766,17 +933,30 @@ fn handle_registry_index(matches: &ArgMatches) -> Result<(), VoidbError> {
     }
 }
 
-fn local_registry_cache_path() -> PathBuf {
+fn local_registry_cache_path(url: &str) -> PathBuf {
+    let sanitized: String = url
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+        .collect();
+    let cache_filename = format!("registry-cache-{}.json", sanitized.trim_matches('_'));
+
     if let Some(user_root) = default_user_process_plugin_install_root() {
-        user_root.join("registry-cache.json")
+        user_root.join(cache_filename)
     } else {
-        PathBuf::from(".voidb-plugins/registry-cache.json")
+        PathBuf::from(format!(".voidb-plugins/{}", cache_filename))
     }
 }
 
 async fn resolve_registry_index(url_opt: Option<&str>) -> Result<(PluginRegistryIndex, String), VoidbError> {
     let url = url_opt.unwrap_or(DEFAULT_OFFICIAL_REGISTRY_URL);
-    let cache_file = local_registry_cache_path();
+
+    // If it's a file:// URL or local path, fetch directly without cache
+    if url.starts_with("file://") || std::path::Path::new(url).is_file() {
+        let index = PluginRegistryIndex::fetch_from_url(url).await?;
+        return Ok((index, url.to_string()));
+    }
+
+    let cache_file = local_registry_cache_path(url);
 
     // 1-hour cache TTL
     let ttl = std::time::Duration::from_secs(3600);
@@ -830,7 +1010,7 @@ async fn handle_registry(matches: &ArgMatches) -> Result<(), VoidbError> {
                 .get_one::<String>("url")
                 .map(String::as_str)
                 .unwrap_or(DEFAULT_OFFICIAL_REGISTRY_URL);
-            let cache_file = local_registry_cache_path();
+            let cache_file = local_registry_cache_path(url);
 
             let index = PluginRegistryIndex::fetch_from_url(url).await?;
             index.save_to_file(&cache_file)?;
@@ -2940,8 +3120,8 @@ platforms = ["{platform}"]
         assert!(updated_s3.versions[0].packages.iter().any(|p| p.format == "tar.gz"));
     }
 
-    #[test]
-    fn package_sign_verify_and_install_gate() {
+    #[tokio::test]
+    async fn package_sign_verify_and_install_gate() {
         let source = TempDir::new("sign-source");
         let dist = TempDir::new("sign-dist");
         let install_root = TempDir::new("sign-install-root");
@@ -2999,7 +3179,7 @@ platforms = ["{platform}"]
             "--require-signature",
         ]);
         let (_, install_sub) = install_matches.subcommand().unwrap();
-        handle_install(install_sub).expect("handle_install with valid signature");
+        handle_install(install_sub).await.expect("handle_install with valid signature");
 
         let record_path = process_plugin_install_record_path(install_root.path(), "redis");
         assert!(record_path.is_file());
@@ -3038,9 +3218,93 @@ platforms = ["{platform}"]
             &list_url,
         ]);
         let (_, sub) = matches.subcommand().unwrap();
-        // Since handle_registry supports async and file:// fallback, test that handle_registry works
         let res = handle_registry(sub).await;
-        // Even if file:// is handled via reqwest or fallback, ensure no panic
-        assert!(res.is_ok() || res.is_err());
+        assert!(res.is_ok());
+
+        // Test search
+        let search_matches = cmd.clone().get_matches_from(vec![
+            "plugin",
+            "search",
+            "sample",
+            "--registry-url",
+            &list_url,
+        ]);
+        let (_, search_sub) = search_matches.subcommand().unwrap();
+        let search_res = handle_search(search_sub).await;
+        assert!(search_res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_online_registry_install_and_update() {
+        let source = TempDir::new("online-source");
+        let dist = TempDir::new("online-dist");
+        let install_root = TempDir::new("online-install-root");
+        write_valid_plugin(source.path(), "myplug", "myplug", "1.0.0", "storage.read");
+
+        let pkg_path = dist.path().join("myplug-1.0.0.tar.zst");
+        package_process_plugin(
+            source.path().join("myplug"),
+            &pkg_path,
+            ProcessPluginPackageFormat::TarZst,
+        )
+        .expect("package");
+
+        let validation = validate_process_plugin_package(
+            ProcessPluginPackageSource::local_archive(&pkg_path),
+            &install_root.path().join("staging"),
+        )
+        .expect("validate package");
+        let sha256_hex = validation.package_digest;
+
+        let index_file = dist.path().join("index.json");
+        let mut index = PluginRegistryIndex::new();
+        index.upsert_plugin(RegistryPluginEntry {
+            id: "myplug".into(),
+            name: "My Plugin".into(),
+            description: Some("Online installable test plugin".into()),
+            homepage: None,
+            license: Some("Apache-2.0".into()),
+            category: Some(PluginCategory::Storage),
+            tags: vec!["myplug".into()],
+            capabilities: vec!["storage.read".into()],
+            latest_version: "1.0.0".into(),
+            versions: vec![RegistryPluginVersion {
+                version: "1.0.0".into(),
+                protocol_version: "1".into(),
+                released_at: Some(Utc::now()),
+                voidb_core: None,
+                platforms: vec![voidb_core::process_plugin::current_platform().into()],
+                signature_scheme: None,
+                packages: vec![RegistryPackageArtifact {
+                    filename: "myplug-1.0.0.tar.zst".into(),
+                    format: "tar.zst".into(),
+                    target: Some(voidb_core::process_plugin::current_platform().into()),
+                    url: format!("file://{}", pkg_path.display()),
+                    sha256: sha256_hex,
+                    size_bytes: Some(fs::metadata(&pkg_path).map(|m| m.len()).unwrap_or(0)),
+                    signature: None,
+                }],
+            }],
+        });
+        index.save_to_file(&index_file).expect("save index");
+
+        let plugin_cli = PluginCliPlugin::new();
+        let cmd = Command::new("plugin").subcommands(plugin_cli.commands());
+
+        // Install by name from online registry
+        let install_matches = cmd.clone().get_matches_from(vec![
+            "plugin",
+            "install",
+            "myplug",
+            "--registry-url",
+            &format!("file://{}", index_file.display()),
+            "--install-root",
+            install_root.path().to_str().unwrap(),
+        ]);
+        let (_, install_sub) = install_matches.subcommand().unwrap();
+        handle_install(install_sub).await.expect("online install myplug");
+
+        let record_path = process_plugin_install_record_path(install_root.path(), "myplug");
+        assert!(record_path.is_file());
     }
 }

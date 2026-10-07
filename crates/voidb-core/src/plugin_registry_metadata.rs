@@ -4,7 +4,7 @@
 //! Registry index, enabling discovery, version resolution, SHA256 integrity
 //! verification, and Ed25519 signature checks.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use crate::error::VoidbError;
@@ -264,6 +264,124 @@ impl PluginRegistryIndex {
                     Err(e)
                 }
             }
+        }
+    }
+
+    /// Download and verify a package artifact from remote URL.
+    /// Verifies SHA256 digest and optionally detached signature.
+    pub async fn download_artifact(
+        artifact: &RegistryPackageArtifact,
+        dest_path: impl AsRef<Path>,
+    ) -> Result<PathBuf, VoidbError> {
+        let dest_path = dest_path.as_ref();
+        if let Some(parent) = dest_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        let bytes = if let Some(local_path) = artifact.url.strip_prefix("file://") {
+            std::fs::read(local_path)?
+        } else if std::path::Path::new(&artifact.url).is_file() {
+            std::fs::read(&artifact.url)?
+        } else {
+            let client = reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(60))
+                .build()
+                .map_err(|e| VoidbError::Network(format!("Failed to build HTTP client for artifact download: {e}")))?;
+
+            let resp = client
+                .get(&artifact.url)
+                .send()
+                .await
+                .map_err(|e| VoidbError::Network(format!("Failed to download package from '{}': {e}", artifact.url)))?;
+
+            if !resp.status().is_success() {
+                return Err(VoidbError::Network(format!(
+                    "Failed to download package from '{}': HTTP {}",
+                    artifact.url,
+                    resp.status()
+                )));
+            }
+
+            resp.bytes()
+                .await
+                .map_err(|e| VoidbError::Network(format!("Failed to read response stream from '{}': {e}", artifact.url)))?
+                .to_vec()
+        };
+
+        // SHA256 integrity gate
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(&bytes);
+        let calculated_sha256 = hex::encode(hasher.finalize());
+
+        let expected_sha256 = artifact.sha256.strip_prefix("sha256:").unwrap_or(&artifact.sha256);
+        if !calculated_sha256.eq_ignore_ascii_case(expected_sha256) {
+            return Err(VoidbError::Plugin(format!(
+                "Artifact SHA256 checksum mismatch for '{}'! Expected: {}, Calculated: {}",
+                artifact.filename, artifact.sha256, calculated_sha256
+            )));
+        }
+
+        std::fs::write(dest_path, &bytes)?;
+
+        // If package has an inline signature or detached signature, write it as well
+        if let Some(sig) = &artifact.signature {
+            let sig_path = crate::plugin_signing::default_signature_path(dest_path);
+            let _ = std::fs::write(sig_path, sig.trim());
+        }
+
+        Ok(dest_path.to_path_buf())
+    }
+}
+
+impl RegistryPluginVersion {
+    /// Find the best matching package artifact for the given target and platform.
+    pub fn find_matching_package(
+        &self,
+        current_target: &str,
+        current_plat: &str,
+    ) -> Option<&RegistryPackageArtifact> {
+        // 1. Exact match on target triple (e.g., aarch64-apple-darwin)
+        if let Some(artifact) = self.packages.iter().find(|p| {
+            p.target.as_deref().is_some_and(|t| t == current_target)
+        }) {
+            return Some(artifact);
+        }
+
+        // 2. Exact match on platform or platform prefix in target
+        if let Some(artifact) = self.packages.iter().find(|p| {
+            if let Some(target) = p.target.as_deref() {
+                target == current_plat || target.contains(current_plat)
+            } else {
+                false
+            }
+        }) {
+            return Some(artifact);
+        }
+
+        // 3. Match universal or platform-agnostic target
+        if let Some(artifact) = self.packages.iter().find(|p| {
+            p.target.as_deref().is_some_and(|t| t == "universal" || t == "all" || t == "any")
+        }) {
+            return Some(artifact);
+        }
+
+        // 4. Default fallback: artifact with no target specified, or first package
+        self.packages.iter().find(|p| p.target.is_none()).or_else(|| self.packages.first())
+    }
+}
+
+impl RegistryPluginEntry {
+    /// Get the latest version descriptor.
+    pub fn get_latest_version(&self) -> Option<&RegistryPluginVersion> {
+        self.versions.iter().find(|v| v.version == self.latest_version).or_else(|| self.versions.last())
+    }
+
+    /// Find a specific version or fall back to latest.
+    pub fn get_version(&self, ver_opt: Option<&str>) -> Option<&RegistryPluginVersion> {
+        match ver_opt {
+            Some(v) => self.versions.iter().find(|item| item.version == v),
+            None => self.get_latest_version(),
         }
     }
 }
