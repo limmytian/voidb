@@ -5888,8 +5888,6 @@ fn register_session_factories(
             | "mysql"
             | "postgres"
             | "redis"
-            | "mongodb"
-            | "elasticsearch"
             | "webdav"
     ) {
         return Ok(());
@@ -5947,21 +5945,6 @@ fn register_session_factories(
                     .map_err(|_| anyhow!("granted Redis profile configuration is invalid"))?,
             )))
         }
-        #[cfg(feature = "mongodb")]
-        "mongodb" => host.register_factory(Arc::new(
-            voidb_plugin_mongodb::MongoAgentSessionFactory::new(
-                serde_json::from_value(config)
-                    .map_err(|_| anyhow!("granted MongoDB profile configuration is invalid"))?,
-            ),
-        )),
-        #[cfg(feature = "elasticsearch")]
-        "elasticsearch" => host.register_factory(Arc::new(
-            voidb_plugin_elasticsearch::EsAgentSessionFactory::new(
-                serde_json::from_value(config).map_err(|_| {
-                    anyhow!("granted Elasticsearch profile configuration is invalid")
-                })?,
-            ),
-        )),
         _ => {}
     }
     Ok(())
@@ -7027,13 +7010,13 @@ mod tests {
         assert_eq!(principal.task_id, "task-123");
         assert_eq!(principal.instance_id.as_deref(), Some("desktop"));
 
-        let (scope, risk) = exact_agent_exec_scope("docker", "docker.list_containers", json!({}))
-            .expect("exact Docker scope");
+        let (scope, risk) = exact_agent_exec_scope("ssh", "ssh.diagnostics", json!({}))
+            .expect("exact SSH scope");
         assert_eq!(risk, voidb_core::CapabilityRiskLevel::ReadOnly);
         assert!(matches!(
             scope,
             AgentAuthorizationScope::ExactInvocation { capability_id, .. }
-                if capability_id == "docker.list_containers"
+                if capability_id == "ssh.diagnostics"
         ));
     }
 
@@ -8061,9 +8044,6 @@ mod tests {
             "duckdb",
             "ssh",
             "sync",
-            "mongodb",
-            "elasticsearch",
-            "sync",
         ] {
             let definitions = resolved_authorization_capabilities(Some(plugin_id))
                 .unwrap_or_else(|error| panic!("{plugin_id} catalog failed: {error}"));
@@ -8235,8 +8215,6 @@ mod tests {
             "postgres",
             "duckdb",
             "ssh",
-            "mongodb",
-            "elasticsearch",
         ] {
             let definitions = resolved_authorization_capabilities(Some(plugin_id))
                 .unwrap_or_else(|error| panic!("{plugin_id} catalog failed: {error}"));

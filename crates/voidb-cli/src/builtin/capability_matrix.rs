@@ -74,22 +74,6 @@ const PLUGIN_EXPERIENCE: &[PluginExperience] = &[
         known_limit: "Bundled native DuckDB makes clean builds and full gates materially slower.",
     },
     PluginExperience {
-        plugin_id: "elasticsearch",
-        release_posture: "release_candidate",
-        standalone_tui: false,
-        tui_context_handoff: "None; capability and agent-owned session only",
-        validation_coverage: "`scripts/check-data-search-live-session-conformance.sh`; Elasticsearch plugin tests",
-        known_limit: "Disposable target evidence remains an opt-in promotion gate.",
-    },
-    PluginExperience {
-        plugin_id: "mongodb",
-        release_posture: "release_candidate",
-        standalone_tui: false,
-        tui_context_handoff: "None; capability and agent-owned session only",
-        validation_coverage: "`scripts/check-data-search-live-session-conformance.sh`; MongoDB plugin tests",
-        known_limit: "Replica-set and provider-specific behavior remains an opt-in live-fixture claim.",
-    },
-    PluginExperience {
         plugin_id: "mysql",
         release_posture: "release_candidate",
         standalone_tui: false,
@@ -470,7 +454,7 @@ mod tests {
     #[test]
     fn matrix_covers_every_builtin_plugin_and_capability() {
         let matrix = build().expect("build matrix");
-        assert!(matrix.capabilities.len() > 100);
+        assert!(matrix.capabilities.len() >= 60);
         assert!(
             matrix
                 .capabilities

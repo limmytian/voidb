@@ -317,11 +317,10 @@ DuckDB and Redis Release Readiness.
 ## Operations Plugin Capability Gates
 
 MongoDB and Elasticsearch expose agent-facing document/search capabilities.
-Changes to their generic invoke registration, bounded output contracts,
+Changes to generic invoke registration, bounded output contracts,
 destructive gates, or fixture promotion status should run:
 
 ```bash
-cargo test -p voidb-plugin-mongodb -p voidb-plugin-elasticsearch capabilities
 cargo test -p voidb-cli invoke
 git diff --check
 ```
@@ -430,10 +429,7 @@ cargo test -p voidb-plugin-ssh
 cargo test -p voidb-core sql_contract
 cargo test -p voidb-plugin-mysql -p voidb-plugin-postgres \
   -p voidb-plugin-sqlite -p voidb-plugin-duckdb --no-fail-fast
-cargo test -p voidb-plugin-mongodb -p voidb-plugin-redis \
-  -p voidb-plugin-elasticsearch --no-fail-fast
-cargo test -p voidb-plugin-s3 -p voidb-plugin-webdav \
-  -p voidb-plugin-email --no-fail-fast
+cargo test -p voidb-plugin-redis --no-fail-fast
 cargo test -p voidb-cli invoke
 ```
 
@@ -644,7 +640,6 @@ slice summary and keep the diff limited to the selected warning group.
 | Package smoke | Release-candidate prep or package automation changes | `scripts/stage-release-artifacts.sh --build`; `scripts/package-smoke.sh --artifact-root target/package/voidb-<version>-<platform>` | Stages default TUI, CLI, and sync-server artifacts; verifies checksums, manifest consistency, executable bits, CLI and sync-server entry points, and TUI prerequisites. Use Package CI Matrix for macOS, Linux, Windows, and runner-skip rules. |
 | First protocol pair | Pull request touching SQLite/Redis capabilities or generic invoke | `cargo test -p voidb-plugin-sqlite`; `cargo test -p voidb-plugin-redis`; `cargo test -p voidb-cli invoke` | Proves the SQLite/Redis reference capability pair, including pagination, dry-run, structured target errors, and redaction. |
 | MySQL capability | Pull request touching MySQL SQL capabilities or diagnostics | `cargo check -p voidb-plugin-mysql --example fixture_smoke`; `cargo test -p voidb-plugin-mysql`; `cargo test -p voidb-cli invoke`; `cargo test -p voidb-core sql_contract`; `scripts/mysql-fixture-smoke.sh --report target/tmp/mysql-fixture-smoke-evidence.md` | Proves the first networked SQL capability path through a disposable local fixture without external credentials. |
-| MongoDB capability | Pull request touching MongoDB document capabilities or diagnostics | `cargo check -p voidb-plugin-mongodb --example fixture_smoke`; `cargo test -p voidb-plugin-mongodb`; `cargo test -p voidb-cli invoke`; `scripts/mongodb-fixture-smoke.sh --report target/tmp/mongodb-fixture-smoke-evidence.md` | Proves the MongoDB capability path through a disposable local fixture without external credentials. |
 | External-agent interaction | Pull request touching SSH session sharing, Docker/Kubernetes/Jenkins current-view sharing, capability-only plugin boundaries, or related docs | `scripts/check-external-agent-interaction.sh`; relevant plugin tests from the focused group above | Prevents retired conversation UI, protects capability-only plugins, and verifies session/context-share operation gates. |
 | Local filesystem boundary | Pull request touching agent-triggered local reads, writes, scans, transfer staging, SSH SFTP, or authorization/audit projection | `scripts/check-local-filesystem-boundaries.sh`; `scripts/check-external-agent-interaction.sh` | Proves traversal/alias rejection, Unicode handling, no-follow behavior, root-identity conflicts, no-replace races, bounded scans, capability-wide denial, and audit redaction across the affected plugins. |
 | SSH capability and TUI smoke | Pull request touching SSH capabilities, profiles, host-key policy, terminal/SFTP/forwarding sessions, external-agent sharing, or generic invoke | `cargo test -p voidb-plugin-ssh`; `cargo test -p voidb-cli invoke`; `cargo test -p voidb-core profile_adapter`; `cargo test -p voidb-core profile_store`; for sharing changes also `cargo test -p voidb-core assist`, `cargo test -p voidb-core session`, `cargo test -p voidb-cli agent_broker`, `scripts/check-external-agent-interaction.sh`, and the SSH TUI `--evidence` command above | Proves SSH capability metadata, strict non-interactive host-key errors, destructive gates, profile redaction, session-share redaction/confirmation/revoke behavior, and the documented manual fixture smoke boundary. |

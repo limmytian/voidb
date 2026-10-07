@@ -157,10 +157,10 @@ VoidB's plugin system allows support for any protocol or data source:
 | PostgreSQL | PostgreSQL | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-postgres` |
 | SQLite | SQLite | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-sqlite` |
 | Redis | Redis | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-redis` |
-| MongoDB | MongoDB | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-mongodb` |
 | DuckDB | DuckDB | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-duckdb` |
-| Elasticsearch | Elasticsearch | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-elasticsearch` |
 | SSH | SSH/SFTP | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-ssh` |
+| Elasticsearch | Elasticsearch | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-elasticsearch](https://github.com/limmytian/voidb-plugin-elasticsearch) |
+| MongoDB | MongoDB | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-mongodb](https://github.com/limmytian/voidb-plugin-mongodb) |
 | Docker | Docker Engine | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-docker](https://github.com/limmytian/voidb-plugin-docker) |
 | Kubernetes | Kubernetes API | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-kubernetes](https://github.com/limmytian/voidb-plugin-kubernetes) |
 | S3 | S3-compatible object storage | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-s3](https://github.com/limmytian/voidb-plugin-s3) |

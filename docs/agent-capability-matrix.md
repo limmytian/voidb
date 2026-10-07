@@ -12,8 +12,6 @@ The committed output is `docs/agent-capability-matrix.md`. Regenerate with `carg
 |---|---|---:|---|---|---|---:|---|---|---|---|---|
 | `connections` | platform | 0 |  |  |  | 0 | no | yes | Profile metadata, credential approval, and JIT authorization only | `cargo test -p voidb-tui`; `scripts/tui-quality-gate.sh` | Owns no target driver, live capability session, or target operation dispatch. |
 | `duckdb` | beta | 9 | destructive:2, read_only:7 | both, stateless | 30000, 60000 | 1 | yes | no | None; capability and agent-owned session only | DuckDB plugin tests; CLI invoke tests; Core SQL contract | Bundled native DuckDB makes clean builds and full gates materially slower. |
-| `elasticsearch` | release_candidate | 11 | destructive:2, read_only:9 | session_only, stateless | 30000 | 1 | yes | no | None; capability and agent-owned session only | `scripts/check-data-search-live-session-conformance.sh`; Elasticsearch plugin tests | Disposable target evidence remains an opt-in promotion gate. |
-| `mongodb` | release_candidate | 15 | destructive:6, read_only:9 | both, session_only, stateless | 30000 | 2 | yes | no | None; capability and agent-owned session only | `scripts/check-data-search-live-session-conformance.sh`; MongoDB plugin tests | Replica-set and provider-specific behavior remains an opt-in live-fixture claim. |
 | `mysql` | release_candidate | 9 | destructive:2, read_only:7 | both, stateless | 30000, 60000 | 1 | yes | no | None; capability and agent-owned session only | MySQL plugin tests; CLI invoke tests; Core SQL contract; MySQL fixture smoke | Server-version and provider-specific compatibility still requires fixture evidence. |
 | `postgres` | release_candidate | 9 | destructive:2, read_only:7 | both, stateless | 30000, 60000 | 1 | yes | no | None; capability and agent-owned session only | PostgreSQL plugin tests; CLI invoke tests; Core SQL contract | Live PostgreSQL fixture coverage remains opt-in. |
 | `redis` | release_candidate | 11 | destructive:4, external_side_effect:1, read_only:6 | both, session_only, stateless | 30000 | 3 | yes | no | None; capability and agent-owned session only | `scripts/check-data-search-live-session-conformance.sh`; Redis plugin tests | Cluster/provider behavior remains outside deterministic local coverage. |
@@ -34,32 +32,6 @@ The committed output is `docs/agent-capability-matrix.md`. Regenerate with `carg
 | `duckdb.import_plan` | read_only | stateless | 60000 | no | invoke caller-token/SIGINT | no | declared | — |
 | `duckdb.query` | read_only | both | 30000 | no | invoke caller-token/SIGINT; session call-cancel + close | no | declared | — |
 | `duckdb.tables` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `elasticsearch.bulk` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `elasticsearch.count` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `elasticsearch.diagnostics` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `elasticsearch.get` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `elasticsearch.health` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `elasticsearch.indices` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `elasticsearch.mapping` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `elasticsearch.nodes` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `elasticsearch.raw_api` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `elasticsearch.search` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `elasticsearch.search_stream_read` | read_only | session_only | 30000 | yes | session call-and-source cancel + stop-observation close | no | declared | 1 |
-| `mongodb.aggregate` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `mongodb.bulk_write` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `mongodb.change_stream_read` | read_only | session_only | 30000 | yes | session call-and-source cancel + stop-observation close | no | declared | 1 |
-| `mongodb.collections` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `mongodb.count` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `mongodb.create_index` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `mongodb.cursor_read` | read_only | session_only | 30000 | yes | session call-and-source cancel + stop-observation close | no | declared | 1 |
-| `mongodb.databases` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `mongodb.delete` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `mongodb.diagnostics` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `mongodb.find` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `mongodb.indexes` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `mongodb.insert` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `mongodb.run_command` | destructive | both | 30000 | no | invoke caller-token/SIGINT; session call-cancel + close | yes | declared | — |
-| `mongodb.update` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
 | `mysql.catalogs` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
 | `mysql.describe_table` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
 | `mysql.exec` | destructive | both | 30000 | no | invoke caller-token/SIGINT; session call-cancel + close | yes | declared | — |

@@ -36,12 +36,6 @@ use voidb_core::{
 };
 #[cfg(feature = "duckdb")]
 use voidb_plugin_duckdb::{DuckDbConfig, duckdb_capabilities, invoke_duckdb_capability};
-#[cfg(feature = "elasticsearch")]
-use voidb_plugin_elasticsearch::{
-    EsConfig, elasticsearch_capabilities, invoke_elasticsearch_capability,
-};
-#[cfg(feature = "mongodb")]
-use voidb_plugin_mongodb::{MongoConfig, invoke_mongodb_capability, mongodb_capabilities};
 #[cfg(feature = "mysql")]
 use voidb_plugin_mysql::{MySqlConfig, invoke_mysql_capability, mysql_capabilities};
 #[cfg(feature = "postgres")]
@@ -68,10 +62,6 @@ const SUPPORTED_INVOKE_PLUGINS: &[&str] = &[
     "duckdb",
     #[cfg(feature = "ssh")]
     "ssh",
-    #[cfg(feature = "mongodb")]
-    "mongodb",
-    #[cfg(feature = "elasticsearch")]
-    "elasticsearch",
     #[cfg(feature = "sync")]
     "sync",
 ];
@@ -1338,28 +1328,6 @@ async fn invoke_builtin_capability_inner(
             )
             .await
         }
-        #[cfg(feature = "mongodb")]
-        "mongodb" => {
-            let config = parse_mongodb_config(connection).map_err(|error| *error)?;
-            invoke_with_timeout(
-                invoke_mongodb_capability(&config, invocation),
-                timeout_ms,
-                &capability.plugin_id,
-                &capability.id,
-            )
-            .await
-        }
-        #[cfg(feature = "elasticsearch")]
-        "elasticsearch" => {
-            let config = parse_elasticsearch_config(connection).map_err(|error| *error)?;
-            invoke_with_timeout(
-                invoke_elasticsearch_capability(&config, invocation),
-                timeout_ms,
-                &capability.plugin_id,
-                &capability.id,
-            )
-            .await
-        }
         #[cfg(feature = "sync")]
         "sync" => {
             invoke_with_timeout(
@@ -1473,20 +1441,6 @@ fn parse_duckdb_config(
 #[cfg(feature = "ssh")]
 fn parse_ssh_config(connection: &ConnectionConfig) -> Result<SshConfig, Box<CapabilityError>> {
     parse_plugin_config(connection, "ssh", "SSH")
-}
-
-#[cfg(feature = "mongodb")]
-fn parse_mongodb_config(
-    connection: &ConnectionConfig,
-) -> Result<MongoConfig, Box<CapabilityError>> {
-    parse_plugin_config(connection, "mongodb", "MongoDB")
-}
-
-#[cfg(feature = "elasticsearch")]
-fn parse_elasticsearch_config(
-    connection: &ConnectionConfig,
-) -> Result<EsConfig, Box<CapabilityError>> {
-    parse_plugin_config(connection, "elasticsearch", "Elasticsearch")
 }
 
 fn parse_plugin_config<T>(
@@ -1617,10 +1571,6 @@ fn capabilities_for_plugin(
         "duckdb" => Ok(duckdb_capabilities()),
         #[cfg(feature = "ssh")]
         "ssh" => Ok(ssh_capabilities()),
-        #[cfg(feature = "mongodb")]
-        "mongodb" => Ok(mongodb_capabilities()),
-        #[cfg(feature = "elasticsearch")]
-        "elasticsearch" => Ok(elasticsearch_capabilities()),
         #[cfg(feature = "sync")]
         "sync" => Ok(sync_capabilities()),
         _ => {
@@ -1644,10 +1594,6 @@ pub(crate) fn builtin_capabilities() -> Vec<CapabilityDefinition> {
     capabilities.extend(duckdb_capabilities());
     #[cfg(feature = "ssh")]
     capabilities.extend(ssh_capabilities());
-    #[cfg(feature = "mongodb")]
-    capabilities.extend(mongodb_capabilities());
-    #[cfg(feature = "elasticsearch")]
-    capabilities.extend(elasticsearch_capabilities());
     #[cfg(feature = "sync")]
     capabilities.extend(sync_capabilities());
     capabilities.sort_by_key(CapabilityDefinition::qualified_id);
@@ -2884,16 +2830,6 @@ mod tests {
         assert!(
             capabilities
                 .iter()
-                .any(|capability| capability.qualified_id() == "mongodb.find")
-        );
-        assert!(
-            capabilities
-                .iter()
-                .any(|capability| capability.qualified_id() == "elasticsearch.search")
-        );
-        assert!(
-            capabilities
-                .iter()
                 .any(|capability| capability.qualified_id() == "sync.status")
         );
     }
@@ -2933,7 +2869,7 @@ mod tests {
         use voidb_core::CapabilityExecutionMode;
 
         let capabilities = supported_capabilities(&empty_discovery());
-        assert_eq!(capabilities.len(), 128);
+        assert_eq!(capabilities.len(), 68);
         assert!(capabilities.iter().all(|capability| {
             !capability.supports_session_execution() || capability.session_handoff.is_some()
         }));
@@ -2946,9 +2882,6 @@ mod tests {
         assert_eq!(
             session_only,
             vec![
-                "elasticsearch.search_stream_read",
-                "mongodb.change_stream_read",
-                "mongodb.cursor_read",
                 "redis.monitor_read",
                 "redis.pubsub_read",
                 "redis.stream_read",
@@ -2972,7 +2905,6 @@ mod tests {
             vec![
                 "duckdb.exec",
                 "duckdb.query",
-                "mongodb.run_command",
                 "mysql.exec",
                 "mysql.query",
                 "postgres.exec",
@@ -3067,8 +2999,6 @@ mod tests {
             serde_json::to_value(snapshot).expect("serialize catalog snapshot"),
             json!({
                 "duckdb": [9, 7, 0, 2],
-                "elasticsearch": [11, 10, 1, 0],
-                "mongodb": [15, 12, 2, 1],
                 "mysql": [9, 7, 0, 2],
                 "postgres": [9, 7, 0, 2],
                 "redis": [11, 7, 3, 1],
@@ -3266,16 +3196,16 @@ mod tests {
         let capability = find_capability(&definitions, "terminal_read");
         let guidance = session_handoff_guidance(capability, "id:profile:test", &empty_discovery());
 
-        assert_eq!(guidance["requires_destructive_acknowledgement"], false);
+        assert_eq!(guidance["requires_destructive_acknowledgement"], true);
         assert_eq!(guidance["requires_start_acknowledgement"], false);
-        assert_eq!(guidance["requires_destructive_grant"], false);
+        assert_eq!(guidance["requires_destructive_grant"], true);
         let authorize = guidance["authorize_args"]
             .as_array()
             .expect("authorize args");
         assert!(
             authorize
                 .iter()
-                .any(|argument| argument == "--preset")
+                .any(|argument| argument == "--allow-destructive")
         );
         let open = guidance["session_open_args"]
             .as_array()
@@ -3449,45 +3379,6 @@ mod tests {
             redis_exec.output_schema["properties"]["output_byte_limit"]["type"],
             "integer"
         );
-    }
-
-    #[test]
-    fn document_beta_catalog_is_bounded_and_gated() {
-        let discovery = empty_discovery();
-        let mongodb = capabilities_for_plugin("mongodb", &discovery).expect("mongodb capabilities");
-        let elasticsearch = capabilities_for_plugin("elasticsearch", &discovery)
-            .expect("elasticsearch capabilities");
-
-        for id in ["insert", "update", "delete", "create_index", "run_command"] {
-            let capability = find_capability(&mongodb, id);
-            assert!(capability.destructive, "mongodb.{id} is destructive");
-            assert!(
-                capability.supports_dry_run,
-                "mongodb.{id} supports dry-run promotion gate"
-            );
-            assert_eq!(capability.risk, CapabilityRiskLevel::Destructive);
-            assert_permission(capability, "connection.write");
-        }
-        assert_output_page_contract(find_capability(&mongodb, "databases"), 500);
-        assert_output_page_contract(find_capability(&mongodb, "find"), 500);
-        assert_output_page_contract(find_capability(&mongodb, "aggregate"), 500);
-        let mongo_aggregate = find_capability(&mongodb, "aggregate");
-        assert!(!mongo_aggregate.destructive);
-        assert!(!mongo_aggregate.supports_dry_run);
-
-        let raw_api = find_capability(&elasticsearch, "raw_api");
-        assert!(raw_api.destructive);
-        assert!(raw_api.supports_dry_run);
-        assert_eq!(raw_api.risk, CapabilityRiskLevel::Destructive);
-        assert_permission(raw_api, "connection.write");
-        assert_permission(raw_api, "elasticsearch.raw_api");
-        assert_output_page_contract(find_capability(&elasticsearch, "indices"), 500);
-        assert_output_page_contract(find_capability(&elasticsearch, "search"), 500);
-        assert_eq!(
-            find_capability(&elasticsearch, "mapping").output_schema["properties"]["raw_omitted"]["type"],
-            "boolean"
-        );
-        assert!(raw_api.output_schema.to_string().contains("body_summary"));
     }
 
     #[test]
@@ -4153,22 +4044,18 @@ mod tests {
     fn mutation_policy_denials_have_redacted_audit_context() {
         for (capability_ref, profile_ref, input, sensitive_value) in [
             (
-                "mongodb.insert",
-                "mongo",
+                "ssh.exec",
+                "shell",
                 json!({
-                    "database": "app",
-                    "collection": "users",
-                    "document": { "email": "ada@example.com", "role": "admin" }
+                    "command": "rm -rf /tmp/test; echo ada@example.com"
                 }),
                 "ada@example.com",
             ),
             (
-                "elasticsearch.raw_api",
-                "search",
+                "postgres.exec",
+                "warehouse",
                 json!({
-                    "method": "POST",
-                    "path": "/users/_doc/1",
-                    "body": { "email": "ada@example.com", "role": "admin" }
+                    "sql": "DELETE FROM users WHERE email = 'ada@example.com'"
                 }),
                 "ada@example.com",
             ),
@@ -4217,144 +4104,6 @@ mod tests {
             let encoded = encoded_audit_context(&event);
             assert!(!encoded.contains(sensitive_value));
         }
-    }
-
-    #[tokio::test]
-    async fn mongodb_insert_dry_run_does_not_open_target_connection() {
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![mongodb_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let data = run_invocation(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "mongodb.insert".into(),
-                profile_ref: "mongo".into(),
-                input: json!({
-                    "database": "app",
-                    "collection": "users",
-                    "document": { "email": "ada@example.com", "role": "admin" }
-                }),
-                timeout_ms: None,
-                dry_run: true,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect("mongodb insert dry-run");
-        let encoded = serde_json::to_string(&data).expect("serialize data");
-
-        assert_eq!(data.plugin_id, "mongodb");
-        assert_eq!(data.output["dry_run"], true);
-        assert_eq!(data.output["operation"], "insert");
-        assert_eq!(data.output_summary["dry_run"], true);
-        assert_eq!(data.runtime.kind, "builtin");
-        assert!(!encoded.contains("ada@example.com"));
-        assert!(!encoded.contains("mongo-secret"));
-    }
-
-    #[tokio::test]
-    async fn elasticsearch_raw_api_dry_run_does_not_open_target_connection() {
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![elasticsearch_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let data = run_invocation(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "elasticsearch.raw_api".into(),
-                profile_ref: "search".into(),
-                input: json!({
-                    "method": "POST",
-                    "path": "/users/_doc/1",
-                    "body": { "email": "ada@example.com", "role": "admin" }
-                }),
-                timeout_ms: None,
-                dry_run: true,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect("elasticsearch raw_api dry-run");
-        let encoded = serde_json::to_string(&data).expect("serialize data");
-
-        assert_eq!(data.plugin_id, "elasticsearch");
-        assert_eq!(data.output["dry_run"], true);
-        assert_eq!(data.output["operation"], "raw_api");
-        assert_eq!(data.output_summary["dry_run"], true);
-        assert_eq!(data.runtime.kind, "builtin");
-        assert!(!encoded.contains("ada@example.com"));
-        assert!(!encoded.contains("es-token"));
-    }
-
-    #[tokio::test]
-    async fn destructive_document_invocations_require_ack_or_dry_run() {
-        let mongo_ctx = CliContext::new(AppConfig {
-            connections: vec![mongodb_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let mongo_error = run_invocation(
-            &mongo_ctx,
-            InvokeRunOptions {
-                capability_ref: "mongodb.insert".into(),
-                profile_ref: "mongo".into(),
-                input: json!({
-                    "database": "app",
-                    "collection": "users",
-                    "document": { "name": "Ada" }
-                }),
-                timeout_ms: None,
-                dry_run: false,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect_err("mongodb destructive denied");
-
-        assert_eq!(mongo_error.category, CapabilityErrorCategory::Policy);
-        assert_eq!(mongo_error.code, "policy.destructive_denied_by_default");
-        assert_eq!(mongo_error.details["qualified_id"], "mongodb.insert");
-
-        let es_ctx = CliContext::new(AppConfig {
-            connections: vec![elasticsearch_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let es_error = run_invocation(
-            &es_ctx,
-            InvokeRunOptions {
-                capability_ref: "elasticsearch.raw_api".into(),
-                profile_ref: "search".into(),
-                input: json!({
-                    "method": "DELETE",
-                    "path": "/users/_doc/1"
-                }),
-                timeout_ms: None,
-                dry_run: false,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect_err("elasticsearch destructive denied");
-
-        assert_eq!(es_error.category, CapabilityErrorCategory::Policy);
-        assert_eq!(es_error.code, "policy.destructive_denied_by_default");
-        assert_eq!(es_error.details["qualified_id"], "elasticsearch.raw_api");
     }
 
     #[tokio::test]
@@ -4891,21 +4640,6 @@ mod tests {
         );
     }
 
-    fn assert_output_page_contract(capability: &CapabilityDefinition, max_limit: u32) {
-        assert_eq!(
-            capability.output_schema["properties"]["limit"]["maximum"],
-            json!(max_limit),
-            "{} should expose a bounded page limit",
-            capability.qualified_id()
-        );
-        assert_eq!(
-            capability.output_schema["properties"]["next_cursor"]["type"][0],
-            "string",
-            "{} should expose a cursor continuation",
-            capability.qualified_id()
-        );
-    }
-
     fn sqlite_connection(name: &str, path: &str) -> ConnectionConfig {
         ConnectionConfig {
             name: name.into(),
@@ -4987,41 +4721,6 @@ mod tests {
         }
     }
 
-    fn mongodb_connection() -> ConnectionConfig {
-        ConnectionConfig {
-            name: "mongo".into(),
-            db_type: DatabaseType::Plugin,
-            plugin_id: Some("mongodb".into()),
-            plugin_config: Some(json!({
-                "uri": "mongodb://user:mongo-secret@127.0.0.1:1/app",
-                "default_db": "app",
-                "auth": {
-                    "type": "Password",
-                    "username": "user",
-                    "password": "mongo-secret",
-                    "auth_db": "admin"
-                },
-                "timeout": 1
-            })),
-        }
-    }
-
-    fn elasticsearch_connection() -> ConnectionConfig {
-        ConnectionConfig {
-            name: "search".into(),
-            db_type: DatabaseType::Plugin,
-            plugin_id: Some("elasticsearch".into()),
-            plugin_config: Some(json!({
-                "urls": ["https://search.example.invalid:9200"],
-                "auth": {
-                    "type": "Bearer",
-                    "token": "es-token"
-                },
-                "timeout": 1,
-                "verify_ssl": false
-            })),
-        }
-    }
 
     #[cfg(unix)]
     fn process_connection() -> ConnectionConfig {
@@ -5202,7 +4901,7 @@ while IFS= read -r line; do
       echo '{"jsonrpc":"2.0","id":"health","result":{"status":"ready","active_invocations":0}}'
       ;;
     *voidb.invoke*)
-      invocation_id=$(printf '%s\n' "$line" | /usr/bin/sed -n 's/.*"invocation":{"id":"\([^"]*\)".*/\1/p')
+      invocation_id=$(printf '%s\n' "$line" | /usr/bin/sed -n 's/.*"invocation":.*"id":"\([^"]*\)".*/\1/p')
       case "$mode" in
         success)
           echo "{\"jsonrpc\":\"2.0\",\"id\":\"invoke\",\"result\":{\"invocation_id\":\"$invocation_id\",\"status\":\"succeeded\",\"output\":{\"ok\":true},\"output_summary\":{\"ok\":true}}}"

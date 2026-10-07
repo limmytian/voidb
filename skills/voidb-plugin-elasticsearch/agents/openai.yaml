@@ -1,4 +1,0 @@
-interface:
-  display_name: "VoidB Elasticsearch Plugin"
-  short_description: "Guide for VoidB Elasticsearch work"
-  default_prompt: "Use $voidb-plugin-elasticsearch to update the VoidB Elasticsearch plugin, capabilities, CLI, or services."

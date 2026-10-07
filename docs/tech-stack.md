@@ -58,7 +58,6 @@
 | tokio-postgres | 0.7 | PostgreSQL async driver (with chrono, serde_json, uuid features) | `voidb-plugin-postgres` |
 | rusqlite | 0.32 | SQLite driver (bundled, with chrono, serde_json, uuid features) | `voidb-plugin-sqlite`, `voidb-core` |
 | redis | 0.27 | Redis async driver (tokio-comp, aio features) | `voidb-plugin-redis` |
-| mongodb | 3.x | MongoDB official driver | `voidb-plugin-mongodb` |
 | duckdb | 1.4 | DuckDB embedded analytics (bundled) | `voidb-plugin-duckdb` |
 
 ### Infrastructure / Protocol
@@ -68,10 +67,6 @@
 | russh-keys | 0.48 | SSH key handling | `voidb-plugin-ssh` |
 | russh-sftp | 2.1 | SFTP subsystem over SSH | `voidb-plugin-ssh` |
 | ssh-key | 0.6 | SSH key parsing | `voidb-plugin-ssh` |
-| bollard | 0.18 | Docker Engine API client | `voidb-plugin-docker` |
-| kube | 0.99 | Kubernetes API client (rustls-tls, ws features) | `voidb-plugin-kubernetes` |
-| k8s-openapi | 0.24 | Kubernetes API types (v1.32) | `voidb-plugin-kubernetes`, `voidb-tui`, `voidb-cli` |
-| reqwest | 0.12 | HTTP client (json, native-tls features) | `voidb-plugin-elasticsearch` |
 
 ### Utilities
 | Crate | Version | Purpose | Used In |
@@ -81,13 +76,10 @@
 | unicode-width | 0.2 | CJK/emoji text width calculation for TUI | Core + plugins |
 | dirs | 6.0 | Platform config/data directory resolution | `voidb-core`, `voidb-tui` |
 | arboard | 3.x | System clipboard access | `voidb-core`, `voidb-tui` |
-| vt100 | 0.15 | VT100 terminal emulation (SSH plugin terminal, Kubernetes exec) | `voidb-core`, `voidb-plugin-kubernetes` |
+| vt100 | 0.15 | VT100 terminal emulation (SSH plugin terminal) | `voidb-core` |
 | shellexpand | 3.1.2 | Shell tilde/env expansion in file paths | `voidb-core` |
 | once_cell | 1.19 | Lazy static initialization | `voidb-core` |
 | hex | 0.4 | Hex encoding for BLOB display | MySQL, Postgres, SQLite, DuckDB plugins |
-| bson | 2.x | BSON types for MongoDB | `voidb-plugin-mongodb` |
-| http | 1.x | HTTP types | `voidb-plugin-kubernetes` |
-| futures-util | 0.3 | Stream extension traits | `voidb-plugin-docker` |
 
 ## Configuration Files
 

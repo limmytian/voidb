@@ -256,22 +256,6 @@ pub(crate) async fn test_connection_by_plugin(
                 .map_err(|e| e.to_string())
         }
 
-        // === Elasticsearch ===
-        #[cfg(feature = "elasticsearch")]
-        "elasticsearch" => {
-            voidb_plugin_elasticsearch::test_connection(conn)
-                .await
-                .map_err(|e| e.to_string())
-        }
-
-        // === MongoDB ===
-        #[cfg(feature = "mongodb")]
-        "mongodb" => {
-            voidb_plugin_mongodb::test_connection(conn)
-                .await
-                .map_err(|e| e.to_string())
-        }
-
         // === SSH ===
         #[cfg(feature = "ssh")]
         "ssh" => {

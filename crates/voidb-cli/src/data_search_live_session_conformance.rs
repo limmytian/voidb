@@ -86,60 +86,6 @@ fn fixtures() -> Vec<LiveFixture> {
             }),
             resume: ResumeFixture::Cursor(AgentLiveSessionCursorKind::EventId, "1721812000000-0"),
         },
-        LiveFixture {
-            capability: "mongodb.cursor_read",
-            start: json!({
-                "resource": { "database": "fixture", "collection": "accounts" },
-                "parameters": { "mode": "find", "batch_size": 2, "max_time_ms": 250 }
-            }),
-            event: json!({
-                "document": { "_id": "fixture", "value": "redacted" },
-                "document_omitted": false
-            }),
-            resume: ResumeFixture::Unsupported,
-        },
-        LiveFixture {
-            capability: "mongodb.change_stream_read",
-            start: json!({
-                "resource": { "database": "fixture", "collection": "accounts" },
-                "parameters": { "pipeline": [], "batch_size": 2, "max_await_ms": 250 }
-            }),
-            event: json!({
-                "operation_type": "insert",
-                "namespace": { "database": "fixture", "collection": "accounts" },
-                "document_key": { "_id": "fixture" },
-                "document_key_omitted": false,
-                "full_document": null,
-                "update_description": null,
-                "update_description_omitted": false,
-                "cluster_time": "1:1",
-                "wall_time": null,
-                "resume_token_omitted": true,
-                "session_metadata_omitted": true
-            }),
-            resume: ResumeFixture::Cursor(AgentLiveSessionCursorKind::Opaque, "opaque-resume"),
-        },
-        LiveFixture {
-            capability: "elasticsearch.search_stream_read",
-            start: json!({
-                "resource": { "index": "fixture-events" },
-                "parameters": {
-                    "mode": "pit",
-                    "query": { "match_all": {} },
-                    "sort": ["_shard_doc"],
-                    "batch_size": 2,
-                    "keep_alive_ms": 60000
-                }
-            }),
-            event: json!({
-                "event_type": "hit",
-                "index": "fixture-events",
-                "id": "fixture",
-                "source": { "value": "redacted" },
-                "source_omitted": false
-            }),
-            resume: ResumeFixture::Cursor(AgentLiveSessionCursorKind::Opaque, "opaque-resume"),
-        },
     ]
 }
 
@@ -381,7 +327,7 @@ async fn exercise_cancellation(capability: &str) {
 #[tokio::test]
 async fn data_search_live_sessions_pass_shared_conformance() {
     let fixtures = fixtures();
-    assert_eq!(fixtures.len(), 6);
+    assert_eq!(fixtures.len(), 3);
     let mut family_counts = BTreeMap::<String, usize>::new();
 
     for fixture in &fixtures {
@@ -483,8 +429,6 @@ async fn data_search_live_sessions_pass_shared_conformance() {
     assert_eq!(
         family_counts,
         BTreeMap::from([
-            ("elasticsearch".into(), 1),
-            ("mongodb".into(), 2),
             ("redis".into(), 3),
         ])
     );
@@ -546,39 +490,6 @@ fn data_search_contract_snapshot_is_stable() {
                 AgentLiveSessionCursorScopePolicy::Required,
                 AgentLiveSessionResumeMode::BestEffortCursor,
                 Some(AgentLiveSessionCursorKind::EventId),
-                AgentLiveSessionCancelBehavior::CallAndSource,
-                AgentLiveSessionCloseEffect::StopObservation,
-                CapabilityRiskLevel::ReadOnly,
-            ),
-            (
-                "mongodb.cursor_read",
-                AgentLiveSessionKind::Cursor,
-                AgentLiveSessionBackpressureMode::SourcePaced,
-                AgentLiveSessionCursorScopePolicy::Optional,
-                AgentLiveSessionResumeMode::Unsupported,
-                None,
-                AgentLiveSessionCancelBehavior::CallAndSource,
-                AgentLiveSessionCloseEffect::StopObservation,
-                CapabilityRiskLevel::ReadOnly,
-            ),
-            (
-                "mongodb.change_stream_read",
-                AgentLiveSessionKind::Cursor,
-                AgentLiveSessionBackpressureMode::SourcePaced,
-                AgentLiveSessionCursorScopePolicy::Required,
-                AgentLiveSessionResumeMode::ExactCursor,
-                Some(AgentLiveSessionCursorKind::Opaque),
-                AgentLiveSessionCancelBehavior::CallAndSource,
-                AgentLiveSessionCloseEffect::StopObservation,
-                CapabilityRiskLevel::ReadOnly,
-            ),
-            (
-                "elasticsearch.search_stream_read",
-                AgentLiveSessionKind::Cursor,
-                AgentLiveSessionBackpressureMode::SourcePaced,
-                AgentLiveSessionCursorScopePolicy::Required,
-                AgentLiveSessionResumeMode::BestEffortCursor,
-                Some(AgentLiveSessionCursorKind::Opaque),
                 AgentLiveSessionCancelBehavior::CallAndSource,
                 AgentLiveSessionCloseEffect::StopObservation,
                 CapabilityRiskLevel::ReadOnly,

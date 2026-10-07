@@ -1,4 +1,0 @@
-interface:
-  display_name: "VoidB MongoDB Plugin"
-  short_description: "Guide for VoidB MongoDB work"
-  default_prompt: "Use $voidb-plugin-mongodb to update the VoidB MongoDB plugin, capabilities, CLI, or document services."

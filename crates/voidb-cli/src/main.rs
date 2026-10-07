@@ -69,10 +69,6 @@ fn build_cli_manager() -> CliPluginManager {
     cli_manager.register(voidb_plugin_redis::create_redis_cli_plugin());
     #[cfg(feature = "ssh")]
     cli_manager.register(voidb_plugin_ssh::create_ssh_cli_plugin());
-    #[cfg(feature = "elasticsearch")]
-    cli_manager.register(voidb_plugin_elasticsearch::create_es_cli_plugin());
-    #[cfg(feature = "mongodb")]
-    cli_manager.register(voidb_plugin_mongodb::create_mongo_cli_plugin());
     #[cfg(feature = "duckdb")]
     cli_manager.register(voidb_plugin_duckdb::create_duckdb_cli_plugin());
     #[cfg(feature = "sync")]

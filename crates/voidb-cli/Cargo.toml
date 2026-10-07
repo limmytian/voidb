@@ -17,8 +17,6 @@ voidb-plugin-postgres = { path = "../plugins/voidb-plugin-postgres", optional = 
 voidb-plugin-sqlite = { path = "../plugins/voidb-plugin-sqlite", optional = true }
 voidb-plugin-redis = { path = "../plugins/voidb-plugin-redis", optional = true }
 voidb-plugin-ssh = { path = "../plugins/voidb-plugin-ssh", optional = true }
-voidb-plugin-elasticsearch = { path = "../plugins/voidb-plugin-elasticsearch", optional = true }
-voidb-plugin-mongodb = { path = "../plugins/voidb-plugin-mongodb", optional = true }
 voidb-plugin-duckdb = { path = "../plugins/voidb-plugin-duckdb", optional = true }
 voidb-plugin-sync = { path = "../plugins/voidb-plugin-sync", optional = true }
 
@@ -44,11 +42,9 @@ postgres = ["dep:voidb-plugin-postgres"]
 sqlite = ["dep:voidb-plugin-sqlite"]
 redis = ["dep:voidb-plugin-redis"]
 ssh = ["dep:voidb-plugin-ssh"]
-elasticsearch = ["dep:voidb-plugin-elasticsearch"]
-mongodb = ["dep:voidb-plugin-mongodb"]
 duckdb = ["dep:voidb-plugin-duckdb"]
 sync = ["dep:voidb-plugin-sync"]
-all-dbs = ["mysql", "postgres", "sqlite", "redis", "duckdb", "mongodb", "elasticsearch"]
+all-dbs = ["mysql", "postgres", "sqlite", "redis", "duckdb"]
 all-infra = ["ssh"]
 full = ["all-dbs", "all-infra", "sync"]
 
