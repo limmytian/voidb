@@ -46,15 +46,30 @@ for the requirements any future plugin-owned terminal app must meet.
 
 ### Installation
 
+#### 1. Official One-Line Script (Linux & macOS)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/limmytian/voidb/main/scripts/install.sh | bash
+```
+
+#### 2. Homebrew (macOS / Linux)
+
+```bash
+brew install limmytian/tap/voidb
+```
+*(Or install manually via `packaging/homebrew/voidb.rb`)*
+
+#### 3. From Source / Cargo
+
 ```bash
 # Install via cargo
-cargo install voidb
+cargo install --locked voidb voidb-cli
 
-# Or build from source
+# Or clone and build
 git clone https://github.com/limmytian/voidb.git
 cd voidb
 cargo build --release
-sudo cp target/release/voidb /usr/local/bin/
+sudo cp target/release/voidb target/release/voidb-cli /usr/local/bin/
 ```
 
 ### First Run
