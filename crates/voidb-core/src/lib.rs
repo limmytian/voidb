@@ -21,6 +21,7 @@ pub mod local_path;
 pub mod object_sync;
 pub mod plugin;
 pub mod plugin_conformance;
+pub mod plugin_registry_metadata;
 pub mod process_plugin;
 pub mod process_plugin_contract;
 pub mod process_plugin_runtime;
@@ -199,6 +200,10 @@ pub use plugin_conformance::{
     PluginPromotionDecision, PluginRuntimeConformanceEvidence, apply_runtime_conformance_evidence,
     certify_process_plugin_candidate, default_plugin_maturity_criteria,
     render_conformance_report_markdown, runtime_conformance_checks, summarize_conformance_report,
+};
+pub use plugin_registry_metadata::{
+    PluginCategory, PluginRegistryIndex, RegistryPackageArtifact, RegistryPluginEntry,
+    RegistryPluginVersion, REGISTRY_SCHEMA_URI, REGISTRY_SCHEMA_VERSION,
 };
 pub use process_plugin::{
     PROCESS_PLUGIN_INSTALL_METADATA_DIR, PROCESS_PLUGIN_INSTALL_RECORD_FILE,

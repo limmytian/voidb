@@ -13,6 +13,8 @@ use serde_json::{Value, json};
 use voidb_core::capability::{CapabilityErrorCategory, RedactionStatus};
 use voidb_core::plugin::cli::{CliContext, CliPlugin};
 use voidb_core::{
+    PluginCategory, PluginRegistryIndex, RegistryPackageArtifact, RegistryPluginEntry,
+    RegistryPluginVersion,
     ProcessPluginCandidate, ProcessPluginCandidateState, ProcessPluginDiagnostic,
     ProcessPluginDiscovery, ProcessPluginInstallRecord, ProcessPluginManifest,
     ProcessPluginPackageFormat, ProcessPluginPackageResult, ProcessPluginPackageSource,
@@ -165,6 +167,44 @@ impl CliPlugin for PluginCliPlugin {
                         .help("Archive compression format: tar.zst (default) or tar"),
                 )
                 .arg(format_arg()),
+            Command::new("registry-index")
+                .about("Build or update an official Plugin Registry index manifest from plugin directories or archives")
+                .arg(
+                    Arg::new("inputs")
+                        .required(true)
+                        .num_args(1..)
+                        .value_name("PATH")
+                        .value_parser(clap::value_parser!(PathBuf))
+                        .help("One or more plugin directories, .tar, .tar.gz, or .tar.zst package paths to index"),
+                )
+                .arg(
+                    Arg::new("output")
+                        .long("output")
+                        .short('o')
+                        .value_name("PATH")
+                        .value_parser(clap::value_parser!(PathBuf))
+                        .help("Output index manifest file path (.json or .toml; default: dist/registry/index.json)"),
+                )
+                .arg(
+                    Arg::new("base-url")
+                        .long("base-url")
+                        .value_name("URL")
+                        .help("Optional base URL for package download links (e.g. https://github.com/<owner>/<repo>/releases/download/<tag>)"),
+                )
+                .arg(
+                    Arg::new("registry-name")
+                        .long("registry-name")
+                        .value_name("NAME")
+                        .help("Optional custom registry catalog name"),
+                )
+                .arg(
+                    Arg::new("merge")
+                        .long("merge")
+                        .value_name("EXISTING_INDEX")
+                        .value_parser(clap::value_parser!(PathBuf))
+                        .help("Optional existing registry index file to merge updates into"),
+                )
+                .arg(format_arg()),
         ]
     }
 
@@ -191,6 +231,7 @@ impl CliPlugin for PluginCliPlugin {
             "enable" => handle_lifecycle(matches, PluginLifecycleOperation::Enable),
             "uninstall" => handle_lifecycle(matches, PluginLifecycleOperation::Uninstall),
             "package" => handle_package(matches),
+            "registry-index" => handle_registry_index(matches),
             _ => Err(VoidbError::Plugin(format!("Unknown command: {}", command))),
         }
     }
@@ -398,6 +439,182 @@ fn handle_package(matches: &ArgMatches) -> Result<(), VoidbError> {
     match package_process_plugin(&source_dir, &output_path, package_format) {
         Ok(result) => print_package_result(format, result),
         Err(error) => print_plugin_error(package_validation_error_to_plugin_error(error)),
+    }
+}
+
+fn handle_registry_index(matches: &ArgMatches) -> Result<(), VoidbError> {
+    let format = output_format(matches)?;
+    let inputs = matches
+        .get_many::<PathBuf>("inputs")
+        .expect("required by clap")
+        .cloned()
+        .collect::<Vec<_>>();
+    let base_url = matches.get_one::<String>("base-url").map(String::as_str);
+    let registry_name = matches.get_one::<String>("registry-name").map(String::as_str);
+
+    let output_path = if let Some(out) = matches.get_one::<PathBuf>("output") {
+        out.clone()
+    } else {
+        PathBuf::from("dist").join("registry").join("index.json")
+    };
+
+    let mut index = if let Some(merge_path) = matches.get_one::<PathBuf>("merge") {
+        if merge_path.exists() {
+            PluginRegistryIndex::load_from_file(merge_path)?
+        } else {
+            PluginRegistryIndex::new()
+        }
+    } else if output_path.exists() {
+        PluginRegistryIndex::load_from_file(&output_path).unwrap_or_else(|_| PluginRegistryIndex::new())
+    } else {
+        PluginRegistryIndex::new()
+    };
+
+    if let Some(name) = registry_name {
+        index.registry_name = Some(name.to_string());
+    }
+
+    let temp_staging_root = match default_user_process_plugin_install_root() {
+        Some(root) => root,
+        None => std::env::temp_dir().join("voidb-registry-indexing"),
+    };
+
+    let mut indexed_count = 0;
+    for input_path in &inputs {
+        if !input_path.exists() {
+            return print_plugin_error(plugin_error(
+                CapabilityErrorCategory::Validation,
+                "validation.input_missing",
+                format!("Input path does not exist: {}", input_path.display()),
+                json!({ "path": input_path }),
+                false,
+            ));
+        }
+
+        let source = if input_path.is_dir() {
+            ProcessPluginPackageSource::local_directory(input_path)
+        } else {
+            ProcessPluginPackageSource::local_archive(input_path)
+        };
+
+        let validation = match validate_process_plugin_package(source, &temp_staging_root) {
+            Ok(v) => v,
+            Err(error) => {
+                return print_plugin_error(package_validation_error_to_plugin_error(error));
+            }
+        };
+
+        let manifest = validation.candidate.manifest.as_ref().expect("validated manifest present");
+        let plugin_id = manifest.id.clone();
+        let version_str = manifest.version.clone();
+        let protocol_version_str = manifest.protocol_version.clone();
+        let platforms = manifest.requirements.as_ref()
+            .and_then(|r| r.platforms.clone())
+            .unwrap_or_else(|| vec!["darwin".into(), "linux".into(), "windows".into()]);
+        let voidb_core_constraint = manifest.requirements.as_ref()
+            .and_then(|r| r.voidb_core.clone());
+
+        let (filename, format_str, target_triple, size_bytes, sha256_digest) = if input_path.is_file() {
+            let fname = input_path.file_name().unwrap_or_default().to_string_lossy().to_string();
+            let fmt = if fname.ends_with(".tar.zst") {
+                "tar.zst".to_string()
+            } else if fname.ends_with(".tar.gz") {
+                "tar.gz".to_string()
+            } else {
+                "tar".to_string()
+            };
+            let size = fs::metadata(input_path).map(|m| m.len()).unwrap_or(0);
+            (fname, fmt, None, Some(size), validation.package_digest.clone())
+        } else {
+            let fname = format!("{}-{}.tar.gz", plugin_id, version_str);
+            (fname, "tar.gz".to_string(), None, None, validation.package_digest.clone())
+        };
+
+        let download_url = if let Some(b) = base_url {
+            format!("{}/{}", b.trim_end_matches('/'), filename)
+        } else if let Some(homepage) = &manifest.homepage {
+            format!("{}/releases/download/v{}/{}", homepage.trim_end_matches('/'), version_str, filename)
+        } else {
+            format!("https://github.com/limmytian/voidb-plugin-{}/releases/download/v{}/{}", plugin_id, version_str, filename)
+        };
+
+        let artifact = RegistryPackageArtifact {
+            filename,
+            format: format_str,
+            target: target_triple,
+            url: download_url,
+            sha256: sha256_digest,
+            size_bytes,
+            signature: None,
+        };
+
+        let category = match plugin_id.as_str() {
+            "s3" | "webdav" => Some(PluginCategory::Storage),
+            "docker" | "kubernetes" | "jenkins" | "ssh" => Some(PluginCategory::Infrastructure),
+            "elasticsearch" => Some(PluginCategory::Search),
+            "mongodb" | "mysql" | "postgres" | "sqlite" | "redis" | "duckdb" => Some(PluginCategory::Database),
+            "email" => Some(PluginCategory::Communication),
+            _ => Some(PluginCategory::Other),
+        };
+
+        let capabilities = manifest.capabilities.iter().map(|c| c.id.clone()).collect::<Vec<_>>();
+        let tags = vec![plugin_id.clone()];
+
+        let mut existing_entry = index.get_plugin(&plugin_id).cloned().unwrap_or_else(|| RegistryPluginEntry {
+            id: plugin_id.clone(),
+            name: manifest.name.clone(),
+            description: manifest.description.clone(),
+            homepage: manifest.homepage.clone(),
+            license: manifest.license.clone(),
+            category,
+            tags,
+            capabilities,
+            latest_version: version_str.clone(),
+            versions: Vec::new(),
+        });
+
+        existing_entry.latest_version = version_str.clone();
+        if let Some(pos) = existing_entry.versions.iter().position(|v| v.version == version_str) {
+            let v = &mut existing_entry.versions[pos];
+            if !v.packages.iter().any(|p| p.filename == artifact.filename) {
+                v.packages.push(artifact);
+            }
+        } else {
+            existing_entry.versions.push(RegistryPluginVersion {
+                version: version_str,
+                protocol_version: protocol_version_str,
+                released_at: Some(Utc::now()),
+                voidb_core: voidb_core_constraint,
+                platforms,
+                signature_scheme: None,
+                packages: vec![artifact],
+            });
+        }
+
+        cleanup_validated_staging(&validation);
+        index.upsert_plugin(existing_entry);
+        indexed_count += 1;
+    }
+
+    index.save_to_file(&output_path)?;
+
+    match format {
+        PluginOutputFormat::Json => print_json(&success_envelope(json!({
+            "operation": "registry-index",
+            "output_path": output_path.to_string_lossy(),
+            "indexed_count": indexed_count,
+            "plugins_total": index.plugins.len(),
+            "updated_at": index.updated_at.to_rfc3339(),
+        }))),
+        PluginOutputFormat::Table => {
+            println!("Field\tValue");
+            println!("operation\tregistry-index");
+            println!("output_path\t{}", output_path.display());
+            println!("indexed_count\t{}", indexed_count);
+            println!("plugins_total\t{}", index.plugins.len());
+            println!("updated_at\t{}", index.updated_at.to_rfc3339());
+            Ok(())
+        }
     }
 }
 
@@ -2149,4 +2366,73 @@ platforms = ["{platform}"]
 
     #[cfg(not(unix))]
     fn make_executable(_path: &Path) {}
+
+    #[test]
+    fn registry_index_builds_and_updates_manifest_cleanly() {
+        let source = TempDir::new("registry-source");
+        let dist = TempDir::new("registry-dist");
+        write_valid_plugin(source.path(), "s3", "s3", "0.3.0", "connection.read");
+
+        let index_path = dist.path().join("index.json");
+
+        // 1. Index local plugin directory
+        let plugin_dir = source.path().join("s3");
+        let plugin_cli = PluginCliPlugin::new();
+        let cmd = Command::new("plugin").subcommands(plugin_cli.commands());
+
+        let matches = cmd.clone().get_matches_from(vec![
+            "plugin",
+            "registry-index",
+            plugin_dir.to_str().unwrap(),
+            "--output",
+            index_path.to_str().unwrap(),
+            "--base-url",
+            "https://downloads.voidb.dev/plugins",
+            "--registry-name",
+            "Test VoidB Registry",
+        ]);
+
+        let (subcmd, submatches) = matches.subcommand().expect("subcommand matches");
+        assert_eq!(subcmd, "registry-index");
+        handle_registry_index(submatches).expect("handle_registry_index");
+
+        assert!(index_path.is_file());
+        let index = PluginRegistryIndex::load_from_file(&index_path).expect("load index");
+        assert_eq!(index.registry_name, Some("Test VoidB Registry".to_string()));
+        assert_eq!(index.plugins.len(), 1);
+
+        let s3 = index.get_plugin("s3").expect("s3 plugin found");
+        assert_eq!(s3.latest_version, "0.3.0");
+        assert_eq!(s3.category, Some(PluginCategory::Storage));
+        assert_eq!(s3.versions.len(), 1);
+        assert_eq!(s3.versions[0].packages.len(), 1);
+        assert_eq!(
+            s3.versions[0].packages[0].url,
+            "https://downloads.voidb.dev/plugins/s3-0.3.0.tar.gz"
+        );
+        assert!(!s3.versions[0].packages[0].sha256.is_empty());
+
+        // 2. Package into tar.zst and index the archive (merging into existing index)
+        let archive_path = dist.path().join("s3-0.3.0.tar.zst");
+        package_process_plugin(&plugin_dir, &archive_path, ProcessPluginPackageFormat::TarZst)
+            .expect("package s3");
+
+        let matches2 = cmd.get_matches_from(vec![
+            "plugin",
+            "registry-index",
+            archive_path.to_str().unwrap(),
+            "--output",
+            index_path.to_str().unwrap(),
+            "--merge",
+            index_path.to_str().unwrap(),
+        ]);
+        let (_, submatches2) = matches2.subcommand().unwrap();
+        handle_registry_index(submatches2).expect("handle_registry_index merge");
+
+        let updated_index = PluginRegistryIndex::load_from_file(&index_path).expect("load updated index");
+        let updated_s3 = updated_index.get_plugin("s3").unwrap();
+        assert_eq!(updated_s3.versions[0].packages.len(), 2);
+        assert!(updated_s3.versions[0].packages.iter().any(|p| p.format == "tar.zst"));
+        assert!(updated_s3.versions[0].packages.iter().any(|p| p.format == "tar.gz"));
+    }
 }

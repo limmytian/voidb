@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://voidb.dev/schemas/plugin-registry.schema.json",
+  "title": "VoidB Plugin Registry Index Manifest",
+  "description": "Schema for the official VoidB Plugin Registry index catalog and manifest.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "updated_at",
+    "plugins"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional schema URI for validation and tooling."
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Schema version integer, currently 1."
+    },
+    "registry_name": {
+      "type": "string",
+      "description": "Human-readable registry name."
+    },
+    "registry_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Base URL of the plugin registry index or repository."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp of registry index generation."
+    },
+    "plugins": {
+      "type": "array",
+      "description": "List of indexed plugins available in the registry.",
+      "items": {
+        "$ref": "#/$defs/registryPluginEntry"
+      }
+    }
+  },
+  "$defs": {
+    "registryPluginEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "latest_version",
+        "versions"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{1,63}$",
+          "description": "Unique plugin identifier."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Human-readable plugin display name."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Summary of plugin capabilities and purpose."
+        },
+        "homepage": {
+          "type": "string",
+          "format": "uri",
+          "description": "Official homepage or repository URL."
+        },
+        "license": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "SPDX license expression."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["storage", "infrastructure", "search", "database", "communication", "other"],
+          "description": "High-level domain category for discovery."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Search and classification tags."
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of declared capability IDs exposed by the plugin."
+        },
+        "latest_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$",
+          "description": "Semver string of the latest available version."
+        },
+        "versions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/registryPluginVersion"
+          },
+          "description": "Release versions history available in the registry."
+        }
+      }
+    },
+    "registryPluginVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "protocol_version",
+        "packages"
+      ],
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$",
+          "description": "Semver release version string."
+        },
+        "protocol_version": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?$",
+          "description": "VoidB process plugin protocol version."
+        },
+        "released_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 UTC timestamp of release."
+        },
+        "voidb_core": {
+          "type": "string",
+          "description": "Required voidb_core version constraint, e.g. '>=0.1.0'."
+        },
+        "platforms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Supported OS platforms."
+        },
+        "signature_scheme": {
+          "type": "string",
+          "enum": ["none", "ed25519"],
+          "description": "Optional cryptographic signature algorithm used."
+        },
+        "packages": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/registryPackageArtifact"
+          },
+          "description": "Downloadable distribution packages for different platforms/formats."
+        }
+      }
+    },
+    "registryPackageArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "filename",
+        "format",
+        "url",
+        "sha256"
+      ],
+      "properties": {
+        "filename": {
+          "type": "string",
+          "description": "Distribution package archive filename."
+        },
+        "format": {
+          "type": "string",
+          "enum": ["tar", "tar.gz", "tar.zst"],
+          "description": "Archive compression format."
+        },
+        "target": {
+          "type": "string",
+          "description": "Optional target triple or platform specifier, e.g. 'x86_64-unknown-linux-gnu' or 'universal'."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Direct download URL for the package archive."
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^(sha256:)?[0-9a-fA-F]{64}$",
+          "description": "Hex-encoded SHA-256 digest of the archive (with or without sha256: prefix)."
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "File size in bytes."
+        },
+        "signature": {
+          "type": "string",
+          "description": "Base64 or hex-encoded detached signature (e.g. Ed25519 signature)."
+        }
+      }
+    }
+  }
+}
