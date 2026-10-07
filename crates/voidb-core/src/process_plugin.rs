@@ -1831,7 +1831,11 @@ fn collect_package_files(
         if metadata.file_type().is_dir() {
             // Ignore hidden/dot directories like .git or .voidb-install
             if !is_dot_prefixed(&entry_path) {
-                collect_package_files(root, &entry_path, entries)?;
+                let name = entry_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                // When packaging from a workspace/repo root, ignore heavy build/output dirs
+                if name != "target" && name != "dist" {
+                    collect_package_files(root, &entry_path, entries)?;
+                }
             }
         } else if metadata.file_type().is_file() {
             let relative = entry_path.strip_prefix(root).unwrap_or(&entry_path);
@@ -2374,15 +2378,34 @@ fn resolve_runtime_command(
         );
     }
 
-    let package_local = plugin_dir.join("bin").join(command);
+    let bin_dir = plugin_dir.join("bin");
+    let package_local = bin_dir.join(command);
     if is_executable_file(&package_local) {
         return Ok(package_local);
     }
 
-    if root.explicit_development
-        && let Some(path) = find_command_in_path(command)
+    #[cfg(windows)]
     {
-        return Ok(path);
+        if !command.ends_with(".exe") {
+            let package_local_exe = bin_dir.join(format!("{command}.exe"));
+            if is_executable_file(&package_local_exe) {
+                return Ok(package_local_exe);
+            }
+        }
+    }
+
+    if root.explicit_development {
+        if let Some(path) = find_command_in_path(command) {
+            return Ok(path);
+        }
+        #[cfg(windows)]
+        {
+            if !command.ends_with(".exe")
+                && let Some(path) = find_command_in_path(&format!("{command}.exe"))
+            {
+                return Ok(path);
+            }
+        }
     }
 
     Err(ProcessPluginDiagnostic::error(
@@ -2401,14 +2424,24 @@ fn ensure_executable_file(
     message: &str,
 ) -> Result<PathBuf, ProcessPluginDiagnostic> {
     if is_executable_file(&path) {
-        Ok(path)
-    } else {
-        Err(ProcessPluginDiagnostic::error(
-            code,
-            message,
-            json!({ "path": path }),
-        ))
+        return Ok(path);
     }
+
+    #[cfg(windows)]
+    {
+        if !path.ends_with(".exe") {
+            let path_exe = path.with_extension("exe");
+            if is_executable_file(&path_exe) {
+                return Ok(path_exe);
+            }
+        }
+    }
+
+    Err(ProcessPluginDiagnostic::error(
+        code,
+        message,
+        json!({ "path": path }),
+    ))
 }
 
 fn resolve_schema_ref(
