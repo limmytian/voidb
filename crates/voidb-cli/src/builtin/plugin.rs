@@ -15,6 +15,8 @@ use voidb_core::plugin::cli::{CliContext, CliPlugin};
 use voidb_core::{
     PluginCategory, PluginRegistryIndex, RegistryPackageArtifact, RegistryPluginEntry,
     RegistryPluginVersion,
+    default_signature_path, generate_signing_keypair, sign_file, verify_file_signature, SignatureVerificationResult,
+    SIGNATURE_SCHEME_ED25519,
     ProcessPluginCandidate, ProcessPluginCandidateState, ProcessPluginDiagnostic,
     ProcessPluginDiscovery, ProcessPluginInstallRecord, ProcessPluginManifest,
     ProcessPluginPackageFormat, ProcessPluginPackageResult, ProcessPluginPackageSource,
@@ -94,6 +96,18 @@ impl CliPlugin for PluginCliPlugin {
                         .value_parser(clap::value_parser!(PathBuf))
                         .help("Local plugin directory, .tar, or .tar.zst package"),
                 )
+                .arg(
+                    Arg::new("verify-key")
+                        .long("verify-key")
+                        .value_name("HEX_PUBKEY")
+                        .help("Ed25519 public key in hex to verify detached package signature (<archive>.sig)"),
+                )
+                .arg(
+                    Arg::new("require-signature")
+                        .long("require-signature")
+                        .action(ArgAction::SetTrue)
+                        .help("Fail installation if detached signature (<archive>.sig) is missing or invalid"),
+                )
                 .arg(format_arg())
                 .arg(install_root_arg()),
             Command::new("update")
@@ -111,6 +125,18 @@ impl CliPlugin for PluginCliPlugin {
                         .value_name("PATH")
                         .value_parser(clap::value_parser!(PathBuf))
                         .help("Local plugin directory, .tar, or .tar.zst package"),
+                )
+                .arg(
+                    Arg::new("verify-key")
+                        .long("verify-key")
+                        .value_name("HEX_PUBKEY")
+                        .help("Ed25519 public key in hex to verify detached package signature (<archive>.sig)"),
+                )
+                .arg(
+                    Arg::new("require-signature")
+                        .long("require-signature")
+                        .action(ArgAction::SetTrue)
+                        .help("Fail update if detached signature (<archive>.sig) is missing or invalid"),
                 )
                 .arg(
                     Arg::new("allow-downgrade")
@@ -205,6 +231,59 @@ impl CliPlugin for PluginCliPlugin {
                         .help("Optional existing registry index file to merge updates into"),
                 )
                 .arg(format_arg()),
+            Command::new("sign")
+                .about("Sign a plugin archive package using an Ed25519 private key, generating a detached signature file (.sig)")
+                .arg(
+                    Arg::new("package")
+                        .required(true)
+                        .value_name("PACKAGE_FILE")
+                        .value_parser(clap::value_parser!(PathBuf))
+                        .help("Path to package archive (.tar, .tar.gz, .tar.zst) to sign"),
+                )
+                .arg(
+                    Arg::new("private-key")
+                        .long("private-key")
+                        .value_name("HEX_KEY_OR_FILE")
+                        .help("Ed25519 secret key in hex or path to private key file. If omitted and --generate-key is set, a new keypair is generated."),
+                )
+                .arg(
+                    Arg::new("generate-key")
+                        .long("generate-key")
+                        .action(ArgAction::SetTrue)
+                        .help("Generate an ephemeral or new keypair if no private key is supplied"),
+                )
+                .arg(
+                    Arg::new("output")
+                        .long("output")
+                        .short('o')
+                        .value_name("SIG_PATH")
+                        .value_parser(clap::value_parser!(PathBuf))
+                        .help("Optional path for detached signature (default: <package>.sig)"),
+                )
+                .arg(format_arg()),
+            Command::new("verify")
+                .about("Verify the detached Ed25519 cryptographic signature of a plugin package")
+                .arg(
+                    Arg::new("package")
+                        .required(true)
+                        .value_name("PACKAGE_FILE")
+                        .value_parser(clap::value_parser!(PathBuf))
+                        .help("Path to package archive (.tar, .tar.gz, .tar.zst) to verify"),
+                )
+                .arg(
+                    Arg::new("public-key")
+                        .long("public-key")
+                        .required(true)
+                        .value_name("HEX_PUBKEY")
+                        .help("Ed25519 public key in hex"),
+                )
+                .arg(
+                    Arg::new("signature")
+                        .long("signature")
+                        .value_name("SIG_HEX_OR_FILE")
+                        .help("Detached signature hex string or path to .sig file (defaults to <package>.sig)"),
+                )
+                .arg(format_arg()),
         ]
     }
 
@@ -232,6 +311,8 @@ impl CliPlugin for PluginCliPlugin {
             "uninstall" => handle_lifecycle(matches, PluginLifecycleOperation::Uninstall),
             "package" => handle_package(matches),
             "registry-index" => handle_registry_index(matches),
+            "sign" => handle_sign(matches),
+            "verify" => handle_verify(matches),
             _ => Err(VoidbError::Plugin(format!("Unknown command: {}", command))),
         }
     }
@@ -337,6 +418,12 @@ fn handle_install(matches: &ArgMatches) -> Result<(), VoidbError> {
         .get_one::<PathBuf>("source")
         .expect("required by clap")
         .clone();
+    let verify_key = matches.get_one::<String>("verify-key").map(String::as_str);
+    let require_signature = matches.get_flag("require-signature");
+
+    if let Err(error) = check_package_signature_gate(&source_path, verify_key, require_signature) {
+        return print_plugin_error(error);
+    }
 
     let source = match ProcessPluginPackageSource::from_path(source_path) {
         Ok(source) => source,
@@ -360,7 +447,13 @@ fn handle_update(matches: &ArgMatches) -> Result<(), VoidbError> {
         .get_one::<PathBuf>("from")
         .expect("required by clap")
         .clone();
+    let verify_key = matches.get_one::<String>("verify-key").map(String::as_str);
+    let require_signature = matches.get_flag("require-signature");
     let allow_downgrade = matches.get_flag("allow-downgrade");
+
+    if let Err(error) = check_package_signature_gate(&source_path, verify_key, require_signature) {
+        return print_plugin_error(error);
+    }
 
     let source = match ProcessPluginPackageSource::from_path(source_path) {
         Ok(source) => source,
@@ -538,6 +631,13 @@ fn handle_registry_index(matches: &ArgMatches) -> Result<(), VoidbError> {
             format!("https://github.com/limmytian/voidb-plugin-{}/releases/download/v{}/{}", plugin_id, version_str, filename)
         };
 
+        let sig_path = default_signature_path(input_path);
+        let signature_str = if sig_path.is_file() {
+            fs::read_to_string(&sig_path).ok().map(|s| s.trim().to_string())
+        } else {
+            None
+        };
+
         let artifact = RegistryPackageArtifact {
             filename,
             format: format_str,
@@ -545,7 +645,7 @@ fn handle_registry_index(matches: &ArgMatches) -> Result<(), VoidbError> {
             url: download_url,
             sha256: sha256_digest,
             size_bytes,
-            signature: None,
+            signature: signature_str,
         };
 
         let category = match plugin_id.as_str() {
@@ -616,6 +716,237 @@ fn handle_registry_index(matches: &ArgMatches) -> Result<(), VoidbError> {
             Ok(())
         }
     }
+}
+
+fn handle_sign(matches: &ArgMatches) -> Result<(), VoidbError> {
+    let format = output_format(matches)?;
+    let package_path = matches
+        .get_one::<PathBuf>("package")
+        .expect("required by clap")
+        .clone();
+
+    if !package_path.is_file() {
+        return print_plugin_error(plugin_error(
+            CapabilityErrorCategory::Validation,
+            "validation.package_missing",
+            format!("Package archive does not exist: {}", package_path.display()),
+            json!({ "path": package_path }),
+            false,
+        ));
+    }
+
+    let priv_key_arg = matches.get_one::<String>("private-key").map(String::as_str);
+    let generate_key = matches.get_flag("generate-key");
+
+    let (signing_key, verifying_key) = if let Some(key_str) = priv_key_arg {
+        let key_hex = if Path::new(key_str).is_file() {
+            fs::read_to_string(key_str)?.trim().to_string()
+        } else {
+            key_str.trim().to_string()
+        };
+        let key_bytes = hex::decode(&key_hex).map_err(|e| {
+            VoidbError::Crypto(format!("Invalid private key hex encoding: {e}"))
+        })?;
+        if key_bytes.len() != 32 {
+            return print_plugin_error(plugin_error(
+                CapabilityErrorCategory::Validation,
+                "crypto.invalid_key_length",
+                "Ed25519 secret key must be 32 bytes (64 hex characters).",
+                json!({ "length_bytes": key_bytes.len() }),
+                false,
+            ));
+        }
+        let mut key_arr = [0u8; 32];
+        key_arr.copy_from_slice(&key_bytes);
+        let sk = ed25519_dalek::SigningKey::from_bytes(&key_arr);
+        let vk = sk.verifying_key();
+        (sk, vk)
+    } else if generate_key {
+        generate_signing_keypair()
+    } else {
+        return print_plugin_error(plugin_error(
+            CapabilityErrorCategory::Validation,
+            "crypto.missing_private_key",
+            "Must provide --private-key or pass --generate-key to create a new keypair.",
+            json!({}),
+            false,
+        ));
+    };
+
+    let sig_path = if let Some(out) = matches.get_one::<PathBuf>("output") {
+        out.clone()
+    } else {
+        default_signature_path(&package_path)
+    };
+
+    let sig_hex = sign_file(&package_path, &signing_key)?;
+    fs::write(&sig_path, &sig_hex)?;
+
+    let pubkey_hex = hex::encode(verifying_key.to_bytes());
+    let privkey_hex = hex::encode(signing_key.to_bytes());
+
+    match format {
+        PluginOutputFormat::Json => print_json(&success_envelope(json!({
+            "operation": "sign",
+            "package": package_path.to_string_lossy(),
+            "signature_file": sig_path.to_string_lossy(),
+            "signature": sig_hex,
+            "public_key": pubkey_hex,
+            "private_key": if generate_key { Some(privkey_hex) } else { None },
+            "scheme": SIGNATURE_SCHEME_ED25519,
+        }))),
+        PluginOutputFormat::Table => {
+            println!("Field\tValue");
+            println!("operation\tsign");
+            println!("package\t{}", package_path.display());
+            println!("signature_file\t{}", sig_path.display());
+            println!("signature\t{}", sig_hex);
+            println!("public_key\t{}", pubkey_hex);
+            if generate_key {
+                println!("generated_private_key\t{}", privkey_hex);
+            }
+            Ok(())
+        }
+    }
+}
+
+fn handle_verify(matches: &ArgMatches) -> Result<(), VoidbError> {
+    let format = output_format(matches)?;
+    let package_path = matches
+        .get_one::<PathBuf>("package")
+        .expect("required by clap")
+        .clone();
+    let pubkey_hex = matches
+        .get_one::<String>("public-key")
+        .expect("required by clap")
+        .trim();
+
+    if !package_path.is_file() {
+        return print_plugin_error(plugin_error(
+            CapabilityErrorCategory::Validation,
+            "validation.package_missing",
+            format!("Package archive does not exist: {}", package_path.display()),
+            json!({ "path": package_path }),
+            false,
+        ));
+    }
+
+    let sig_hex = if let Some(sig_arg) = matches.get_one::<String>("signature") {
+        let sig_trimmed = sig_arg.trim();
+        if Path::new(sig_trimmed).is_file() {
+            fs::read_to_string(sig_trimmed)?.trim().to_string()
+        } else {
+            sig_trimmed.to_string()
+        }
+    } else {
+        let default_sig_path = default_signature_path(&package_path);
+        if !default_sig_path.is_file() {
+            return print_plugin_error(plugin_error(
+                CapabilityErrorCategory::Validation,
+                "validation.signature_missing",
+                format!("Detached signature file not found: {}", default_sig_path.display()),
+                json!({ "expected_path": default_sig_path }),
+                false,
+            ));
+        }
+        fs::read_to_string(default_sig_path)?.trim().to_string()
+    };
+
+    let result = verify_file_signature(&package_path, &sig_hex, pubkey_hex)?;
+
+    if !result.valid {
+        return print_plugin_error(plugin_error(
+            CapabilityErrorCategory::Validation,
+            "crypto.signature_verification_failed",
+            result.message,
+            json!({
+                "package": package_path,
+                "public_key": pubkey_hex,
+                "signature": sig_hex,
+            }),
+            false,
+        ));
+    }
+
+    match format {
+        PluginOutputFormat::Json => print_json(&success_envelope(json!({
+            "operation": "verify",
+            "package": package_path.to_string_lossy(),
+            "valid": true,
+            "public_key": pubkey_hex,
+            "scheme": SIGNATURE_SCHEME_ED25519,
+            "message": result.message,
+        }))),
+        PluginOutputFormat::Table => {
+            println!("Field\tValue");
+            println!("operation\tverify");
+            println!("package\t{}", package_path.display());
+            println!("valid\ttrue");
+            println!("public_key\t{}", pubkey_hex);
+            println!("scheme\t{}", SIGNATURE_SCHEME_ED25519);
+            println!("message\t{}", result.message);
+            Ok(())
+        }
+    }
+}
+
+fn check_package_signature_gate(
+    source_path: &Path,
+    verify_key: Option<&str>,
+    require_signature: bool,
+) -> Result<Option<SignatureVerificationResult>, PluginError> {
+    if !source_path.is_file() {
+        if require_signature {
+            return Err(plugin_error(
+                CapabilityErrorCategory::Validation,
+                "validation.signature_required_for_archive_only",
+                "Signature verification requires an archive file (.tar, .tar.gz, .tar.zst), not an unpacked directory.",
+                json!({ "path": source_path }),
+                false,
+            ));
+        }
+        return Ok(None);
+    }
+
+    let default_sig_path = default_signature_path(source_path);
+
+    if let Some(pubkey) = verify_key {
+        if !default_sig_path.is_file() {
+            return Err(plugin_error(
+                CapabilityErrorCategory::Validation,
+                "validation.signature_file_missing",
+                format!("Detached signature file missing: {}", default_sig_path.display()),
+                json!({ "expected_signature": default_sig_path }),
+                false,
+            ));
+        }
+        let sig_hex = fs::read_to_string(&default_sig_path).map_err(|e| {
+            filesystem_plugin_error("filesystem.read_signature_failed", "Failed to read signature file", &default_sig_path, e)
+        })?;
+        let res = verify_file_signature(source_path, sig_hex.trim(), pubkey).map_err(|e| {
+            plugin_error(CapabilityErrorCategory::Validation, "crypto.verification_error", e.to_string(), json!({}), false)
+        })?;
+        if !res.valid {
+            return Err(plugin_error(
+                CapabilityErrorCategory::Validation,
+                "crypto.signature_invalid",
+                res.message,
+                json!({ "path": source_path, "public_key": pubkey }),
+                false,
+            ));
+        }
+        return Ok(Some(res));
+    } else if require_signature {
+        return Err(plugin_error(
+            CapabilityErrorCategory::Validation,
+            "validation.verify_key_required",
+            "--require-signature was passed but no --verify-key was provided.",
+            json!({}),
+            false,
+        ));
+    }
+
+    Ok(None)
 }
 
 fn output_format(matches: &ArgMatches) -> Result<PluginOutputFormat, VoidbError> {
@@ -2434,5 +2765,70 @@ platforms = ["{platform}"]
         assert_eq!(updated_s3.versions[0].packages.len(), 2);
         assert!(updated_s3.versions[0].packages.iter().any(|p| p.format == "tar.zst"));
         assert!(updated_s3.versions[0].packages.iter().any(|p| p.format == "tar.gz"));
+    }
+
+    #[test]
+    fn package_sign_verify_and_install_gate() {
+        let source = TempDir::new("sign-source");
+        let dist = TempDir::new("sign-dist");
+        let install_root = TempDir::new("sign-install-root");
+        write_valid_plugin(source.path(), "redis", "redis", "0.1.0", "connection.read");
+
+        let archive_path = dist.path().join("redis-0.1.0.tar.zst");
+        package_process_plugin(
+            source.path().join("redis"),
+            &archive_path,
+            ProcessPluginPackageFormat::TarZst,
+        )
+        .expect("package plugin");
+
+        let (sk, vk) = generate_signing_keypair();
+        let pub_hex = hex::encode(vk.to_bytes());
+        let priv_hex = hex::encode(sk.to_bytes());
+
+        let plugin_cli = PluginCliPlugin::new();
+        let cmd = Command::new("plugin").subcommands(plugin_cli.commands());
+
+        // 1. Sign package using generated private key
+        let sign_matches = cmd.clone().get_matches_from(vec![
+            "plugin",
+            "sign",
+            archive_path.to_str().unwrap(),
+            "--private-key",
+            &priv_hex,
+        ]);
+        let (_, sign_sub) = sign_matches.subcommand().unwrap();
+        handle_sign(sign_sub).expect("handle_sign");
+
+        let sig_path = default_signature_path(&archive_path);
+        assert!(sig_path.is_file());
+
+        // 2. Verify signature using public key
+        let verify_matches = cmd.clone().get_matches_from(vec![
+            "plugin",
+            "verify",
+            archive_path.to_str().unwrap(),
+            "--public-key",
+            &pub_hex,
+        ]);
+        let (_, verify_sub) = verify_matches.subcommand().unwrap();
+        handle_verify(verify_sub).expect("handle_verify");
+
+        // 3. Install package with signature gate (--verify-key and --require-signature)
+        let install_matches = cmd.get_matches_from(vec![
+            "plugin",
+            "install",
+            archive_path.to_str().unwrap(),
+            "--install-root",
+            install_root.path().to_str().unwrap(),
+            "--verify-key",
+            &pub_hex,
+            "--require-signature",
+        ]);
+        let (_, install_sub) = install_matches.subcommand().unwrap();
+        handle_install(install_sub).expect("handle_install with valid signature");
+
+        let record_path = process_plugin_install_record_path(install_root.path(), "redis");
+        assert!(record_path.is_file());
     }
 }

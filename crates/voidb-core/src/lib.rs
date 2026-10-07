@@ -22,6 +22,7 @@ pub mod object_sync;
 pub mod plugin;
 pub mod plugin_conformance;
 pub mod plugin_registry_metadata;
+pub mod plugin_signing;
 pub mod process_plugin;
 pub mod process_plugin_contract;
 pub mod process_plugin_runtime;
@@ -204,6 +205,11 @@ pub use plugin_conformance::{
 pub use plugin_registry_metadata::{
     PluginCategory, PluginRegistryIndex, RegistryPackageArtifact, RegistryPluginEntry,
     RegistryPluginVersion, REGISTRY_SCHEMA_URI, REGISTRY_SCHEMA_VERSION,
+};
+pub use plugin_signing::{
+    default_signature_path, generate_signing_keypair, sign_bytes, sign_file, sign_file_detached,
+    verify_bytes_signature, verify_file_signature, SignatureVerificationResult,
+    SIGNATURE_FILE_EXTENSION, SIGNATURE_SCHEME_ED25519,
 };
 pub use process_plugin::{
     PROCESS_PLUGIN_INSTALL_METADATA_DIR, PROCESS_PLUGIN_INSTALL_RECORD_FILE,
