@@ -7,7 +7,7 @@ class Voidb < Formula
   on_macos do
     if Hardware::CPU.arm?
       url "https://github.com/limmytian/voidb/releases/download/v0.3.2/voidb-0.3.2-darwin-arm64.tar.gz"
-      sha256 ""
+      sha256 "00bf3dc7649785b93e51c97a56f12a490b402b4c3f632a388d0fa6e6854d8fb4"
     else
       # Placeholder for Intel Mac binary if published
       url "https://github.com/limmytian/voidb/releases/download/v0.3.2/voidb-0.3.2-darwin-x64.tar.gz"
@@ -18,10 +18,10 @@ class Voidb < Formula
   on_linux do
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
       url "https://github.com/limmytian/voidb/releases/download/v0.3.2/voidb-0.3.2-linux-arm64.tar.gz"
-      sha256 ""
+      sha256 "18d34681e2ba6d0c1546524bcb529d73796662b8a64d0e41dd77b5bfde4e0a14"
     else
       url "https://github.com/limmytian/voidb/releases/download/v0.3.2/voidb-0.3.2-linux-x64.tar.gz"
-      sha256 ""
+      sha256 "bb4cc3b5859da78542ec7573d300ee4a1ca1e571bea2da77749308320f7fdbd0"
     end
   end
 
