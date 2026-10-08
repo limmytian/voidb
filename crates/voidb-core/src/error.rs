@@ -20,6 +20,9 @@ pub enum VoidbError {
     #[error("Cryptography error: {0}")]
     Crypto(String),
 
+    #[error("Security error: {0}")]
+    Security(String),
+
     #[error("Invalid configuration: {0}")]
     InvalidConfig(String),
 

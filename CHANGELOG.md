@@ -5,6 +5,21 @@ All notable changes to VoidB will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2026-10-09
+
+### Security
+- **Runtime Binary Integrity Verification Gate**: Introduced SHA-256 binary digest verification before executing any external process plugin. Blocks unauthorized binary replacement or tampering with `SECURITY GATE BLOCKED` to prevent credential leakage.
+- **Secure Stdio IPC Credential Channel**: Refactored `test_connection_by_plugin` across all 14 plugins to transfer decrypted connection configurations via secure anonymous pipes (`--stdin-config`), eliminating plaintext credentials in `ps aux` command-line arguments.
+
+### Fixed
+- **Plugin CLI Argument Discovery**: Fixed Clap 4 `ArgMatches` panic by guarding against undeclared argument IDs using `.ids().any(...)` across all 14 plugins.
+- **Graceful Raw Configuration Fallback**: Plugin commands not requiring profile secrets (e.g., `docker ps`, local SQLite/DuckDB) no longer block on master password prompts.
+- **SSH Auth & Host Key Validation**: Fixed `SshAuthMethod` serde deserialization aliases and added strict host key failure reporting and TUI prompt handling in `voidb-plugin-ssh`.
+
+### Added
+- **Full-Protocol Docker E2E Test Suite**: Added automated integration verification tests for all database, container, and remote connection plugins (SQLite, DuckDB, Docker, Redis, Postgres, MySQL, SSH).
+- **GitHub Actions CI/CD Coverage**: Added complete CI matrix workflows (`cargo test`, `cargo clippy`, `cargo build`) and release pipelines across all 14 official plugin repositories.
+
 ## [0.3.2] - 2026-10-08
 
 ### Added

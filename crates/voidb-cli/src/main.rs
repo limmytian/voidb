@@ -8,6 +8,7 @@ use voidb_core::config::AppConfig;
 use voidb_core::plugin::cli::{CliContext, CliPluginManager};
 use voidb_core::{VOIDB_MASTER_PASSWORD_ENV, VoidbError};
 
+use std::io::IsTerminal;
 use std::process::ExitStatus;
 use voidb_core::process_plugin::{ProcessPluginCandidate, discover_process_plugins};
 
@@ -68,7 +69,10 @@ async fn main() -> anyhow::Result<()> {
 fn dispatch_external_plugin(
     candidate: &ProcessPluginCandidate,
     forward_args: &[String],
-) -> std::io::Result<ExitStatus> {
+) -> anyhow::Result<ExitStatus> {
+    voidb_core::process_plugin::verify_plugin_binary_integrity(candidate)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
+
     let binary = candidate.resolved_runtime_command.as_ref().ok_or_else(|| {
         std::io::Error::new(
             std::io::ErrorKind::NotFound,
@@ -78,7 +82,7 @@ fn dispatch_external_plugin(
 
     let mut cmd = std::process::Command::new(binary);
     cmd.args(forward_args);
-    cmd.status()
+    Ok(cmd.status()?)
 }
 
 fn build_cli_manager() -> CliPluginManager {
@@ -215,6 +219,12 @@ fn command_allows_interactive_master_password(matches: &ArgMatches) -> bool {
     let Some((plugin_id, command, command_matches)) = selected_cli_command(matches) else {
         return false;
     };
+
+    if (plugin_id == "connections" && matches!(command, "test" | "show"))
+        || (plugin_id == "profile" && matches!(command, "test" | "show"))
+    {
+        return std::io::stdin().is_terminal();
+    }
 
     command == "tui"
         && plugin_id != "connections"

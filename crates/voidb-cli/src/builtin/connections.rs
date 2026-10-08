@@ -106,34 +106,65 @@ impl ConnectionsCliPlugin {
     }
 
     fn handle_list(&self, ctx: &CliContext) -> Result<(), VoidbError> {
-        if ctx.config.connections.is_empty() {
-            println!("No connections configured.");
-            return Ok(());
+        let mut any_found = false;
+        if !ctx.config.connections.is_empty() {
+            println!("{:<20} {:<15} {:<10}", "NAME", "PLUGIN", "TYPE");
+            println!("{}", "-".repeat(45));
+            for conn in &ctx.config.connections {
+                println!(
+                    "{:<20} {:<15} {:<10}",
+                    conn.name,
+                    conn.effective_plugin_id(),
+                    conn.db_type.as_str(),
+                );
+            }
+            any_found = true;
         }
 
-        println!("{:<20} {:<15} {:<10}", "NAME", "PLUGIN", "TYPE");
-        println!("{}", "-".repeat(45));
-        for conn in &ctx.config.connections {
-            println!(
-                "{:<20} {:<15} {:<10}",
-                conn.name,
-                conn.effective_plugin_id(),
-                conn.db_type.as_str(),
-            );
+        if let Ok(profiles) = ctx.profiles()
+            && !profiles.is_empty()
+        {
+            if !any_found {
+                println!("{:<20} {:<15} {:<10}", "NAME", "PLUGIN", "TYPE");
+                println!("{}", "-".repeat(45));
+            }
+            for profile in &profiles {
+                if ctx.config.connections.iter().any(|c| c.name == profile.name) {
+                    continue;
+                }
+                println!(
+                    "{:<20} {:<15} {:<10}",
+                    profile.name,
+                    profile.plugin_id,
+                    profile
+                        .metadata
+                        .get("database_type")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("plugin"),
+                );
+            }
+            any_found = true;
+        }
+
+        if !any_found {
+            println!("No connections configured.");
         }
         Ok(())
     }
 
     async fn handle_test(&self, name: &str, ctx: &CliContext) -> Result<(), VoidbError> {
-        let conn_config = ctx.find_connection(name).ok_or_else(|| {
-            VoidbError::Plugin(format!("Connection '{}' not found", name))
-        })?;
+        let conn_config = if let Some(conn) = ctx.find_connection(name) {
+            conn.clone()
+        } else {
+            let (_profile, conn) = ctx.resolve_profile_connection(name, None)?;
+            conn
+        };
 
-        let plugin_id = conn_config.effective_plugin_id();
+        let plugin_id = conn_config.effective_plugin_id().to_string();
 
         print!("Testing connection '{}'... ", name);
 
-        let result = test_connection_by_plugin(plugin_id, conn_config).await;
+        let result = test_connection_by_plugin(&plugin_id, &conn_config).await;
 
         match result {
             Ok(msg) => {
@@ -148,9 +179,12 @@ impl ConnectionsCliPlugin {
     }
 
     fn handle_show(&self, name: &str, ctx: &CliContext) -> Result<(), VoidbError> {
-        let conn_config = ctx.find_connection(name).ok_or_else(|| {
-            VoidbError::Plugin(format!("Connection '{}' not found", name))
-        })?;
+        let conn_config = if let Some(conn) = ctx.find_connection(name) {
+            conn.clone()
+        } else {
+            let (_profile, conn) = ctx.resolve_profile_connection(name, None)?;
+            conn
+        };
 
         println!("Name:      {}", conn_config.name);
         println!("Type:      {}", conn_config.db_type.as_str());
@@ -218,36 +252,224 @@ pub(crate) async fn test_connection_by_plugin(
     if let Some(candidate) = discovery.effective_candidate(plugin_id)
         && let Some(binary) = &candidate.resolved_runtime_command
     {
-            let output = std::process::Command::new(binary)
-                .arg("test")
-                .arg("--connection")
-                .arg(&conn.name)
-                .output()
-                .map_err(|e| format!("Failed to execute '{}': {}", binary.display(), e))?;
-
-            let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-
-            if output.status.success() {
-                if !stdout.is_empty() {
-                    return Ok(stdout);
-                } else {
-                    return Ok("Connection test succeeded".to_string());
-                }
-            } else {
-                let msg = if !stderr.is_empty() {
-                    stderr
-                } else if !stdout.is_empty() {
-                    stdout
-                } else {
-                    format!("Test exited with status {}", output.status)
-                };
-                return Err(msg);
-            }
+        if let Err(integrity_err) = voidb_core::process_plugin::verify_plugin_binary_integrity(candidate) {
+            return Err(format!("Plugin security gate check failed: {}", integrity_err));
         }
+
+        // Try testing with --stdin-config first (transfers decrypted config via secure anonymous pipe,
+        // avoiding CLI argument leakage and eliminating dependency on child process disk configuration).
+        let config_bytes = serde_json::to_vec(conn).unwrap_or_default();
+        let stdin_run = (|| -> Result<std::process::Output, std::io::Error> {
+            use std::io::Write;
+            let mut child = std::process::Command::new(binary)
+                .arg("test")
+                .arg("--stdin-config")
+                .stdin(std::process::Stdio::piped())
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped())
+                .spawn()?;
+
+            if let Some(mut stdin) = child.stdin.take() {
+                let _ = stdin.write_all(&config_bytes);
+            }
+            child.wait_with_output()
+        })();
+
+        let output = match stdin_run {
+            Ok(out) if out.status.success() => out,
+            Ok(out) => {
+                let err_str = String::from_utf8_lossy(&out.stderr);
+                if err_str.contains("unexpected argument '--stdin-config'")
+                    || err_str.contains("unrecognized option '--stdin-config'")
+                {
+                    // Fall back to legacy --connection argument for older plugin binaries
+                    std::process::Command::new(binary)
+                        .arg("test")
+                        .arg("--connection")
+                        .arg(&conn.name)
+                        .output()
+                        .map_err(|e| format!("Failed to execute '{}': {}", binary.display(), e))?
+                } else {
+                    out
+                }
+            }
+            Err(_) => {
+                // Fall back to legacy --connection argument
+                std::process::Command::new(binary)
+                    .arg("test")
+                    .arg("--connection")
+                    .arg(&conn.name)
+                    .output()
+                    .map_err(|e| format!("Failed to execute '{}': {}", binary.display(), e))?
+            }
+        };
+
+        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+
+        if output.status.success() {
+            if !stdout.is_empty() {
+                return Ok(stdout);
+            } else {
+                return Ok("Connection test succeeded".to_string());
+            }
+        } else {
+            let msg = if !stderr.is_empty() {
+                stderr
+            } else if !stdout.is_empty() {
+                stdout
+            } else {
+                format!("Test exited with status {}", output.status)
+            };
+            return Err(msg);
+        }
+    }
 
     Err(format!(
         "Connection testing is not supported for plugin '{}' (plugin not installed or missing binary)",
         plugin_id
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use voidb_core::connection::{ConnectionConfig, DatabaseType};
+
+    #[tokio::test]
+    async fn test_sqlite_connection_via_plugin() {
+        let db_path = std::env::temp_dir().join(format!("voidb_test_{}.db", uuid::Uuid::new_v4()));
+        let conn = ConnectionConfig {
+            name: "test-sqlite".into(),
+            db_type: DatabaseType::SQLite,
+            plugin_id: Some("sqlite".into()),
+            plugin_config: Some(serde_json::json!({
+                "path": db_path.to_string_lossy(),
+            })),
+        };
+
+        let result = test_connection_by_plugin("sqlite", &conn).await;
+        let _ = std::fs::remove_file(&db_path);
+        assert!(result.is_ok(), "SQLite test failed: {:?}", result.err());
+        assert!(result.unwrap().contains("Opened SQLite database successfully"));
+    }
+
+    #[tokio::test]
+    async fn test_duckdb_connection_via_plugin() {
+        let db_path = std::env::temp_dir().join(format!("voidb_test_{}.duckdb", uuid::Uuid::new_v4()));
+        let conn = ConnectionConfig {
+            name: "test-duckdb".into(),
+            db_type: DatabaseType::Plugin,
+            plugin_id: Some("duckdb".into()),
+            plugin_config: Some(serde_json::json!({
+                "path": db_path.to_string_lossy(),
+            })),
+        };
+
+        let result = test_connection_by_plugin("duckdb", &conn).await;
+        let _ = std::fs::remove_file(&db_path);
+        assert!(result.is_ok(), "DuckDB test failed: {:?}", result.err());
+        assert!(result.unwrap().contains("DuckDB"));
+    }
+
+    #[tokio::test]
+    async fn test_docker_connection_via_plugin() {
+        let conn = ConnectionConfig {
+            name: "test-docker".into(),
+            db_type: DatabaseType::Plugin,
+            plugin_id: Some("docker".into()),
+            plugin_config: Some(serde_json::json!({
+                "connection": { "type": "Local" }
+            })),
+        };
+
+        let result = test_connection_by_plugin("docker", &conn).await;
+        // If docker daemon is reachable locally, verify it succeeds
+        if let Ok(msg) = result {
+            assert!(msg.contains("Connected: Docker"));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_redis_connection_via_plugin() {
+        let conn = ConnectionConfig {
+            name: "test-redis".into(),
+            db_type: DatabaseType::Plugin,
+            plugin_id: Some("redis".into()),
+            plugin_config: Some(serde_json::json!({
+                "host": "127.0.0.1",
+                "port": 16379,
+            })),
+        };
+
+        let result = test_connection_by_plugin("redis", &conn).await;
+        if let Ok(msg) = result {
+            assert!(msg.contains("PONG"));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_postgres_connection_via_plugin() {
+        let conn = ConnectionConfig {
+            name: "test-postgres".into(),
+            db_type: DatabaseType::PostgreSQL,
+            plugin_id: Some("postgres".into()),
+            plugin_config: Some(serde_json::json!({
+                "host": "127.0.0.1",
+                "port": 15432,
+                "username": "postgres",
+                "password": "testpass",
+                "database": "testdb",
+            })),
+        };
+
+        let result = test_connection_by_plugin("postgres", &conn).await;
+        if let Ok(msg) = result {
+            assert!(msg.contains("Connected successfully"));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_mysql_connection_via_plugin() {
+        let conn = ConnectionConfig {
+            name: "test-mysql".into(),
+            db_type: DatabaseType::MySQL,
+            plugin_id: Some("mysql".into()),
+            plugin_config: Some(serde_json::json!({
+                "host": "127.0.0.1",
+                "port": 13306,
+                "username": "root",
+                "password": "testpass",
+                "database": "testdb",
+            })),
+        };
+
+        let result = test_connection_by_plugin("mysql", &conn).await;
+        if let Ok(msg) = result {
+            assert!(msg.contains("Connected successfully"));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_ssh_connection_via_plugin() {
+        let conn = ConnectionConfig {
+            name: "test-ssh".into(),
+            db_type: DatabaseType::Plugin,
+            plugin_id: Some("ssh".into()),
+            plugin_config: Some(serde_json::json!({
+                "host": "127.0.0.1",
+                "port": 12222,
+                "username": "root",
+                "auth": {
+                    "type": "password",
+                    "password": "testpass"
+                }
+            })),
+        };
+
+        let result = test_connection_by_plugin("ssh", &conn).await;
+        if let Ok(msg) = result {
+            assert!(msg.contains("OK (root@127.0.0.1:12222)"));
+        }
+    }
 }

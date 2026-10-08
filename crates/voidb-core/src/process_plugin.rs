@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
+use crate::VoidbError;
 use crate::capability::{
     CapabilityAuthorizationMetadata, CapabilityExecutionMode, CapabilityRiskLevel,
     CapabilitySessionHandoff,
@@ -418,6 +419,8 @@ pub struct ProcessPluginInstallRecord {
     pub installed_version: String,
     pub manifest_digest: String,
     pub package_digest: String,
+    #[serde(default)]
+    pub binary_digest: Option<String>,
     pub source: ProcessPluginInstallSourceRecord,
     pub install_root: PathBuf,
     pub installed_at: DateTime<Utc>,
@@ -439,6 +442,7 @@ pub struct ProcessPluginPackageValidation {
     pub version: String,
     pub manifest_digest: String,
     pub package_digest: String,
+    pub binary_digest: Option<String>,
     pub candidate: ProcessPluginCandidate,
     pub install_record: ProcessPluginInstallRecord,
     pub warnings: Vec<ProcessPluginDiagnostic>,
@@ -591,6 +595,65 @@ pub fn write_process_plugin_install_record(
         ProcessPluginPackageValidationError::io("write install record", &path, error)
     })?;
     Ok(path)
+}
+
+/// Verify the on-disk integrity of an external process plugin before execution.
+/// If an install record exists, checks manifest digest and binary digest against the recorded hashes.
+/// If unauthorized modification is detected, returns VoidbError::Security to prevent malicious execution.
+pub fn verify_plugin_binary_integrity(
+    candidate: &ProcessPluginCandidate,
+) -> Result<(), VoidbError> {
+    let install_record_path = process_plugin_install_record_path(&candidate.source.root, &candidate.id);
+    if !install_record_path.exists() {
+        return Ok(());
+    }
+
+    let mut record = read_process_plugin_install_record(&install_record_path).map_err(|error| {
+        VoidbError::Security(format!(
+            "Failed to read install integrity record for plugin '{}': {}",
+            candidate.id, error
+        ))
+    })?;
+
+    // Verify manifest digest
+    let current_manifest_digest = digest_file(&candidate.manifest_path).map_err(|error| {
+        VoidbError::Security(format!(
+            "Failed to compute manifest digest for plugin '{}': {}",
+            candidate.id, error
+        ))
+    })?;
+
+    if current_manifest_digest != record.manifest_digest {
+        return Err(VoidbError::Security(format!(
+            "Integrity gate violation: Manifest for plugin '{}' has been modified! Expected {}, found {}. Refusing execution.",
+            candidate.id, record.manifest_digest, current_manifest_digest
+        )));
+    }
+
+    // Verify binary digest
+    if let Some(binary_path) = &candidate.resolved_runtime_command {
+        let current_binary_digest = digest_file(binary_path).map_err(|error| {
+            VoidbError::Security(format!(
+                "Failed to compute binary digest for plugin '{}': {}",
+                candidate.id, error
+            ))
+        })?;
+
+        if let Some(expected_binary_digest) = &record.binary_digest {
+            if &current_binary_digest != expected_binary_digest {
+                return Err(VoidbError::Security(format!(
+                    "SECURITY GATE BLOCKED: Binary for plugin '{}' ({}) does not match installed digest! Expected {}, found {}. Potential unauthorized binary replacement or tampering detected. Refusing execution to prevent credential leakage.",
+                    candidate.id, binary_path.display(), expected_binary_digest, current_binary_digest
+                )));
+            }
+        } else {
+            // First run on a legacy install record: backfill the binary digest
+            record.binary_digest = Some(current_binary_digest);
+            let _ = write_process_plugin_install_record(&record);
+        }
+    }
+
+    Ok(())
 }
 
 pub fn cleanup_process_plugin_package_staging(
@@ -1058,6 +1121,11 @@ fn validate_staged_package_root(
         )
     })?;
     let manifest_digest = digest_file(&candidate.manifest_path)?;
+    let binary_digest = candidate
+        .resolved_runtime_command
+        .as_ref()
+        .map(|path| digest_file(path))
+        .transpose()?;
     let warnings = candidate
         .diagnostics
         .iter()
@@ -1076,6 +1144,7 @@ fn validate_staged_package_root(
         installed_version: manifest.version.clone(),
         manifest_digest: manifest_digest.clone(),
         package_digest: package_digest.clone(),
+        binary_digest: binary_digest.clone(),
         source: ProcessPluginInstallSourceRecord {
             kind: source_summary.kind,
             locator: source_summary.locator.clone(),
@@ -1099,6 +1168,7 @@ fn validate_staged_package_root(
         version: manifest.version.clone(),
         manifest_digest,
         package_digest,
+        binary_digest,
         candidate,
         install_record,
         warnings,
@@ -1545,7 +1615,7 @@ fn reject_world_writable_executable(
     Ok(())
 }
 
-fn digest_file(path: &Path) -> Result<String, ProcessPluginPackageValidationError> {
+pub fn digest_file(path: &Path) -> Result<String, ProcessPluginPackageValidationError> {
     let mut file = File::open(path).map_err(|error| {
         ProcessPluginPackageValidationError::io("open digest input", path, error)
     })?;
@@ -2925,6 +2995,7 @@ mod tests {
             installed_version: "0.1.0".into(),
             manifest_digest: "sha256:manifest".into(),
             package_digest: "sha256:package".into(),
+            binary_digest: None,
             source: ProcessPluginInstallSourceRecord {
                 kind: ProcessPluginPackageSourceKind::LocalDirectory,
                 locator: "/tmp/redis".into(),
@@ -3285,6 +3356,8 @@ destructive = true"#,
         let record = read_process_plugin_install_record(&record_path).expect("read install record");
         assert_eq!(record.plugin_id, "redis");
         assert_eq!(record.manifest_digest, validation.manifest_digest);
+        assert_eq!(record.binary_digest, validation.binary_digest);
+        assert!(validation.binary_digest.as_ref().map(|d| d.starts_with("sha256:")).unwrap_or(false));
         cleanup_process_plugin_package_staging(&validation.staging_root).expect("cleanup staging");
     }
 
@@ -3629,5 +3702,61 @@ platforms = [{platform_list}]
     fn write_tar_octal_field(field: &mut [u8], value: u64) {
         let value = format!("{value:0width$o}\0", width = field.len() - 1);
         field.copy_from_slice(value.as_bytes());
+    }
+
+    #[test]
+    fn integrity_check_verifies_intact_plugin_and_detects_tampering() {
+        let temp = TempDir::new("integrity-test");
+        write_valid_plugin(temp.path(), "redis", "redis", "1", &[current_platform()]);
+        let discovery = discover_process_plugins_from_roots(vec![ProcessPluginRoot::new(
+            temp.path(),
+            ProcessPluginRootKind::User,
+            0,
+        )]);
+        let candidate = discovery.effective_candidate("redis").expect("effective candidate");
+
+        // 1. Without install record: succeeds (no record to mismatch)
+        assert!(verify_plugin_binary_integrity(candidate).is_ok());
+
+        // 2. With matching install record: succeeds
+        let manifest_digest = digest_file(&candidate.manifest_path).expect("manifest digest");
+        let binary_path = candidate.resolved_runtime_command.as_ref().expect("binary path");
+        let binary_digest = digest_file(binary_path).expect("binary digest");
+
+        let record = ProcessPluginInstallRecord {
+            schema_version: PROCESS_PLUGIN_INSTALL_RECORD_SCHEMA_VERSION,
+            plugin_id: "redis".into(),
+            installed_version: "0.1.0".into(),
+            manifest_digest: manifest_digest.clone(),
+            package_digest: "sha256:package".into(),
+            binary_digest: Some(binary_digest.clone()),
+            source: ProcessPluginInstallSourceRecord {
+                kind: ProcessPluginPackageSourceKind::LocalDirectory,
+                locator: "/tmp/redis".into(),
+                redacted_locator: "/tmp/redis".into(),
+            },
+            install_root: temp.path().to_path_buf(),
+            installed_at: Utc::now(),
+            installed_by: "test".into(),
+            enabled: true,
+            previous_version: None,
+            compatibility: ProcessPluginInstallCompatibilityRecord {
+                state: ProcessPluginCandidateState::Available,
+                core_version: env!("CARGO_PKG_VERSION").into(),
+                protocol_version: Some("1".into()),
+                diagnostics: Vec::new(),
+            },
+        };
+        write_process_plugin_install_record(&record).expect("write install record");
+
+        assert!(verify_plugin_binary_integrity(candidate).is_ok());
+
+        // 3. Tampered binary: fails with VoidbError::Security
+        fs::write(binary_path, b"#!/bin/sh\necho MALICIOUS\n").expect("tamper binary");
+        let result = verify_plugin_binary_integrity(candidate);
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("SECURITY GATE BLOCKED") || err_msg.contains("Security error"));
+        assert!(err_msg.contains("does not match installed digest"));
     }
 }
