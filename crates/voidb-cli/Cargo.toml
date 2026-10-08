@@ -12,12 +12,6 @@ path = "src/main.rs"
 
 [dependencies]
 voidb-core = { path = "../voidb-core" }
-voidb-plugin-mysql = { path = "../plugins/voidb-plugin-mysql", optional = true }
-voidb-plugin-postgres = { path = "../plugins/voidb-plugin-postgres", optional = true }
-voidb-plugin-sqlite = { path = "../plugins/voidb-plugin-sqlite", optional = true }
-voidb-plugin-redis = { path = "../plugins/voidb-plugin-redis", optional = true }
-voidb-plugin-ssh = { path = "../plugins/voidb-plugin-ssh", optional = true }
-voidb-plugin-duckdb = { path = "../plugins/voidb-plugin-duckdb", optional = true }
 voidb-plugin-sync = { path = "../plugins/voidb-plugin-sync", optional = true }
 
 clap = { workspace = true }
@@ -38,17 +32,9 @@ uuid = { workspace = true }
 rpassword = "7"
 
 [features]
-default = ["mysql", "postgres", "sqlite", "redis", "ssh"]
-mysql = ["dep:voidb-plugin-mysql"]
-postgres = ["dep:voidb-plugin-postgres"]
-sqlite = ["dep:voidb-plugin-sqlite"]
-redis = ["dep:voidb-plugin-redis"]
-ssh = ["dep:voidb-plugin-ssh"]
-duckdb = ["dep:voidb-plugin-duckdb"]
+default = []
 sync = ["dep:voidb-plugin-sync"]
-all-dbs = ["mysql", "postgres", "sqlite", "redis", "duckdb"]
-all-infra = ["ssh"]
-full = ["all-dbs", "all-infra", "sync"]
+full = ["sync"]
 
 [dev-dependencies]
 toml = "0.8"

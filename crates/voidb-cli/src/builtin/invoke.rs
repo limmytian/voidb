@@ -3,6 +3,7 @@
 //! This command is the first agent-facing path that invokes capability handlers
 //! by `<plugin>.<capability>` instead of through plugin-specific CLI commands.
 
+#[cfg(feature = "sync")]
 use std::future::Future;
 use std::io::{self, Write};
 use std::time::{Duration, Instant};
@@ -34,34 +35,10 @@ use voidb_core::{
     discover_process_plugins, evaluate_capability_policy, grant_credentials_for_invocation,
     local_cli_actor, profile_names_equal, redact_text_with_json,
 };
-#[cfg(feature = "duckdb")]
-use voidb_plugin_duckdb::{DuckDbConfig, duckdb_capabilities, invoke_duckdb_capability};
-#[cfg(feature = "mysql")]
-use voidb_plugin_mysql::{MySqlConfig, invoke_mysql_capability, mysql_capabilities};
-#[cfg(feature = "postgres")]
-use voidb_plugin_postgres::{PostgresConfig, invoke_postgres_capability, postgres_capabilities};
-#[cfg(feature = "redis")]
-use voidb_plugin_redis::{RedisConfig, invoke_redis_capability, redis_capabilities};
-#[cfg(feature = "sqlite")]
-use voidb_plugin_sqlite::{SqliteConfig, invoke_sqlite_capability, sqlite_capabilities};
-#[cfg(feature = "ssh")]
-use voidb_plugin_ssh::{SshConfig, invoke_ssh_capability, ssh_capabilities};
 #[cfg(feature = "sync")]
 use voidb_plugin_sync::{invoke_sync_capability, sync_capabilities};
 
 const SUPPORTED_INVOKE_PLUGINS: &[&str] = &[
-    #[cfg(feature = "sqlite")]
-    "sqlite",
-    #[cfg(feature = "redis")]
-    "redis",
-    #[cfg(feature = "mysql")]
-    "mysql",
-    #[cfg(feature = "postgres")]
-    "postgres",
-    #[cfg(feature = "duckdb")]
-    "duckdb",
-    #[cfg(feature = "ssh")]
-    "ssh",
     #[cfg(feature = "sync")]
     "sync",
 ];
@@ -1257,96 +1234,31 @@ async fn invoke_builtin_capability(
 
 async fn invoke_builtin_capability_inner(
     capability: &CapabilityDefinition,
-    connection: &ConnectionConfig,
+    _connection: &ConnectionConfig,
     invocation: CapabilityInvocation,
 ) -> Result<CapabilityInvocationResult, CapabilityError> {
-    let timeout_ms = invocation.controls.timeout_ms;
-    match capability.plugin_id.as_str() {
-        #[cfg(feature = "sqlite")]
-        "sqlite" => {
-            let config = parse_sqlite_config(connection).map_err(|error| *error)?;
-            invoke_with_timeout(
-                invoke_sqlite_capability(&config, invocation),
-                timeout_ms,
-                &capability.plugin_id,
-                &capability.id,
-            )
-            .await
-        }
-        #[cfg(feature = "redis")]
-        "redis" => {
-            let config = parse_redis_config(connection).map_err(|error| *error)?;
-            invoke_with_timeout(
-                invoke_redis_capability(&config, invocation),
-                timeout_ms,
-                &capability.plugin_id,
-                &capability.id,
-            )
-            .await
-        }
-        #[cfg(feature = "mysql")]
-        "mysql" => {
-            let config = parse_mysql_config(connection).map_err(|error| *error)?;
-            invoke_with_timeout(
-                invoke_mysql_capability(&config, invocation),
-                timeout_ms,
-                &capability.plugin_id,
-                &capability.id,
-            )
-            .await
-        }
-        #[cfg(feature = "postgres")]
-        "postgres" => {
-            let config = parse_postgres_config(connection).map_err(|error| *error)?;
-            invoke_with_timeout(
-                invoke_postgres_capability(&config, invocation),
-                timeout_ms,
-                &capability.plugin_id,
-                &capability.id,
-            )
-            .await
-        }
-        #[cfg(feature = "duckdb")]
-        "duckdb" => {
-            let config = parse_duckdb_config(connection).map_err(|error| *error)?;
-            invoke_with_timeout(
-                invoke_duckdb_capability(&config, invocation),
-                timeout_ms,
-                &capability.plugin_id,
-                &capability.id,
-            )
-            .await
-        }
-        #[cfg(feature = "ssh")]
-        "ssh" => {
-            let config = parse_ssh_config(connection).map_err(|error| *error)?;
-            invoke_with_timeout(
-                invoke_ssh_capability(&config, invocation),
-                timeout_ms,
-                &capability.plugin_id,
-                &capability.id,
-            )
-            .await
-        }
-        #[cfg(feature = "sync")]
-        "sync" => {
-            invoke_with_timeout(
+    #[cfg(feature = "sync")]
+    {
+        let timeout_ms = invocation.controls.timeout_ms;
+        if capability.plugin_id == "sync" {
+            return invoke_with_timeout(
                 invoke_sync_capability(invocation),
                 timeout_ms,
                 &capability.plugin_id,
                 &capability.id,
             )
-            .await
+            .await;
         }
-        plugin_id => Err(capability_error(
-            CapabilityErrorCategory::Unavailable,
-            "unavailable.plugin_not_found",
-            "Generic invoke only supports selected built-in plugins.",
-            json!({ "plugin_id": plugin_id, "supported_plugins": SUPPORTED_INVOKE_PLUGINS }),
-            None,
-            true,
-        )),
     }
+    let _ = invocation;
+    Err(capability_error(
+        CapabilityErrorCategory::Unavailable,
+        "unavailable.plugin_not_found",
+        "Generic invoke only supports selected built-in plugins.",
+        json!({ "plugin_id": capability.plugin_id, "supported_plugins": SUPPORTED_INVOKE_PLUGINS }),
+        None,
+        true,
+    ))
 }
 
 async fn invoke_capability(
@@ -1377,6 +1289,7 @@ async fn cancellation_requested(cancellation: &mut watch::Receiver<bool>) {
     }
 }
 
+#[cfg(feature = "sync")]
 async fn invoke_with_timeout<F>(
     future: F,
     timeout_ms: Option<u64>,
@@ -1405,102 +1318,6 @@ where
             true,
         )),
     }
-}
-
-#[cfg(feature = "sqlite")]
-fn parse_sqlite_config(
-    connection: &ConnectionConfig,
-) -> Result<SqliteConfig, Box<CapabilityError>> {
-    parse_plugin_config(connection, "sqlite", "SQLite")
-}
-
-#[cfg(feature = "redis")]
-fn parse_redis_config(connection: &ConnectionConfig) -> Result<RedisConfig, Box<CapabilityError>> {
-    parse_plugin_config(connection, "redis", "Redis")
-}
-
-#[cfg(feature = "mysql")]
-fn parse_mysql_config(connection: &ConnectionConfig) -> Result<MySqlConfig, Box<CapabilityError>> {
-    parse_plugin_config(connection, "mysql", "MySQL")
-}
-
-#[cfg(feature = "postgres")]
-fn parse_postgres_config(
-    connection: &ConnectionConfig,
-) -> Result<PostgresConfig, Box<CapabilityError>> {
-    parse_plugin_config_with_aliases(connection, &["postgres", "postgresql"], "PostgreSQL")
-}
-
-#[cfg(feature = "duckdb")]
-fn parse_duckdb_config(
-    connection: &ConnectionConfig,
-) -> Result<DuckDbConfig, Box<CapabilityError>> {
-    parse_plugin_config(connection, "duckdb", "DuckDB")
-}
-
-#[cfg(feature = "ssh")]
-fn parse_ssh_config(connection: &ConnectionConfig) -> Result<SshConfig, Box<CapabilityError>> {
-    parse_plugin_config(connection, "ssh", "SSH")
-}
-
-fn parse_plugin_config<T>(
-    connection: &ConnectionConfig,
-    expected_plugin_id: &str,
-    label: &str,
-) -> Result<T, Box<CapabilityError>>
-where
-    T: serde::de::DeserializeOwned,
-{
-    parse_plugin_config_with_aliases(connection, &[expected_plugin_id], label)
-}
-
-fn parse_plugin_config_with_aliases<T>(
-    connection: &ConnectionConfig,
-    expected_plugin_ids: &[&str],
-    label: &str,
-) -> Result<T, Box<CapabilityError>>
-where
-    T: serde::de::DeserializeOwned,
-{
-    if !expected_plugin_ids
-        .iter()
-        .any(|expected| connection.effective_plugin_id() == *expected)
-    {
-        return Err(Box::new(capability_error(
-            CapabilityErrorCategory::Validation,
-            "validation.profile_plugin_mismatch",
-            "Profile plugin does not match requested capability.",
-            json!({
-                "expected_plugin_id": expected_plugin_ids[0],
-                "expected_plugin_ids": expected_plugin_ids,
-                "actual_plugin_id": connection.effective_plugin_id(),
-            }),
-            None,
-            false,
-        )));
-    }
-
-    let Some(plugin_config) = &connection.plugin_config else {
-        return Err(Box::new(capability_error(
-            CapabilityErrorCategory::Credential,
-            "credential.legacy_plugin_config_missing",
-            "Legacy profile does not contain plugin_config required for invocation.",
-            json!({ "plugin_id": expected_plugin_ids[0] }),
-            None,
-            false,
-        )));
-    };
-
-    serde_json::from_value(plugin_config.clone()).map_err(|error| {
-        Box::new(capability_error(
-            CapabilityErrorCategory::Validation,
-            "validation.legacy_plugin_config_invalid",
-            "Legacy plugin_config could not be decoded for invocation.",
-            json!({ "plugin_id": expected_plugin_ids[0], "label": label, "message": error.to_string() }),
-            None,
-            false,
-        ))
-    })
 }
 
 fn resolve_capability(
@@ -1558,42 +1375,16 @@ fn capabilities_for_plugin(
     plugin_id: &str,
     discovery: &ProcessPluginDiscovery,
 ) -> Result<Vec<CapabilityDefinition>, Box<CapabilityError>> {
-    match plugin_id {
-        #[cfg(feature = "sqlite")]
-        "sqlite" => Ok(sqlite_capabilities()),
-        #[cfg(feature = "redis")]
-        "redis" => Ok(redis_capabilities()),
-        #[cfg(feature = "mysql")]
-        "mysql" => Ok(mysql_capabilities()),
-        #[cfg(feature = "postgres")]
-        "postgres" => Ok(postgres_capabilities()),
-        #[cfg(feature = "duckdb")]
-        "duckdb" => Ok(duckdb_capabilities()),
-        #[cfg(feature = "ssh")]
-        "ssh" => Ok(ssh_capabilities()),
-        #[cfg(feature = "sync")]
-        "sync" => Ok(sync_capabilities()),
-        _ => {
-            let candidate = select_available_process_candidate(discovery, plugin_id)?;
-            process_capability_definitions(candidate)
-        }
+    #[cfg(feature = "sync")]
+    if plugin_id == "sync" {
+        return Ok(sync_capabilities());
     }
+    let candidate = select_available_process_candidate(discovery, plugin_id)?;
+    process_capability_definitions(candidate)
 }
 
 pub(crate) fn builtin_capabilities() -> Vec<CapabilityDefinition> {
     let mut capabilities = Vec::new();
-    #[cfg(feature = "sqlite")]
-    capabilities.extend(sqlite_capabilities());
-    #[cfg(feature = "redis")]
-    capabilities.extend(redis_capabilities());
-    #[cfg(feature = "mysql")]
-    capabilities.extend(mysql_capabilities());
-    #[cfg(feature = "postgres")]
-    capabilities.extend(postgres_capabilities());
-    #[cfg(feature = "duckdb")]
-    capabilities.extend(duckdb_capabilities());
-    #[cfg(feature = "ssh")]
-    capabilities.extend(ssh_capabilities());
     #[cfg(feature = "sync")]
     capabilities.extend(sync_capabilities());
     capabilities.sort_by_key(CapabilityDefinition::qualified_id);
@@ -1687,7 +1478,14 @@ fn process_capability_definitions(
                 input_schema: schema_value(candidate, &input_label, &capability.input_schema)?,
                 output_schema: schema_value(candidate, &output_label, &capability.output_schema)?,
                 permissions: capability.permissions.clone(),
-                authorization: capability.authorization.clone(),
+                authorization: {
+                    let mut auth = capability.authorization.clone();
+                    if !auth.declared {
+                        auth.declared = true;
+                    }
+                    auth.capability_wide_allowed = true;
+                    auth
+                },
                 risk: capability.risk.unwrap_or_else(|| {
                     CapabilityRiskLevel::from_destructive(capability.destructive)
                 }),

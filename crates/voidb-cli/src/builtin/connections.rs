@@ -196,6 +196,7 @@ fn resolve_voidb_tui_binary() -> std::path::PathBuf {
 ///
 /// Returns an error string if `plugin_config` is missing or cannot be
 /// deserialized into `T`.
+#[allow(dead_code)]
 fn parse_plugin_config<T: serde::de::DeserializeOwned>(
     conn: &voidb_core::connection::ConnectionConfig,
 ) -> Result<T, String> {
@@ -206,68 +207,47 @@ fn parse_plugin_config<T: serde::de::DeserializeOwned>(
     serde_json::from_value(raw.clone()).map_err(|e| format!("Invalid plugin config: {}", e))
 }
 
-/// Test a connection using the appropriate service's `new_direct()` constructor
-/// or a dedicated `test_connection()` helper, dispatched by `plugin_id`.
+/// Test a connection by dispatching to the plugin's `test` subcommand.
 ///
 /// Returns a short status string on success, or an error message on failure.
 pub(crate) async fn test_connection_by_plugin(
     plugin_id: &str,
     conn: &voidb_core::connection::ConnectionConfig,
 ) -> Result<String, String> {
-    match plugin_id {
-        // === MySQL ===
-        #[cfg(feature = "mysql")]
-        "mysql" => {
-            let config: voidb_plugin_mysql::MySqlConfig = parse_plugin_config(conn)?;
-            voidb_plugin_mysql::service::MySqlService::new_direct(&config)
-                .await?;
-            Ok(format!("connected to {}:{}", config.host, config.port))
+    let discovery = voidb_core::process_plugin::discover_process_plugins();
+    if let Some(candidate) = discovery.effective_candidate(plugin_id)
+        && let Some(binary) = &candidate.resolved_runtime_command
+    {
+            let output = std::process::Command::new(binary)
+                .arg("test")
+                .arg("--connection")
+                .arg(&conn.name)
+                .output()
+                .map_err(|e| format!("Failed to execute '{}': {}", binary.display(), e))?;
+
+            let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+
+            if output.status.success() {
+                if !stdout.is_empty() {
+                    return Ok(stdout);
+                } else {
+                    return Ok("Connection test succeeded".to_string());
+                }
+            } else {
+                let msg = if !stderr.is_empty() {
+                    stderr
+                } else if !stdout.is_empty() {
+                    stdout
+                } else {
+                    format!("Test exited with status {}", output.status)
+                };
+                return Err(msg);
+            }
         }
 
-        // === PostgreSQL ===
-        #[cfg(feature = "postgres")]
-        "postgres" | "postgresql" => {
-            let config: voidb_plugin_postgres::PostgresConfig = parse_plugin_config(conn)?;
-            voidb_plugin_postgres::service::PostgresService::new_direct(&config)
-                .await?;
-            Ok(format!("connected to {}:{}", config.host, config.port))
-        }
-
-        // === SQLite ===
-        #[cfg(feature = "sqlite")]
-        "sqlite" => {
-            let config: voidb_plugin_sqlite::SqliteConfig = parse_plugin_config(conn)?;
-            voidb_plugin_sqlite::service::SqliteService::new_direct(&config)?;
-            Ok(format!("opened '{}'", config.path))
-        }
-
-        // === DuckDB ===
-        #[cfg(feature = "duckdb")]
-        "duckdb" => {
-            let config: voidb_plugin_duckdb::DuckDbConfig = parse_plugin_config(conn)?;
-            voidb_plugin_duckdb::test_connection(&config)
-        }
-
-        // === Redis — uses dedicated test_connection helper for a real PING ===
-        #[cfg(feature = "redis")]
-        "redis" => {
-            voidb_plugin_redis::test_connection(conn)
-                .await
-                .map_err(|e| e.to_string())
-        }
-
-        // === SSH ===
-        #[cfg(feature = "ssh")]
-        "ssh" => {
-            voidb_plugin_ssh::test_connection(conn)
-                .await
-                .map_err(|e| e.to_string())
-        }
-
-        // === Unsupported ===
-        other => Err(format!(
-            "Connection testing is not supported for plugin '{}'",
-            other
-        )),
-    }
+    Err(format!(
+        "Connection testing is not supported for plugin '{}' (plugin not installed or missing binary)",
+        plugin_id
+    ))
 }

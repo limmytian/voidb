@@ -9,12 +9,6 @@ members = [
     "crates/voidb-process-plugin-sdk",
     "crates/voidb-tui",
     "crates/voidb-cli",
-    "crates/plugins/voidb-plugin-mysql",
-    "crates/plugins/voidb-plugin-postgres",
-    "crates/plugins/voidb-plugin-sqlite",
-    "crates/plugins/voidb-plugin-redis",
-    "crates/plugins/voidb-plugin-ssh",
-    "crates/plugins/voidb-plugin-duckdb",
     "crates/plugins/voidb-plugin-sync",
 ]
 

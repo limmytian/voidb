@@ -93,21 +93,6 @@ fn build_cli_manager() -> CliPluginManager {
     cli_manager.register(Box::new(builtin::plugin::PluginCliPlugin::new()));
     cli_manager.register(Box::new(builtin::profile::ProfileCliPlugin::new()));
 
-    // Database plugins
-    #[cfg(feature = "mysql")]
-    cli_manager.register(voidb_plugin_mysql::create_mysql_cli_plugin());
-    #[cfg(feature = "postgres")]
-    cli_manager.register(voidb_plugin_postgres::create_postgres_cli_plugin());
-    #[cfg(feature = "sqlite")]
-    cli_manager.register(voidb_plugin_sqlite::create_sqlite_cli_plugin());
-
-    // Other plugins
-    #[cfg(feature = "redis")]
-    cli_manager.register(voidb_plugin_redis::create_redis_cli_plugin());
-    #[cfg(feature = "ssh")]
-    cli_manager.register(voidb_plugin_ssh::create_ssh_cli_plugin());
-    #[cfg(feature = "duckdb")]
-    cli_manager.register(voidb_plugin_duckdb::create_duckdb_cli_plugin());
     #[cfg(feature = "sync")]
     cli_manager.register(voidb_plugin_sync::create_sync_cli_plugin());
 
@@ -275,20 +260,86 @@ fn tui_target_requested(matches: &ArgMatches) -> bool {
 }
 
 fn arg_present(matches: &ArgMatches, id: &str) -> bool {
-    matches.try_contains_id(id).unwrap_or(false)
+    if matches.try_contains_id(id).unwrap_or(false) {
+        if let Ok(Some(raw)) = matches.try_get_raw(id) {
+            if raw.count() > 0 {
+                return true;
+            }
+        } else {
+            return true;
+        }
+    }
+    let flag = format!("--{id}");
+    if let Ok(Some(mut raw_args)) = matches.try_get_raw("") {
+        return raw_args.any(|arg| {
+            let s = arg.to_string_lossy();
+            s == flag || s.starts_with(&format!("{flag}="))
+        });
+    }
+    false
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeMap;
     use std::path::PathBuf;
 
     fn parse_cli(args: &[&str]) -> ArgMatches {
         let cli_manager = build_cli_manager();
-        let discovery = voidb_core::process_plugin::ProcessPluginDiscovery {
-            roots: Vec::new(),
-            candidates: Vec::new(),
-        };
+        let mut discovery = voidb_core::process_plugin::discover_process_plugins();
+        if !discovery.candidates.iter().any(|c| c.id == "ssh") {
+            let manifest = voidb_core::process_plugin::ProcessPluginManifest {
+                schema: None,
+                id: "ssh".to_string(),
+                name: "SSH".to_string(),
+                version: "0.3.1".to_string(),
+                protocol_version: "1".to_string(),
+                description: Some("SSH".to_string()),
+                license: Some("Apache-2.0".to_string()),
+                homepage: None,
+                runtime: voidb_core::process_plugin::ProcessPluginRuntime {
+                    command: "voidb-plugin-ssh".to_string(),
+                    args: vec!["serve".to_string()],
+                    transport: "stdio-jsonrpc".to_string(),
+                    env: Default::default(),
+                },
+                connections: voidb_core::process_plugin::ProcessPluginConnections {
+                    profile_schema: "schemas/profile.schema.json".to_string(),
+                    secret_classes: vec!["password".to_string()],
+                },
+                capabilities: vec![],
+                ui: Some(voidb_core::process_plugin::ProcessPluginUi {
+                    tui: true,
+                    entrypoint_capability: None,
+                    raw_input: false,
+                }),
+                requirements: None,
+            };
+            let source = voidb_core::process_plugin::ProcessPluginSource {
+                root: PathBuf::from("/mock"),
+                plugin_dir: PathBuf::from("/mock/ssh"),
+                kind: voidb_core::process_plugin::ProcessPluginRootKind::User,
+                trust_level: voidb_core::process_plugin::ProcessPluginTrustLevel::UserInstalled,
+                precedence: 100,
+            };
+            discovery.candidates.push(voidb_core::process_plugin::ProcessPluginCandidate {
+                id: "ssh".to_string(),
+                name: Some("SSH".to_string()),
+                version: Some("0.3.1".to_string()),
+                protocol_version: Some("1".to_string()),
+                manifest_path: PathBuf::from("/mock/plugin.toml"),
+                source,
+                state: voidb_core::process_plugin::ProcessPluginCandidateState::Available,
+                transport: Some("stdio-jsonrpc".to_string()),
+                capability_count: 0,
+                tui: true,
+                diagnostics: Vec::new(),
+                manifest: Some(manifest),
+                resolved_runtime_command: Some(PathBuf::from("/mock/bin/ssh")),
+                resolved_schema_paths: BTreeMap::new(),
+            });
+        }
         let mut argv = vec!["voidb"];
         argv.extend_from_slice(args);
         build_cli_app(&cli_manager, &discovery)

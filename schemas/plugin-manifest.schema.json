@@ -309,6 +309,69 @@
             "note": {
               "type": "string",
               "minLength": 1
+            },
+            "approval_schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "version",
+                "fields"
+              ],
+              "properties": {
+                "version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "path",
+                      "label",
+                      "value_type",
+                      "required"
+                    ],
+                    "properties": {
+                      "path": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "value_type": {
+                        "type": "string",
+                        "enum": [
+                          "string",
+                          "string_list",
+                          "integer",
+                          "boolean",
+                          "resource_id",
+                          "path",
+                          "command_argv",
+                          "json",
+                          "secret_material"
+                        ]
+                      },
+                      "required": {
+                        "type": "boolean"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "risk_emphasis": {
+                        "type": "string",
+                        "enum": [
+                          "normal",
+                          "privilege_escalation",
+                          "destructive"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         },

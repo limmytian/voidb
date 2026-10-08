@@ -5890,77 +5890,10 @@ async fn handle_broker_request(
 
 #[cfg(not(test))]
 fn register_session_factories(
-    host: &mut AgentSessionHost,
-    grant: &AgentGrantFile,
-    password: &str,
+    _host: &mut AgentSessionHost,
+    _grant: &AgentGrantFile,
+    _password: &str,
 ) -> anyhow::Result<()> {
-    if !matches!(
-        grant.plugin_id.as_str(),
-        "ssh"
-            | "sqlite"
-            | "duckdb"
-            | "mysql"
-            | "postgres"
-            | "redis"
-            | "webdav"
-    ) {
-        return Ok(());
-    }
-    let store = LocalProfileStore::default_store()?;
-    let profile = store
-        .load_profiles()?
-        .into_iter()
-        .find(|profile| profile.id == grant.profile_id && profile.plugin_id == grant.plugin_id)
-        .ok_or_else(|| anyhow!("granted session profile is unavailable"))?;
-    let connection = store
-        .native_connection(&profile, Some(password))
-        .map_err(|_| anyhow!("granted session profile credentials are unavailable"))?;
-    let config = connection
-        .plugin_config
-        .ok_or_else(|| anyhow!("granted session profile configuration is unavailable"))?;
-    match grant.plugin_id.as_str() {
-        #[cfg(feature = "ssh")]
-        "ssh" => host.register_factory(Arc::new(voidb_plugin_ssh::SshAgentSessionFactory::new(
-            serde_json::from_value(config)
-                .map_err(|_| anyhow!("granted SSH profile configuration is invalid"))?,
-        ))),
-        #[cfg(feature = "sqlite")]
-        "sqlite" => host.register_factory(Arc::new(
-            voidb_plugin_sqlite::SqliteAgentSessionFactory::new(
-                serde_json::from_value(config)
-                    .map_err(|_| anyhow!("granted SQLite profile configuration is invalid"))?,
-            ),
-        )),
-        #[cfg(feature = "duckdb")]
-        "duckdb" => host.register_factory(Arc::new(
-            voidb_plugin_duckdb::DuckDbAgentSessionFactory::new(
-                serde_json::from_value(config)
-                    .map_err(|_| anyhow!("granted DuckDB profile configuration is invalid"))?,
-            ),
-        )),
-        #[cfg(feature = "mysql")]
-        "mysql" => {
-            host.register_factory(Arc::new(voidb_plugin_mysql::MySqlAgentSessionFactory::new(
-                serde_json::from_value(config)
-                    .map_err(|_| anyhow!("granted MySQL profile configuration is invalid"))?,
-            )))
-        }
-        #[cfg(feature = "postgres")]
-        "postgres" => host.register_factory(Arc::new(
-            voidb_plugin_postgres::PostgresAgentSessionFactory::new(
-                serde_json::from_value(config)
-                    .map_err(|_| anyhow!("granted PostgreSQL profile configuration is invalid"))?,
-            ),
-        )),
-        #[cfg(feature = "redis")]
-        "redis" => {
-            host.register_factory(Arc::new(voidb_plugin_redis::RedisAgentSessionFactory::new(
-                serde_json::from_value(config)
-                    .map_err(|_| anyhow!("granted Redis profile configuration is invalid"))?,
-            )))
-        }
-        _ => {}
-    }
     Ok(())
 }
 

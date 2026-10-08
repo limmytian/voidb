@@ -399,11 +399,8 @@ fn principal_component(
     }
 }
 
-#[allow(clippy::vec_init_then_push)]
 fn default_catalog() -> Result<AgentContextStoreCatalog, AgentContextProtocolError> {
-    let mut roots = Vec::new();
-    #[cfg(feature = "ssh")]
-    roots.push(("ssh", voidb_plugin_ssh::ssh_agent_context_store_root()));
+    let roots: Vec<(&str, std::io::Result<std::path::PathBuf>)> = Vec::new();
 
     let mut sources = Vec::with_capacity(roots.len());
     for (plugin_id, root) in roots {
