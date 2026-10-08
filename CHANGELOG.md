@@ -5,6 +5,21 @@ All notable changes to VoidB will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-10-08
+
+### Added
+
+- **100% Decoupled Process Plugin Architecture**: Completely externalized 6 database and protocol drivers (`mysql`, `postgres`, `sqlite`, `redis`, `ssh`, `duckdb`) into independent repositories, removing all heavy driver crates (`libduckdb-sys`, `tokio-postgres`, `mysql_async`, `rusqlite`, `redis`, `russh`) from the core voidb workspace.
+- **Unified Command Dispatcher & Complete Plugin Equality**: `voidb-cli` now dynamically discovers all 14 official plugins and transparently routes subcommands, arguments, options, and help messages.
+- **Standard Tri-Modal Contract for All 14 Plugins**: Every official plugin provides `test` (fast connectivity check), `tui` (standalone interactive full-screen terminal), and `serve` (headless stdio-jsonrpc for AI coding agents) alongside domain commands.
+- **Bundled Default Plugins & One-Click Init**: Built-in discovery checks sibling and installation prefix paths (`<exe_dir>/plugins`, `<prefix>/share/voidb/plugins`). Added `voidb-cli plugin install-default` for one-command initialization of core database plugins.
+- **Release Packaging & Distribution**: Updated GitHub release workflow and Homebrew formula to build and package both `voidb` and `voidb-cli` binaries together.
+
+### Changed
+
+- Updated all architectural documentation and AGENTS.md guide to reflect the decoupled v4.1 architecture.
+- Cleaned up obsolete in-tree migration documentation.
+
 ## [0.3.0] - 2026-10-08
 
 ### Added

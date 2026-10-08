@@ -293,7 +293,7 @@ mod tests {
                 schema: None,
                 id: "ssh".to_string(),
                 name: "SSH".to_string(),
-                version: "0.3.1".to_string(),
+                version: "0.3.2".to_string(),
                 protocol_version: "1".to_string(),
                 description: Some("SSH".to_string()),
                 license: Some("Apache-2.0".to_string()),
@@ -326,7 +326,7 @@ mod tests {
             discovery.candidates.push(voidb_core::process_plugin::ProcessPluginCandidate {
                 id: "ssh".to_string(),
                 name: Some("SSH".to_string()),
-                version: Some("0.3.1".to_string()),
+                version: Some("0.3.2".to_string()),
                 protocol_version: Some("1".to_string()),
                 manifest_path: PathBuf::from("/mock/plugin.toml"),
                 source,
