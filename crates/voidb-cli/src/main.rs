@@ -122,8 +122,7 @@ fn build_cli_app(
         .about("VoidB - Terminal Database Management Tool")
         .version(env!("CARGO_PKG_VERSION"))
         .subcommand_required(true)
-        .arg_required_else_help(true)
-        .allow_external_subcommands(true);
+        .arg_required_else_help(true);
 
     for cmd in cli_manager.build_commands() {
         app = app.subcommand(cmd);
