@@ -8,6 +8,9 @@ use voidb_core::config::AppConfig;
 use voidb_core::plugin::cli::{CliContext, CliPluginManager};
 use voidb_core::{VOIDB_MASTER_PASSWORD_ENV, VoidbError};
 
+use std::process::ExitStatus;
+use voidb_core::process_plugin::{ProcessPluginCandidate, discover_process_plugins};
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -21,13 +24,31 @@ async fn main() -> anyhow::Result<()> {
         std::process::exit(exit_code);
     }
 
+    let discovery = discover_process_plugins();
+    let cli_manager = build_cli_manager();
+
+    // Check if the first argument after flags is an installed external process plugin.
+    // If so, forward directly to the external plugin's binary (including --help and all subcommands).
+    let raw_args: Vec<String> = std::env::args().collect();
+    if raw_args.len() > 1 {
+        let first_arg = &raw_args[1];
+        if !first_arg.starts_with('-')
+            && cli_manager.get(first_arg).is_none()
+            && let Some(candidate) = discovery.effective_candidate(first_arg)
+        {
+            let forward_args = raw_args[2..].to_vec();
+            let status = dispatch_external_plugin(candidate, &forward_args)?;
+            let code = status.code().unwrap_or(1);
+            std::process::exit(code);
+        }
+    }
+
+    let app = build_cli_app(&cli_manager, &discovery);
+    let matches = app.get_matches();
+
     // Broker children receive the password through an anonymous pipe, never
     // through argv, grant files, socket messages, or their environment.
     let broker_password = agent_broker::take_broker_child_password().await?;
-    let cli_manager = build_cli_manager();
-    let app = build_cli_app(&cli_manager);
-
-    let matches = app.get_matches();
     let (config, active_master_password) = load_config_for_command(broker_password, &matches)?;
 
     // Create context and dispatch
@@ -42,6 +63,22 @@ async fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn dispatch_external_plugin(
+    candidate: &ProcessPluginCandidate,
+    forward_args: &[String],
+) -> std::io::Result<ExitStatus> {
+    let binary = candidate.resolved_runtime_command.as_ref().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("No resolved executable binary found for plugin '{}'", candidate.id),
+        )
+    })?;
+
+    let mut cmd = std::process::Command::new(binary);
+    cmd.args(forward_args);
+    cmd.status()
 }
 
 fn build_cli_manager() -> CliPluginManager {
@@ -77,15 +114,39 @@ fn build_cli_manager() -> CliPluginManager {
     cli_manager
 }
 
-fn build_cli_app(cli_manager: &CliPluginManager) -> Command {
+fn build_cli_app(
+    cli_manager: &CliPluginManager,
+    discovery: &voidb_core::process_plugin::ProcessPluginDiscovery,
+) -> Command {
     let mut app = Command::new("voidb")
         .about("VoidB - Terminal Database Management Tool")
         .version(env!("CARGO_PKG_VERSION"))
         .subcommand_required(true)
-        .arg_required_else_help(true);
+        .arg_required_else_help(true)
+        .allow_external_subcommands(true);
 
     for cmd in cli_manager.build_commands() {
         app = app.subcommand(cmd);
+    }
+
+    // Add discovered external plugins as subcommands for transparent help & discovery
+    for candidate in &discovery.candidates {
+        if !candidate.is_effective_available() {
+            continue;
+        }
+        if cli_manager.get(&candidate.id).is_some() {
+            continue; // Builtin takes precedence
+        }
+        let name: &'static str = candidate.id.clone().leak();
+        let about: &'static str = candidate
+            .name
+            .clone()
+            .unwrap_or_else(|| format!("{} plugin commands", candidate.id))
+            .leak();
+        let sub = Command::new(name)
+            .about(about)
+            .allow_external_subcommands(true);
+        app = app.subcommand(sub);
     }
 
     app
@@ -221,12 +282,17 @@ fn arg_present(matches: &ArgMatches, id: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     fn parse_cli(args: &[&str]) -> ArgMatches {
         let cli_manager = build_cli_manager();
+        let discovery = voidb_core::process_plugin::ProcessPluginDiscovery {
+            roots: Vec::new(),
+            candidates: Vec::new(),
+        };
         let mut argv = vec!["voidb"];
         argv.extend_from_slice(args);
-        build_cli_app(&cli_manager)
+        build_cli_app(&cli_manager, &discovery)
             .try_get_matches_from(argv)
             .expect("valid CLI args")
     }
@@ -473,4 +539,40 @@ mod tests {
         assert!(!command_allows_interactive_master_password(&matches));
         assert!(!command_can_use_raw_config(&matches));
     }
+
+    #[test]
+    fn build_cli_app_includes_available_external_plugins() {
+        let cli_manager = build_cli_manager();
+        let candidate = ProcessPluginCandidate {
+            id: "kubernetes".to_string(),
+            name: Some("Kubernetes Cluster Management Plugin".to_string()),
+            version: Some("0.3.0".to_string()),
+            protocol_version: Some("1".to_string()),
+            manifest_path: PathBuf::from("/test/kubernetes/plugin.toml"),
+            source: voidb_core::process_plugin::ProcessPluginSource {
+                root: PathBuf::from("/test"),
+                plugin_dir: PathBuf::from("/test/kubernetes"),
+                kind: voidb_core::process_plugin::ProcessPluginRootKind::User,
+                trust_level: voidb_core::process_plugin::ProcessPluginTrustLevel::UserInstalled,
+                precedence: 0,
+            },
+            state: voidb_core::process_plugin::ProcessPluginCandidateState::Available,
+            transport: Some("stdio-jsonrpc".to_string()),
+            capability_count: 16,
+            tui: true,
+            diagnostics: Vec::new(),
+            manifest: None,
+            resolved_runtime_command: Some(PathBuf::from("/test/kubernetes/bin/voidb-plugin-kubernetes")),
+            resolved_schema_paths: Default::default(),
+        };
+        let discovery = voidb_core::process_plugin::ProcessPluginDiscovery {
+            roots: Vec::new(),
+            candidates: vec![candidate],
+        };
+
+        let app = build_cli_app(&cli_manager, &discovery);
+        let subcommands: Vec<String> = app.get_subcommands().map(|c| c.get_name().to_string()).collect();
+        assert!(subcommands.contains(&"kubernetes".to_string()));
+    }
 }
+

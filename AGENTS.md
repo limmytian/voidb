@@ -31,10 +31,13 @@ pub trait Plugin: Send + Sync {
 ```
 
 The shell registry currently contains only `ConnectionManagerPluginFactory`.
-Protocol plugins are service, CLI, and capability crates; retained interactive
-apps such as Docker, Kubernetes, Jenkins, and SSH run as plugin-owned standalone
-TUIs through `voidb-cli <plugin> tui --profile <profile>`. They are not embedded
-shell tabs.
+Protocol plugins are autonomous service, CLI, and capability crates. Built-in
+and external plugins have identical first-class status under `voidb-cli`, which
+dynamically discovers installed external process plugins and routes commands
+transparently. Retained interactive apps (such as Docker, Kubernetes, Jenkins,
+SSH, S3, WebDAV, Email) run as plugin-owned standalone TUIs through
+`voidb-cli <plugin> tui --profile <profile>`. They are not embedded shell tabs.
+All plugins follow the tri-modal contract: `test`, `tui`, and `serve` (stdio-jsonrpc).
 
 ## Service Layer (Critical)
 

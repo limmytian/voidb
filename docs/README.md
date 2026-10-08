@@ -4,6 +4,8 @@ VoidB is a terminal-based database management tool with vim-style keybindings an
 
 ## Documentation
 
+- [Architecture](architecture.md) - Router architecture, plugin equality, CLI dispatch, and human/machine operational boundaries
+- [Conventions](conventions.md) - Development conventions, code style, error handling, and guidelines
 - [5 分钟开发一个 VoidB 插件](quickstart-process-plugin.md) - 快速上手：编写基于 stdio-jsonrpc 的多语言独立进程插件
 - [Process Plugin Development and Certification Guide](process-plugin-development-guide.md) - Specification, cargo-generate template, packaging tooling, and certification checklist
 - [Plugin Development Guide](plugin-development-guide.md) - Comprehensive guide: architecture, traits, service-layer convention, patterns, checklist
@@ -48,7 +50,6 @@ VoidB is a terminal-based database management tool with vim-style keybindings an
 - [SQL Plugin Migration Guide](sql-plugin-migration-guide.md) - Steps and checks for moving SQLite, MySQL, PostgreSQL, and DuckDB onto the shared SQL contract
 - [MySQL Capability Migration](mysql-capability-migration.md) - MySQL profile shape, capability behavior, deterministic fixtures, and fixture-backed live smoke gate
 - [SSH Plugin](ssh-plugin.md) - SSH terminal, SFTP, forwarding, agent capability surface, fixture smoke, and release gate
-- [Email TUI](email-tui.md) - Req82 standalone Email TUI launch, workflows, fixture transcript evidence, and CLI fallback
 - [Agent Capability Examples](agent-capability-examples.md) - Concrete schema discovery, invocation, structured error, and repeated runtime instance examples for agents
 - [TUI Workflow Classification](tui-workflow-classification.md) - Classification of which plugin workflows should retain TUI support versus move to CLI-first capabilities
 - [TUI Adapter Boundary](tui-adapter-boundary.md) - Ownership rules for TUI surfaces that consume profiles, capabilities, and plugin services without becoming the core contract

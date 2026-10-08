@@ -11,45 +11,50 @@
 ## Component Diagram
 
 ```
-|                        VoidB Shell (app_v4.rs)                    |
-|  +----------------------------+  +----------------------------+   |
-|  |  Event Loop                |  |  Tab Manager               |   |
-|  |  - crossterm EventStream   |  |  - Vec<Tab>                |   |
-|  |  - render_rx (plugin reqs) |  |  - active_tab index        |   |
-|  |  - Tab Manager popup       |  |  - TabRequest channel (rx) |   |
-|  +----------------------------+  +----------------------------+   |
-|                  |                            ^                    |
-|     event routing (two-layer)     tab requests (mpsc channel)     |
-|                  v                            |                    |
-| Plugin |  | Plugin    |  | Plugin   |  | Plugin            |
-| MySQL  |  | Postgres  |  | SSH      |  | ConnectionManager |
-| Browser|  | Browser   |  | Terminal |  | (Home Screen)     |
++-------------------------------------------------------------------------------+
+|                            VoidB Architecture v4.0                            |
++-------------------------------------------------------------------------------+
+|                                                                               |
+|   [Human Interaction]                                 [Machine Communication] |
+|                                                                               |
+|   +-----------------------+   +-------------------+   +-------------------+   |
+|   |   voidb (Main TUI)    |   | voidb-cli <cmd>   |   | AI Agents / Core  |   |
+|   |  Connection & Profile |   | Unified Command   |   | Capability Broker |   |
+|   |       Manager         |   |    Dispatcher     |   |                   |   |
+|   +-----------------------+   +-------------------+   +-------------------+   |
+|               |                         |                       |             |
+|               | saves metadata          | transparent dispatch  | JSON-RPC    |
+|               v                         v                       v             |
+|     ~/.config/voidb/config.toml   +---------------------------------------+   |
+|     (AES-256-GCM encrypted)       |    Plugins (Builtin & External)       |   |
+|                                   |  - test  : Connectivity check         |   |
+|                                   |  - tui   : Fullscreen interactive TUI |   |
+|                                   |  - serve : stdio-jsonrpc protocol     |   |
+|                                   |  - <cmd> : Domain-specific operations |   |
+|                                   +---------------------------------------+   |
++-------------------------------------------------------------------------------+
 ```
 
-## Layers
+## Layers & Division of Responsibility
 
-### Shell (`crates/voidb-tui/src/app_v4.rs`)
-- Event loop, tab management, global shortcuts, tab bar rendering
-- Contains: `App` struct, `AppTabManager`, `TabManagerPopup`, hard/soft global shortcut logic
-- Depends on: `voidb-core` (Plugin trait, ShellCapabilities, Event, PluginRegistry)
+### 1. VoidB Shell (`crates/voidb-tui/src/app_v4.rs`)
+- Pure connection information & profile management UI.
+- Never embeds, hosts, or summons heavyweight external child processes.
+- Contains only the `ConnectionManagerPluginFactory`.
 
-### Core (`crates/voidb-core/src/`)
-- Shared abstractions, traits, types, and reusable widgets
-- Contains: Plugin trait, DatabaseAdapter trait, Event enum, ShellCapabilities, ConnectionConfig, reusable TUI widgets
-- Depends on: ratatui, crossterm, tokio, serde, thiserror
+### 2. Unified Command Dispatcher (`voidb-cli`)
+- Serves as the first-class dispatch desk.
+- First-class equality for built-in and external process plugins.
+- Dynamically discovers external plugins installed under `~/Library/Application Support/voidb/plugins/<plugin>/bin/`.
+- Transparently routes arguments, subcommands, flags, and help requests to plugin binaries.
 
-### External Plugins (`crates/plugins/voidb-plugin-*/src/`)
-- Autonomous applications implementing specific functionality
-- Contains: Database adapters, TUI plugins, CLI plugins, data plugins
-- Depends on: `voidb-core` + protocol-specific drivers
-
-### Built-in Plugins (`crates/voidb-tui/src/plugins/`)
-- Compiled directly into `voidb-tui`
-- Contains: `ConnectionManagerPlugin` (home screen), `ConnectionDialog`
-
-### CLI (`crates/voidb-cli/src/`)
-- Non-interactive command-line interface
-- Contains: CLI binary with plugin-driven subcommands
+### 3. Plugins (Built-in & External)
+- Fully autonomous domain operators.
+- Support the tri-modal operational contract:
+  - `test`: Automated connectivity verification.
+  - `tui`: Standalone full-screen interactive terminal interface (invoked via `voidb-cli <plugin> tui --profile <profile>`).
+  - `serve`: `stdio-jsonrpc` protocol server for AI Agents and automated orchestration.
+  - Domain commands: Full autonomous command surface (e.g., `k8s pods`, `docker ps`, `s3 buckets`).
 
 ## Data Flow
 

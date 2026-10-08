@@ -3253,7 +3253,7 @@ platforms = ["{platform}"]
 
         let validation = validate_process_plugin_package(
             ProcessPluginPackageSource::local_archive(&pkg_path),
-            &install_root.path().join("staging"),
+            install_root.path().join("staging"),
         )
         .expect("validate package");
         let sha256_hex = validation.package_digest;
@@ -3322,7 +3322,7 @@ platforms = ["{platform}"]
 
         let validation_v2 = validate_process_plugin_package(
             ProcessPluginPackageSource::local_archive(&pkg_v2_path),
-            &install_root.path().join("staging_v2"),
+            install_root.path().join("staging_v2"),
         )
         .expect("validate v2 package");
 
