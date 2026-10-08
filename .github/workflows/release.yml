@@ -43,31 +43,33 @@ jobs:
         if: matrix.use_cross
         run: cargo install cross --git https://github.com/cross-rs/cross
 
-      - name: Build Binary
+      - name: Build Binaries
         run: |
           if [ "${{ matrix.use_cross }}" = "true" ]; then
-            cross build --release --target ${{ matrix.target }} -p voidb-cli
+            cross build --release --target ${{ matrix.target }} -p voidb-tui -p voidb-cli
           else
-            cargo build --release --target ${{ matrix.target }} -p voidb-cli
+            cargo build --release --target ${{ matrix.target }} -p voidb-tui -p voidb-cli
           fi
         shell: bash
 
-      - name: Package Binary (Unix)
+      - name: Package Binaries (Unix)
         if: runner.os != 'Windows'
         run: |
           mkdir -p dist
-          cp target/${{ matrix.target }}/release/voidb-cli dist/${{ matrix.artifact_name }}
+          cp target/${{ matrix.target }}/release/voidb dist/voidb
+          cp target/${{ matrix.target }}/release/voidb-cli dist/voidb-cli
           cd dist
-          tar -czf voidb-${{ github.ref_name }}-${{ matrix.target }}.tar.gz ${{ matrix.artifact_name }}
+          tar -czf voidb-${{ github.ref_name }}-${{ matrix.target }}.tar.gz voidb voidb-cli
         shell: bash
 
-      - name: Package Binary (Windows)
+      - name: Package Binaries (Windows)
         if: runner.os == 'Windows'
         run: |
           mkdir -p dist
-          cp target/${{ matrix.target }}/release/voidb-cli.exe dist/${{ matrix.artifact_name }}
+          cp target/${{ matrix.target }}/release/voidb.exe dist/voidb.exe
+          cp target/${{ matrix.target }}/release/voidb-cli.exe dist/voidb-cli.exe
           cd dist
-          7z a voidb-${{ github.ref_name }}-${{ matrix.target }}.zip ${{ matrix.artifact_name }}
+          7z a voidb-${{ github.ref_name }}-${{ matrix.target }}.zip voidb.exe voidb-cli.exe
         shell: bash
 
       - name: Upload Artifact

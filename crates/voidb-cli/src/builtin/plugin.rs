@@ -22,13 +22,19 @@ use voidb_core::{
     ProcessPluginPackageFormat, ProcessPluginPackageResult, ProcessPluginPackageSource,
     ProcessPluginPackageValidation, ProcessPluginPackageValidationError,
     ProcessPluginPreviousVersionRecord, ProcessPluginRoot, ProcessPluginRootKind, VoidbError,
-    cleanup_process_plugin_package_staging, default_user_process_plugin_install_root,
-    discover_process_plugins, discover_process_plugins_from_roots, package_process_plugin,
+    cleanup_process_plugin_package_staging, default_bundled_plugin_roots,
+    default_user_process_plugin_install_root, discover_process_plugins,
+    discover_process_plugins_from_roots, package_process_plugin,
     process_plugin_install_record_path, read_process_plugin_install_record,
     validate_process_plugin_package, write_process_plugin_install_record,
 };
 
 const PLUGIN_CLI_SCHEMA_VERSION: u32 = 1;
+
+/// Default official core database and protocol plugins bundled or recommended by VoidB.
+pub const DEFAULT_OFFICIAL_CORE_PLUGINS: &[&str] = &[
+    "mysql", "postgres", "sqlite", "redis", "ssh", "duckdb",
+];
 
 pub struct PluginCliPlugin;
 
@@ -118,6 +124,35 @@ impl CliPlugin for PluginCliPlugin {
                         .long("require-signature")
                         .action(ArgAction::SetTrue)
                         .help("Fail installation if detached signature (<archive>.sig) is missing or invalid"),
+                )
+                .arg(format_arg())
+                .arg(install_root_arg()),
+            Command::new("install-default")
+                .visible_alias("init-defaults")
+                .about("Install or initialize default official database and protocol plugins (mysql, postgres, sqlite, redis, ssh, duckdb)")
+                .arg(
+                    Arg::new("plugins")
+                        .long("plugins")
+                        .value_name("PLUGINS")
+                        .help("Comma-separated list of plugins to install (defaults to: mysql, postgres, sqlite, redis, ssh, duckdb)"),
+                )
+                .arg(
+                    Arg::new("registry-url")
+                        .long("registry-url")
+                        .value_name("URL")
+                        .help("Remote registry index URL (defaults to official repository index)"),
+                )
+                .arg(
+                    Arg::new("force")
+                        .long("force")
+                        .action(ArgAction::SetTrue)
+                        .help("Reinstall even if the plugin is already installed"),
+                )
+                .arg(
+                    Arg::new("from-bundled")
+                        .long("from-bundled")
+                        .action(ArgAction::SetTrue)
+                        .help("Only install from local bundled roots, do not download from remote registry"),
                 )
                 .arg(format_arg())
                 .arg(install_root_arg()),
@@ -389,6 +424,7 @@ impl CliPlugin for PluginCliPlugin {
                 handle_describe(matches, &discovery)
             }
             "install" => handle_install(matches).await,
+            "install-default" | "init-defaults" => handle_install_default(matches).await,
             "update" => handle_update(matches).await,
             "search" => handle_search(matches).await,
             "disable" => handle_lifecycle(matches, PluginLifecycleOperation::Disable),
@@ -560,6 +596,242 @@ async fn handle_install(matches: &ArgMatches) -> Result<(), VoidbError> {
     match install_plugin_package(source, install_root) {
         Ok(result) => print_operation_result(format, result),
         Err(error) => print_plugin_error(*error),
+    }
+}
+
+async fn handle_install_default(matches: &ArgMatches) -> Result<(), VoidbError> {
+    let format = output_format(matches)?;
+    let install_root = install_root_from_matches(matches)?;
+    let registry_url_opt = matches.get_one::<String>("registry-url").map(String::as_str);
+    let force = matches.get_flag("force");
+    let from_bundled = matches.get_flag("from-bundled");
+
+    let plugins_to_install: Vec<String> = if let Some(custom) = matches.get_one::<String>("plugins") {
+        custom
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect()
+    } else {
+        DEFAULT_OFFICIAL_CORE_PLUGINS
+            .iter()
+            .map(|s| s.to_string())
+            .collect()
+    };
+
+    let bundled_roots = default_bundled_plugin_roots();
+    let mut results = Vec::new();
+    let mut registry_index: Option<PluginRegistryIndex> = None;
+
+    for plugin_id in &plugins_to_install {
+        let active_dir = install_root.join(plugin_id);
+        if active_dir.join("plugin.toml").exists() && !force {
+            results.push(json!({
+                "plugin": plugin_id,
+                "status": "already_installed",
+                "message": "Plugin is already installed in user install root",
+            }));
+            continue;
+        }
+
+        // 1. Check bundled roots
+        let mut installed_from_bundled = false;
+        for bundled_root in &bundled_roots {
+            let candidate_dir = bundled_root.join(plugin_id);
+            if candidate_dir.join("plugin.toml").is_file() {
+                if active_dir.exists() && force {
+                    let _ = fs::remove_dir_all(&active_dir);
+                }
+                match ProcessPluginPackageSource::from_path(&candidate_dir) {
+                    Ok(source) => {
+                        match install_plugin_package(source, install_root.clone()) {
+                            Ok(res) => {
+                                results.push(json!({
+                                    "plugin": plugin_id,
+                                    "status": "installed",
+                                    "source": "bundled",
+                                    "version": res.data.plugin.installed_version,
+                                    "message": "Installed from local bundled root",
+                                }));
+                                installed_from_bundled = true;
+                                break;
+                            }
+                            Err(err) => {
+                                results.push(json!({
+                                    "plugin": plugin_id,
+                                    "status": "failed",
+                                    "source": "bundled",
+                                    "error": err.message,
+                                }));
+                                installed_from_bundled = true;
+                                break;
+                            }
+                        }
+                    }
+                    Err(err) => {
+                        results.push(json!({
+                            "plugin": plugin_id,
+                            "status": "failed",
+                            "source": "bundled",
+                            "error": format!("{:?}", err),
+                        }));
+                        installed_from_bundled = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if installed_from_bundled {
+            continue;
+        }
+
+        if from_bundled {
+            results.push(json!({
+                "plugin": plugin_id,
+                "status": "failed",
+                "source": "bundled",
+                "error": "Plugin not found in bundled roots",
+            }));
+            continue;
+        }
+
+        // 2. Fetch from registry
+        if registry_index.is_none() {
+            match resolve_registry_index(registry_url_opt).await {
+                Ok((idx, _)) => registry_index = Some(idx),
+                Err(e) => {
+                    results.push(json!({
+                        "plugin": plugin_id,
+                        "status": "failed",
+                        "source": "registry",
+                        "error": format!("Failed to resolve registry: {}", e),
+                    }));
+                    continue;
+                }
+            }
+        }
+
+        let index = registry_index.as_ref().unwrap();
+        let entry = match index.get_plugin(plugin_id) {
+            Some(e) => e,
+            None => {
+                results.push(json!({
+                    "plugin": plugin_id,
+                    "status": "failed",
+                    "source": "registry",
+                    "error": format!("Plugin '{}' not found in registry", plugin_id),
+                }));
+                continue;
+            }
+        };
+
+        let version_entry = match entry.get_version(None) {
+            Some(v) => v,
+            None => {
+                results.push(json!({
+                    "plugin": plugin_id,
+                    "status": "failed",
+                    "source": "registry",
+                    "error": "No version available in registry",
+                }));
+                continue;
+            }
+        };
+
+        let current_plat = voidb_core::process_plugin::current_platform();
+        let current_target = std::env::consts::ARCH;
+        let artifact = match version_entry.find_matching_package(current_target, current_plat) {
+            Some(a) => a,
+            None => {
+                results.push(json!({
+                    "plugin": plugin_id,
+                    "status": "failed",
+                    "source": "registry",
+                    "error": format!("No compatible artifact found for platform '{}'", current_plat),
+                }));
+                continue;
+            }
+        };
+
+        let download_dir = std::env::temp_dir().join(format!(
+            "voidb-download-default-{}",
+            Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        ));
+        let dest_file = download_dir.join(&artifact.filename);
+
+        if let Err(e) = PluginRegistryIndex::download_artifact(artifact, &dest_file).await {
+            results.push(json!({
+                "plugin": plugin_id,
+                "status": "failed",
+                "source": "registry",
+                "error": format!("Download failed: {}", e),
+            }));
+            let _ = fs::remove_dir_all(&download_dir);
+            continue;
+        }
+
+        if active_dir.exists() && force {
+            let _ = fs::remove_dir_all(&active_dir);
+        }
+
+        let source = match ProcessPluginPackageSource::from_path(&dest_file) {
+            Ok(s) => s,
+            Err(e) => {
+                results.push(json!({
+                    "plugin": plugin_id,
+                    "status": "failed",
+                    "source": "registry",
+                    "error": format!("Package validation error: {:?}", e),
+                }));
+                let _ = fs::remove_dir_all(&download_dir);
+                continue;
+            }
+        };
+
+        match install_plugin_package(source, install_root.clone()) {
+            Ok(res) => {
+                results.push(json!({
+                    "plugin": plugin_id,
+                    "status": "installed",
+                    "source": "registry",
+                    "version": res.data.plugin.installed_version,
+                    "message": "Installed from official registry",
+                }));
+            }
+            Err(err) => {
+                results.push(json!({
+                    "plugin": plugin_id,
+                    "status": "failed",
+                    "source": "registry",
+                    "error": err.message,
+                }));
+            }
+        }
+        let _ = fs::remove_dir_all(&download_dir);
+    }
+
+    match format {
+        PluginOutputFormat::Json => print_json(&success_envelope(json!({
+            "operation": "install-default",
+            "results": results,
+        }))),
+        PluginOutputFormat::Table => {
+            println!("PLUGIN\tSTATUS\tSOURCE\tDETAILS");
+            for r in &results {
+                let plugin = r.get("plugin").and_then(|v| v.as_str()).unwrap_or("-");
+                let status = r.get("status").and_then(|v| v.as_str()).unwrap_or("-");
+                let source = r.get("source").and_then(|v| v.as_str()).unwrap_or("-");
+                let details = r
+                    .get("version")
+                    .and_then(|v| v.as_str())
+                    .or_else(|| r.get("message").and_then(|v| v.as_str()))
+                    .or_else(|| r.get("error").and_then(|v| v.as_str()))
+                    .unwrap_or("-");
+                println!("{}\t{}\t{}\t{}", plugin, status, source, details);
+            }
+            Ok(())
+        }
     }
 }
 

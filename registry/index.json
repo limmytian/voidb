@@ -3,7 +3,7 @@
   "schema_version": 1,
   "registry_name": "VoidB Official Plugin Registry",
   "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
-  "updated_at": "2026-10-07T19:19:25.801313Z",
+  "updated_at": "2026-10-08T11:18:14.329765Z",
   "plugins": [
     {
       "id": "docker",
@@ -54,6 +54,50 @@
               "url": "https://github.com/limmytian/voidb-plugin-docker/releases/download/v0.3.0/docker-0.3.0.tar.gz",
               "sha256": "sha256:7a6cee3cfade56b5b6dc6d8364a1707d4ae9480efb67d32944c3fc2b42356d87",
               "size_bytes": 1679673
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "duckdb",
+      "name": "DuckDB Database Plugin",
+      "description": "DuckDB embedded database process plugin for VoidB.",
+      "homepage": "https://github.com/limmytian/voidb-plugin-duckdb",
+      "license": "Apache-2.0",
+      "category": "database",
+      "tags": [
+        "duckdb"
+      ],
+      "capabilities": [
+        "query",
+        "explain",
+        "exec",
+        "catalogs",
+        "tables",
+        "describe_table",
+        "export_query",
+        "import_plan",
+        "import_apply"
+      ],
+      "latest_version": "0.3.1",
+      "versions": [
+        {
+          "version": "0.3.1",
+          "protocol_version": "1",
+          "released_at": "2026-10-08T11:18:12.374303Z",
+          "platforms": [
+            "darwin",
+            "linux",
+            "windows"
+          ],
+          "packages": [
+            {
+              "filename": "duckdb-0.3.1.tar.gz",
+              "format": "tar.gz",
+              "url": "https://github.com/limmytian/voidb-plugin-duckdb/releases/download/v0.3.1/duckdb-0.3.1.tar.gz",
+              "sha256": "sha256:5b96a2fabb0fc6e7243470d192cae20e3064561a7f7011887553b7e9e0700d63",
+              "size_bytes": 26441726
             }
           ]
         }
@@ -304,6 +348,140 @@
       ]
     },
     {
+      "id": "mysql",
+      "name": "MySQL Database Plugin",
+      "description": "MySQL and MariaDB relational database process plugin for VoidB.",
+      "homepage": "https://github.com/limmytian/voidb-plugin-mysql",
+      "license": "Apache-2.0",
+      "category": "database",
+      "tags": [
+        "mysql"
+      ],
+      "capabilities": [
+        "query",
+        "explain",
+        "exec",
+        "catalogs",
+        "tables",
+        "describe_table",
+        "export_query",
+        "import_plan",
+        "import_apply"
+      ],
+      "latest_version": "0.3.1",
+      "versions": [
+        {
+          "version": "0.3.1",
+          "protocol_version": "1",
+          "released_at": "2026-10-08T11:18:07.650071Z",
+          "platforms": [
+            "darwin",
+            "linux",
+            "windows"
+          ],
+          "packages": [
+            {
+              "filename": "mysql-0.3.1.tar.gz",
+              "format": "tar.gz",
+              "url": "https://github.com/limmytian/voidb-plugin-mysql/releases/download/v0.3.1/mysql-0.3.1.tar.gz",
+              "sha256": "sha256:6e00345798bb38c90881d7dff3f3beab5c4cb458fe58591a64e6047e595491b4",
+              "size_bytes": 6907556
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "postgres",
+      "name": "PostgreSQL Database Plugin",
+      "description": "PostgreSQL relational database process plugin for VoidB.",
+      "homepage": "https://github.com/limmytian/voidb-plugin-postgres",
+      "license": "Apache-2.0",
+      "category": "database",
+      "tags": [
+        "postgres"
+      ],
+      "capabilities": [
+        "query",
+        "explain",
+        "exec",
+        "catalogs",
+        "tables",
+        "describe_table",
+        "export_query",
+        "import_plan",
+        "import_apply"
+      ],
+      "latest_version": "0.3.1",
+      "versions": [
+        {
+          "version": "0.3.1",
+          "protocol_version": "1",
+          "released_at": "2026-10-08T11:18:08.103029Z",
+          "platforms": [
+            "darwin",
+            "linux",
+            "windows"
+          ],
+          "packages": [
+            {
+              "filename": "postgres-0.3.1.tar.gz",
+              "format": "tar.gz",
+              "url": "https://github.com/limmytian/voidb-plugin-postgres/releases/download/v0.3.1/postgres-0.3.1.tar.gz",
+              "sha256": "sha256:bd1f8d0d5b4d8e562a6aa4848dd97a71a56814e38fa257ddd48b9def0ab3d1b8",
+              "size_bytes": 4917928
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "redis",
+      "name": "Redis Key-Value Store Plugin",
+      "description": "Redis in-memory data store process plugin for VoidB.",
+      "homepage": "https://github.com/limmytian/voidb-plugin-redis",
+      "license": "Apache-2.0",
+      "category": "database",
+      "tags": [
+        "redis"
+      ],
+      "capabilities": [
+        "keys",
+        "get",
+        "set",
+        "del",
+        "ttl",
+        "expire",
+        "info",
+        "exec",
+        "pubsub_read",
+        "monitor_read",
+        "stream_read"
+      ],
+      "latest_version": "0.3.1",
+      "versions": [
+        {
+          "version": "0.3.1",
+          "protocol_version": "1",
+          "released_at": "2026-10-08T11:18:08.921004Z",
+          "platforms": [
+            "darwin",
+            "linux",
+            "windows"
+          ],
+          "packages": [
+            {
+              "filename": "redis-0.3.1.tar.gz",
+              "format": "tar.gz",
+              "url": "https://github.com/limmytian/voidb-plugin-redis/releases/download/v0.3.1/redis-0.3.1.tar.gz",
+              "sha256": "sha256:4bf2a2a06bf429b8f6cab4f575818e87d71369ba5c270671c2655964012ca08f",
+              "size_bytes": 4292199
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "s3",
       "name": "S3 Object Storage Plugin",
       "description": "Amazon S3 and S3-compatible (MinIO, Cloudflare R2, Ceph) object storage plugin for VoidB.",
@@ -347,6 +525,101 @@
               "url": "https://github.com/limmytian/voidb-plugin-s3/releases/download/v0.3.0/s3-0.3.0.tar.gz",
               "sha256": "sha256:aa5b055b1773833af78fcee32ce5475d84a9903812a05a04d748d72eb5c1c2d4",
               "size_bytes": 2114105
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sqlite",
+      "name": "SQLite Database Plugin",
+      "description": "SQLite embedded database process plugin for VoidB.",
+      "homepage": "https://github.com/limmytian/voidb-plugin-sqlite",
+      "license": "Apache-2.0",
+      "category": "database",
+      "tags": [
+        "sqlite"
+      ],
+      "capabilities": [
+        "query",
+        "explain",
+        "exec",
+        "catalogs",
+        "tables",
+        "describe_table",
+        "export_query",
+        "import_plan",
+        "import_apply"
+      ],
+      "latest_version": "0.3.1",
+      "versions": [
+        {
+          "version": "0.3.1",
+          "protocol_version": "1",
+          "released_at": "2026-10-08T11:18:08.525433Z",
+          "platforms": [
+            "darwin",
+            "linux",
+            "windows"
+          ],
+          "packages": [
+            {
+              "filename": "sqlite-0.3.1.tar.gz",
+              "format": "tar.gz",
+              "url": "https://github.com/limmytian/voidb-plugin-sqlite/releases/download/v0.3.1/sqlite-0.3.1.tar.gz",
+              "sha256": "sha256:eb974c73ce058c791b5cedeb58b6ab7b5200d4c2e1f753873c144db69097cae4",
+              "size_bytes": 4618609
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ssh",
+      "name": "SSH and SFTP Remote Management Plugin",
+      "description": "SSH terminal, port forwarding, and SFTP management process plugin for VoidB.",
+      "homepage": "https://github.com/limmytian/voidb-plugin-ssh",
+      "license": "Apache-2.0",
+      "category": "infrastructure",
+      "tags": [
+        "ssh"
+      ],
+      "capabilities": [
+        "test",
+        "exec",
+        "terminal_read",
+        "terminal_snapshot",
+        "terminal_write",
+        "terminal_resize",
+        "terminal_signal",
+        "forward_open",
+        "forward_status",
+        "sftp_list",
+        "sftp_get",
+        "sftp_put",
+        "sftp_mkdir",
+        "sftp_rm",
+        "diagnostics"
+      ],
+      "latest_version": "0.3.1",
+      "versions": [
+        {
+          "version": "0.3.1",
+          "protocol_version": "1",
+          "released_at": "2026-10-08T11:18:09.762237Z",
+          "voidb_core": ">=0.1.0",
+          "platforms": [
+            "darwin",
+            "linux",
+            "windows"
+          ],
+          "packages": [
+            {
+              "filename": "ssh-0.3.1.tar.gz",
+              "format": "tar.gz",
+              "url": "https://github.com/limmytian/voidb-plugin-ssh/releases/download/v0.3.1/ssh-0.3.1.tar.gz",
+              "sha256": "sha256:bbaf0f008787f583ee6b29615f7611f35f11ef7b9b68c34bfac8e46b3bc1b08b",
+              "size_bytes": 9096547
             }
           ]
         }

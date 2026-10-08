@@ -29,6 +29,9 @@ class Voidb < Formula
     bin.install "voidb"
     bin.install "voidb-cli"
     bin.install "voidb-sync-server" if File.exist?("voidb-sync-server")
+    if Dir.exist?("plugins")
+      (pkgshare/"plugins").install Dir["plugins/*"]
+    end
   end
 
   def caveats
@@ -36,8 +39,9 @@ class Voidb < Formula
       VoidB v#{version} installed successfully!
 
       Quick start:
-        voidb                 # Launch interactive TUI
-        voidb-cli --help      # Explore CLI & plugin commands
+        voidb                             # Launch interactive TUI
+        voidb-cli plugin install-default  # Ensure all core database plugins are ready
+        voidb-cli --help                  # Explore CLI & plugin commands
 
       In VoidB TUI, press 'p' to open the visual Plugin Marketplace.
       Install official plugins directly from CLI:

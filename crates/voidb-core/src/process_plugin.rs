@@ -766,10 +766,42 @@ fn default_user_plugin_root() -> Option<PathBuf> {
     default_user_plugin_roots().into_iter().next()
 }
 
-fn default_bundled_plugin_roots() -> Vec<PathBuf> {
-    std::env::var_os(PROCESS_PLUGIN_BUNDLED_ROOT_ENV)
+/// Discover default bundled plugin roots from environment and binary installation prefix.
+pub fn default_bundled_plugin_roots() -> Vec<PathBuf> {
+    let mut roots: Vec<PathBuf> = std::env::var_os(PROCESS_PLUGIN_BUNDLED_ROOT_ENV)
         .map(|roots| std::env::split_paths(&roots).collect())
-        .unwrap_or_default()
+        .unwrap_or_default();
+
+    if let Ok(current_exe) = std::env::current_exe()
+        && let Some(exe_dir) = current_exe.parent()
+    {
+        // 1. Sibling plugins directory: <exe_dir>/plugins
+        let sibling = exe_dir.join("plugins");
+        if sibling.is_dir() && !roots.contains(&sibling) {
+            roots.push(sibling);
+        }
+
+        // 2. Standard installation prefix paths:
+        // e.g. /usr/local/bin/voidb -> /usr/local/share/voidb/plugins
+        if let Some(prefix) = exe_dir.parent() {
+            let share_plugins = prefix.join("share").join("voidb").join("plugins");
+            if share_plugins.is_dir() && !roots.contains(&share_plugins) {
+                roots.push(share_plugins);
+            }
+
+            let lib_plugins = prefix.join("lib").join("voidb").join("plugins");
+            if lib_plugins.is_dir() && !roots.contains(&lib_plugins) {
+                roots.push(lib_plugins);
+            }
+
+            let libexec_plugins = prefix.join("libexec").join("voidb").join("plugins");
+            if libexec_plugins.is_dir() && !roots.contains(&libexec_plugins) {
+                roots.push(libexec_plugins);
+            }
+        }
+    }
+
+    roots
 }
 
 #[cfg(target_os = "macos")]

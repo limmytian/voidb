@@ -230,7 +230,7 @@ fn command_can_use_raw_config(matches: &ArgMatches) -> bool {
 
     (plugin_id == "connections" && matches!(command, "list" | "show" | "tui"))
         || (plugin_id == "profile" && matches!(command, "list" | "show"))
-        || (plugin_id == "plugin" && matches!(command, "list" | "describe" | "install" | "update" | "search" | "disable" | "enable" | "uninstall" | "package" | "registry" | "registry-index" | "sign" | "verify"))
+        || plugin_id == "plugin"
         || (plugin_id == "invoke" && matches!(command, "list" | "describe" | "matrix"))
         || plugin_id == "context"
         || (plugin_id == "ssh" && matches!(command, "session" | "assist"))

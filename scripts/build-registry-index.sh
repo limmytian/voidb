@@ -9,6 +9,12 @@ BASE_URL="${2:-}"
 REGISTRY_NAME="VoidB Official Plugin Registry"
 
 PLUGINS=(
+  "mysql"
+  "postgres"
+  "sqlite"
+  "redis"
+  "ssh"
+  "duckdb"
   "s3"
   "email"
   "docker"
@@ -31,8 +37,8 @@ for plugin in "${PLUGINS[@]}"; do
   fi
 
   # Prefer actual packaged distribution archive in dist/ if available
-  pkg_archive="${plugin_repo}/dist/${plugin}-0.3.0.tar.gz"
-  if [ -f "${pkg_archive}" ]; then
+  pkg_archive="$(ls -t "${plugin_repo}"/dist/${plugin}-*.tar.gz 2>/dev/null | head -n 1 || true)"
+  if [ -n "${pkg_archive}" ] && [ -f "${pkg_archive}" ]; then
     INPUT_PATHS+=("${pkg_archive}")
   else
     INPUT_PATHS+=("${plugin_repo}")

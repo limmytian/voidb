@@ -188,6 +188,19 @@ main() {
         fi
     done
 
+    # Install bundled default plugins if present in distribution archive
+    if [[ -d "$TMP_DIR/plugins" ]]; then
+        local user_plugin_dir
+        if [[ "$os" == "darwin" ]]; then
+            user_plugin_dir="$HOME/Library/Application Support/voidb/plugins"
+        else
+            user_plugin_dir="${XDG_DATA_HOME:-$HOME/.local/share}/voidb/plugins"
+        fi
+        info "Installing bundled default database plugins to ${user_plugin_dir}..."
+        mkdir -p "$user_plugin_dir"
+        cp -R "$TMP_DIR/plugins/"* "$user_plugin_dir/"
+    fi
+
     # Verify installation
     if [[ -x "$dest_dir/voidb" ]] && [[ -x "$dest_dir/voidb-cli" ]]; then
         success "VoidB successfully installed!"
@@ -204,12 +217,10 @@ main() {
         fi
 
         info "Quick Start:"
-        printf "  1. Run VoidB TUI:       ${BOLD}voidb${NC}\n"
-        printf "  2. Explore Marketplace: 按 'p' 打开可视化插件市场，或运行:\n"
-        printf "     ${BOLD}voidb-cli plugin search${NC}\n"
-        printf "  3. Install official plugins (e.g. MySQL, S3, Docker):\n"
-        printf "     ${BOLD}voidb-cli plugin install mysql${NC}\n"
-        printf "     ${BOLD}voidb-cli plugin install s3${NC}\n"
+        printf "  1. Run VoidB TUI:             ${BOLD}voidb${NC}\n"
+        printf "  2. Initialize core plugins:   ${BOLD}voidb-cli plugin install-default${NC}\n"
+        printf "  3. Explore Marketplace:       ${BOLD}voidb-cli plugin search <query>${NC} (or press 'p' inside VoidB TUI)\n"
+        printf "  4. Install extra plugins:     ${BOLD}voidb-cli plugin install s3${NC}\n"
         printf "\n"
     else
         error "Installation failed: could not locate voidb binaries in archive."

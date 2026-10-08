@@ -329,6 +329,30 @@ else
     "sync-server/${SYNC_SERVER_NAME}"
 fi
 
+# Stage official default plugins if available
+DEFAULT_PLUGINS=("mysql" "postgres" "sqlite" "redis" "ssh" "duckdb")
+for plugin in "${DEFAULT_PLUGINS[@]}"; do
+  plugin_repo="${REPO_ROOT}/../voidb-plugin-${plugin}"
+  if [[ -d "${plugin_repo}" && -f "${plugin_repo}/plugin.toml" ]]; then
+    plugin_stage="${ARTIFACT_ROOT}/plugins/${plugin}"
+    mkdir -p "${plugin_stage}/bin"
+    cp "${plugin_repo}/plugin.toml" "${plugin_stage}/"
+    if [[ -d "${plugin_repo}/schemas" ]]; then
+      cp -r "${plugin_repo}/schemas" "${plugin_stage}/"
+    fi
+    if [[ -f "${plugin_repo}/target/${PROFILE_DIR}/${plugin}" ]]; then
+      cp "${plugin_repo}/target/${PROFILE_DIR}/${plugin}" "${plugin_stage}/bin/voidb-plugin-${plugin}"
+      chmod +x "${plugin_stage}/bin/voidb-plugin-${plugin}"
+    elif [[ -f "${plugin_repo}/target/${PROFILE_DIR}/voidb-plugin-${plugin}" ]]; then
+      cp "${plugin_repo}/target/${PROFILE_DIR}/voidb-plugin-${plugin}" "${plugin_stage}/bin/voidb-plugin-${plugin}"
+      chmod +x "${plugin_stage}/bin/voidb-plugin-${plugin}"
+    elif [[ -f "${plugin_repo}/bin/voidb-plugin-${plugin}" ]]; then
+      cp "${plugin_repo}/bin/voidb-plugin-${plugin}" "${plugin_stage}/bin/voidb-plugin-${plugin}"
+      chmod +x "${plugin_stage}/bin/voidb-plugin-${plugin}"
+    fi
+  fi
+done
+
 if [[ "${GENERATE_MANIFEST}" -eq 1 ]]; then
   run "${SCRIPT_DIR}/generate-release-manifest.sh" \
     --artifact-root "${ARTIFACT_ROOT}" \

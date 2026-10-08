@@ -11,4 +11,5 @@ credentials.json
 profiles.json
 .env
 .env.*
+/dist
 

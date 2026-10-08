@@ -226,7 +226,7 @@ pub use process_plugin::{
     ProcessPluginRoot, ProcessPluginRootKind, ProcessPluginRuntime, ProcessPluginSource,
     ProcessPluginTrustLevel, ProcessPluginUi, cleanup_process_plugin_package_staging,
     default_process_plugin_roots, default_user_process_plugin_install_root,
-    discover_process_plugins, discover_process_plugins_from_roots, package_process_plugin,
+    default_bundled_plugin_roots, discover_process_plugins, discover_process_plugins_from_roots, package_process_plugin,
     process_plugin_install_metadata_root, process_plugin_install_record_path,
     process_plugin_roots_from_parts, read_process_plugin_install_record,
     validate_process_plugin_package, validate_process_plugin_package_from_path,
