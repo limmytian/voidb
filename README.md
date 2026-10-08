@@ -20,25 +20,21 @@ Replicating Navicat-class multi-protocol power in your terminal with Vim-style n
 - ⌨️ **Keyboard-First Terminal Experience** — Native Ratatui TUI with full Vim keybindings, fuzzy profile search, schema-driven connection forms, and instant interactive diagnostics.
 - 🤖 **Secure Gateway for AI Agents** — Purpose-built CLI & broker architecture that lets AI agents (Cursor, Claude Code, Goose, Antigravity) query databases, inspect containers, and manage infrastructure without handing over raw passwords or permanent privileges.
 - 🛡️ **Defensive Security & JIT Authorization** — Master passwords and credentials stored in AES-256-GCM encrypted vaults; agents request 15-minute time-bounded, read-only or explicit JIT authorization with mandatory human review for destructive calls.
-- 🔌 **Unified Multi-Protocol Ecosystem** — One tool across relational databases (MySQL, PostgreSQL, SQLite, DuckDB), in-memory stores (Redis), document/search engines (MongoDB, Elasticsearch), DevOps infrastructure (SSH, Docker, Kubernetes), and external process plugins (S3, WebDAV, Email, Jenkins).
-- 🚀 **Modular & Blazing Fast** — Zero-cost abstraction plugin architecture with tiered feature compilation (`mysql`, `postgres`, `sqlite`, `redis`, `ssh` by default) so you don't wait for heavy C++ or Kubernetes drivers unless you want them.
+- 🔌 **Unified Multi-Protocol Ecosystem** — One tool across relational databases (MySQL, PostgreSQL, SQLite, DuckDB), in-memory stores (Redis), document/search engines (MongoDB, Elasticsearch), DevOps infrastructure (SSH, Docker, Kubernetes), and storage/collaboration plugins (S3, WebDAV, Email, Jenkins).
+- 🚀 **100% Decoupled & Blazing Fast** — Clean, lightweight core with zero heavy C++ or driver bloat. All 14 plugins run as first-class, independent process plugins with identical standing under `voidb-cli`.
 
 ---
 
 ## Current Architecture
 
-VoidB uses a capability-first core with independent terminal frontends:
+VoidB uses a capability-first core with completely decoupled process plugins:
 
-- **Connection Manager**: the default standalone application. It owns its event
-  loop and native profile state and does not implement the router `Plugin` trait.
-- **VoidB Shell**: an optional compatibility/development surface launched with
-  `voidb --shell`; it is not the default profile workflow.
-- **Plugin crates**: own protocol, service, CLI, and capability code. They no longer ship legacy router-hosted UI factories.
+- **Connection Manager (`voidb`)**: the default standalone application. It owns its event loop, encrypted credentials vault, profile state, and JIT authorization gateway. It never directly embeds heavy protocol drivers.
+- **Unified Command Dispatcher (`voidb-cli`)**: the master CLI dispatch desk. Discovers both bundled and user-installed process plugins and transparently routes commands, arguments, and flags.
+- **Decoupled Process Plugins (`voidb-plugin-<name>`)**: All 14 official plugins live in separate repositories and adhere to the tri-modal contract: `test` (connectivity check), `tui` (interactive terminal app), and `serve` (`stdio-jsonrpc` for agents).
+- **Default Plugins**: Bundled with distributions or initialized with `voidb-cli plugin install-default`.
 
-See [Plugin Development Guide](docs/plugin-development-guide.md) for plugin
-architecture and service-layer patterns, and
-[Plugin-Owned TUI Development Guide](docs/plugin-owned-tui-development-guide.md)
-for the requirements any future plugin-owned terminal app must meet.
+See [docs/architecture.md](docs/architecture.md) for full architecture details.
 
 ---
 

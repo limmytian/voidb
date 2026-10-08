@@ -101,32 +101,29 @@ The normative matrix and compatibility boundary are in
 - Methods: `create(context) -> Box<dyn Plugin>`, `plugin_id()`, `plugin_name()`, `create_connection_dialog()`
 - Pattern: Registry pattern — factories stored in `HashMap<String, Box<dyn PluginFactory>>`
 
-### `DatabaseAdapter` (`crates/voidb-core/src/database/mod.rs`)
-- Async database operations abstraction (schema introspection, queries, DDL)
-- Methods: `connect()`, `list_databases()`, `describe_table()`, `query_rows()`, `execute()`, etc.
-- Pattern: Async trait via `#[async_trait]`, implemented by each DB plugin's adapter
+### `ProcessPluginCandidate` & `ProcessPluginDiscovery` (`crates/voidb-core/src/process_plugin.rs`)
+- Dynamic discovery engine scanning bundled, system, and user plugin directories.
+- Loads and parses `plugin.toml` manifests, schemas, capability definitions, and binary paths.
+- Enforces candidate state validation, version resolution, and precedence ordering.
+
+### `ProcessPluginRuntime` (`crates/voidb-core/src/process_plugin_runtime.rs`)
+- Manages stdio-jsonrpc lifecycle for external process plugins.
+- Negotiates protocol initialization, capability execution, and stream multiplexing.
+- Provides secure environment isolation without leaking master passwords.
 
 ### `ShellCapabilities` (`crates/voidb-core/src/shell_capabilities.rs`)
-- Dependency injection container passed to plugins at init
-- Fields: `connections`, `tabs`, `clipboard`, `plugin_registry`
-- Pattern: Clone-friendly struct with Arc-wrapped fields
+- Dependency injection container passed to plugins at init.
+- Fields: `connections`, `tabs`, `clipboard`, `plugin_registry`.
+- Pattern: Clone-friendly struct with Arc-wrapped fields.
 
 ### `TabManager` trait (`crates/voidb-core/src/shell_capabilities.rs`)
-- Interface for plugins to manage tabs without direct shell access
-- Methods: `open()`, `close_current()`, `set_title()`, `request_render()`, `list_tabs()`, `switch_to()`, `quit()`
-- Pattern: Trait object (`Arc<dyn TabManager>`), implemented by `AppTabManager` in shell
-
-### `NativePlugin` trait (`crates/voidb-core/src/plugin/native.rs`)
-- Legacy interface for registering database protocol handlers
-- Methods: `plugin_id()`, `protocols()`, `default_port()`, `create_adapter()`
-
-### `ConnectionDialogComponent` (`crates/voidb-core/src/plugin/connection_dialog.rs`)
-- Plugin-provided custom connection configuration dialog
-- Methods: `render()`, `handle_event() -> DialogAction`, `build_config()`
+- Interface for plugins to manage tabs without direct shell access.
+- Methods: `open()`, `close_current()`, `set_title()`, `request_render()`, `list_tabs()`, `switch_to()`, `quit()`.
+- Pattern: Trait object (`Arc<dyn TabManager>`), implemented by `AppTabManager` in shell.
 
 ### `Event` enum (`crates/voidb-core/src/event.rs`)
-- Unified event type passed from shell to plugins
-- Variants: `Key(KeyEvent)`, `Mouse(MouseEvent)`, `Paste(String)`, `Tick`, `FocusGained`, `FocusLost`, `Resize { width, height }`
+- Unified event type passed from shell to plugins.
+- Variants: `Key(KeyEvent)`, `Mouse(MouseEvent)`, `Paste(String)`, `Tick`, `FocusGained`, `FocusLost`, `Resize { width, height }`.
 
 ## Entry Points
 

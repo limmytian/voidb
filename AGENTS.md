@@ -2,56 +2,30 @@
 
 A terminal-based database management tool built with Rust + ratatui, replicating Navicat's core functionality with vim-style keybindings and a pure router architecture.
 
-## Architecture v4.0 (Current)
+## Architecture v4.1 (Current)
 
-VoidB v4.0 uses a **pure router architecture** where plugins are fully autonomous:
+VoidB v4.1 uses a **completely decoupled, capability-first process plugin architecture**:
 
-- **VoidB Shell** (`app_v4.rs`): Pure router (~1,025 lines) — manages tabs, routes events, renders 1-line tab bar and tab manager
-- **Plugins**: Autonomous applications with full screen control
-- **Communication**: Channel-based (non-blocking) + ShellCapabilities (DI)
+- **VoidB Shell & Connection Manager** (`voidb`): Dedicated connection information, credential vault, profile management, and JIT authorization gateway. It never embeds or links heavyweight database drivers directly.
+- **Unified Command Dispatcher** (`voidb-cli`): The master dispatch desk. Discovers both bundled and user-installed process plugins and transparently routes subcommands, options, and flags.
+- **Decoupled Process Plugins**: All 14 official plugins (`mysql`, `postgres`, `sqlite`, `redis`, `ssh`, `duckdb`, `docker`, `kubernetes`, `s3`, `elasticsearch`, `mongodb`, `jenkins`, `webdav`, `email`) live in independent repositories (`voidb-plugin-<name>`) with identical first-class status.
+- **Tri-Modal Standard Contract**: Every plugin adheres to:
+  1. `test`: Fast connectivity & configuration verification.
+  2. `tui`: Standalone interactive full-screen terminal application (`voidb-cli <plugin> tui --profile <profile>`).
+  3. `serve`: Headless `stdio-jsonrpc` protocol server for AI coding agents and machine automation.
+  4. Domain commands: Full autonomous CLI subcommands (e.g., `mysql query`, `k8s pods`, `docker ps`).
 
-**Key Event Routing** (two-layer):
-1. **Hard globals** (always): `Ctrl+Q` (quit), `Ctrl+\` (shell escape menu)
-2. Check `active_plugin.wants_raw_input()` — if `true`, skip soft globals
-3. **Soft globals**: `q` (home), `Q` (close tab), `Ctrl+L` (tab manager)
-4. Remaining events → active plugin
+Default database plugins are bundled in distribution packages and initialized with `voidb-cli plugin install-default`.
 
-Shell does **not** render plugin UI, manage focus states, or show notifications.
+## Service Layer & Plugin SDK
 
-## Plugin Trait
-
-```rust
-pub trait Plugin: Send + Sync {
-    fn id(&self) -> &str;
-    fn name(&self) -> &str;
-    fn init(&mut self, caps: ShellCapabilities) -> Result<()>;
-    fn update(&mut self, frame: &mut Frame, area: Rect, event: Option<Event>) -> Result<()>;
-    fn wants_raw_input(&self) -> bool { false }
-}
-```
-
-The shell registry currently contains only `ConnectionManagerPluginFactory`.
-Protocol plugins are autonomous service, CLI, and capability crates. Built-in
-and external plugins have identical first-class status under `voidb-cli`, which
-dynamically discovers installed external process plugins and routes commands
-transparently. Retained interactive apps (such as Docker, Kubernetes, Jenkins,
-SSH, S3, WebDAV, Email) run as plugin-owned standalone TUIs through
-`voidb-cli <plugin> tui --profile <profile>`. They are not embedded shell tabs.
-All plugins follow the tri-modal contract: `test`, `tui`, and `serve` (stdio-jsonrpc).
-
-## Service Layer (Critical)
-
-Protocol, database, storage, and infrastructure plugins keep data operations in a `service/` submodule. The Sync plugin uses its dedicated `ops`/client/server modules for its command surface.
-- `ServiceMode::Channel` — TUI mode: `send(cmd)` / `poll_event()` (non-blocking)
-- `ServiceMode::Direct` — CLI mode: direct async method calls
-- `SyncWorker<Cmd, Resp>` — for `!Send` types (SQLite, DuckDB)
-- **TUI plugins never import database driver crates directly**
-
-See [docs/plugin-development-guide.md](docs/plugin-development-guide.md) Section 11 for the full cookbook.
+All process plugins use `voidb-process-plugin-sdk` and maintain data operations in a dedicated `service/` layer.
+- `voidb` core workspace contains zero database drivers (`mysql_async`, `tokio-postgres`, `rusqlite`, `redis`, `libduckdb-sys`, `russh`).
+- Heavy drivers belong exclusively to their respective plugin crates.
 
 ## Connection Management
 
-`ConnectionConfigRegistry` (in `ShellCapabilities`) **only stores config metadata**. Each plugin manages its own live connection via its service layer. No shared connection pool.
+`ConnectionConfigRegistry` / `ProfileStore` **only stores connection metadata and encrypted credentials** (AES-256-GCM). Each plugin manages its own live connections via its service layer. No shared connection pool.
 
 ## Key Commands
 
