@@ -1,26 +1,26 @@
 class Voidb < Formula
   desc "Terminal database manager replicating Navicat's core functionality with vim-style keys"
   homepage "https://github.com/limmytian/voidb"
-  version "0.3.0"
+  version "0.3.1"
   license "MIT"
 
   on_macos do
     if Hardware::CPU.arm?
-      url "https://github.com/limmytian/voidb/releases/download/v0.3.0/voidb-0.3.0-darwin-arm64.tar.gz"
-      sha256 "6cd53ccdc667b19b3b00bc77edfedb26f0c9751e9d0b0c69867f350504961495"
+      url "https://github.com/limmytian/voidb/releases/download/v0.3.1/voidb-0.3.1-darwin-arm64.tar.gz"
+      sha256 "635f89bfb5103429e10318a604de3c9c215ee643031382051fc824b44e0f0f31"
     else
       # Placeholder for Intel Mac binary if published
-      url "https://github.com/limmytian/voidb/releases/download/v0.3.0/voidb-0.3.0-darwin-x64.tar.gz"
+      url "https://github.com/limmytian/voidb/releases/download/v0.3.1/voidb-0.3.1-darwin-x64.tar.gz"
       sha256 ""
     end
   end
 
   on_linux do
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/limmytian/voidb/releases/download/v0.3.0/voidb-0.3.0-linux-arm64.tar.gz"
+      url "https://github.com/limmytian/voidb/releases/download/v0.3.1/voidb-0.3.1-linux-arm64.tar.gz"
       sha256 ""
     else
-      url "https://github.com/limmytian/voidb/releases/download/v0.3.0/voidb-0.3.0-linux-x64.tar.gz"
+      url "https://github.com/limmytian/voidb/releases/download/v0.3.1/voidb-0.3.1-linux-x64.tar.gz"
       sha256 ""
     end
   end

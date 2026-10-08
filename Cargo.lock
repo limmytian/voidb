@@ -5639,7 +5639,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "voidb-cli"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5670,7 +5670,7 @@ dependencies = [
 
 [[package]]
 name = "voidb-core"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -5709,7 +5709,7 @@ dependencies = [
 
 [[package]]
 name = "voidb-plugin-duckdb"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5726,7 +5726,7 @@ dependencies = [
 
 [[package]]
 name = "voidb-plugin-mysql"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5743,7 +5743,7 @@ dependencies = [
 
 [[package]]
 name = "voidb-plugin-postgres"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5762,7 +5762,7 @@ dependencies = [
 
 [[package]]
 name = "voidb-plugin-redis"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5779,7 +5779,7 @@ dependencies = [
 
 [[package]]
 name = "voidb-plugin-sqlite"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5796,7 +5796,7 @@ dependencies = [
 
 [[package]]
 name = "voidb-plugin-ssh"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5819,7 +5819,7 @@ dependencies = [
 
 [[package]]
 name = "voidb-plugin-sync"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -5852,7 +5852,7 @@ dependencies = [
 
 [[package]]
 name = "voidb-process-plugin-sdk"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "chrono",
  "serde",
@@ -5863,7 +5863,7 @@ dependencies = [
 
 [[package]]
 name = "voidb-sync-server"
-version = "0.3.0-rc.1"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "argon2",
@@ -5892,7 +5892,7 @@ dependencies = [
 
 [[package]]
 name = "voidb-tui"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "arboard",
