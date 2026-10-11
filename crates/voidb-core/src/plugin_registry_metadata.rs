@@ -341,11 +341,22 @@ impl RegistryPluginVersion {
         current_target: &str,
         current_plat: &str,
     ) -> Option<&RegistryPackageArtifact> {
-        // 1. Exact match on target triple (e.g., aarch64-apple-darwin)
+        // CLI callers provide the architecture, while registry artifacts use triples.
+        let platform_target = match current_plat {
+            "darwin" => format!("{current_target}-apple-darwin"),
+            "linux" => format!("{current_target}-unknown-linux-gnu"),
+            "windows" => format!("{current_target}-pc-windows-msvc"),
+            _ => String::new(),
+        };
+        // Match the exact triple or the architecture qualified by its platform.
         if let Some(artifact) = self
             .packages
             .iter()
-            .find(|p| p.target.as_deref().is_some_and(|t| t == current_target))
+            .find(|p| {
+                p.target
+                    .as_deref()
+                    .is_some_and(|t| t == current_target || t == platform_target)
+            })
         {
             return Some(artifact);
         }
@@ -506,6 +517,9 @@ mod tests {
                 .find_matching_package("aarch64-apple-darwin", "darwin")
                 .is_some()
         );
+        assert!(version.find_matching_package("aarch64", "darwin").is_some());
+        assert!(version.find_matching_package("x86_64", "darwin").is_none());
+        assert!(version.find_matching_package("aarch64", "linux").is_none());
         assert!(
             version
                 .find_matching_package("x86_64-apple-darwin", "darwin")
