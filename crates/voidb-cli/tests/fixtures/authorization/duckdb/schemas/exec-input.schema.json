@@ -1,0 +1,14 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "sql": {
+      "description": "DuckDB SQL that may mutate schema or data.",
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "sql"
+  ],
+  "type": "object"
+}

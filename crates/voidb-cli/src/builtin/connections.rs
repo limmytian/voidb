@@ -7,8 +7,8 @@
 use async_trait::async_trait;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use std::process::Stdio;
-use voidb_core::plugin::cli::{CliContext, CliPlugin};
 use voidb_core::VoidbError;
+use voidb_core::plugin::cli::{CliContext, CliPlugin};
 
 pub struct ConnectionsCliPlugin;
 
@@ -129,7 +129,12 @@ impl ConnectionsCliPlugin {
                 println!("{}", "-".repeat(45));
             }
             for profile in &profiles {
-                if ctx.config.connections.iter().any(|c| c.name == profile.name) {
+                if ctx
+                    .config
+                    .connections
+                    .iter()
+                    .any(|c| c.name == profile.name)
+                {
                     continue;
                 }
                 println!(
@@ -249,11 +254,24 @@ pub(crate) async fn test_connection_by_plugin(
     conn: &voidb_core::connection::ConnectionConfig,
 ) -> Result<String, String> {
     let discovery = voidb_core::process_plugin::discover_process_plugins();
+    test_connection_with_discovery(plugin_id, conn, &discovery).await
+}
+
+async fn test_connection_with_discovery(
+    plugin_id: &str,
+    conn: &voidb_core::connection::ConnectionConfig,
+    discovery: &voidb_core::ProcessPluginDiscovery,
+) -> Result<String, String> {
     if let Some(candidate) = discovery.effective_candidate(plugin_id)
         && let Some(binary) = &candidate.resolved_runtime_command
     {
-        if let Err(integrity_err) = voidb_core::process_plugin::verify_plugin_binary_integrity(candidate) {
-            return Err(format!("Plugin security gate check failed: {}", integrity_err));
+        if let Err(integrity_err) =
+            voidb_core::process_plugin::verify_plugin_binary_integrity(candidate)
+        {
+            return Err(format!(
+                "Plugin security gate check failed: {}",
+                integrity_err
+            ));
         }
 
         // Try testing with --stdin-config first (transfers decrypted config via secure anonymous pipe,
@@ -334,142 +352,97 @@ pub(crate) async fn test_connection_by_plugin(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use voidb_core::connection::{ConnectionConfig, DatabaseType};
+    use voidb_core::{ConnectionConfig, DatabaseType, ProcessPluginDiscovery};
 
-    #[tokio::test]
-    async fn test_sqlite_connection_via_plugin() {
-        let db_path = std::env::temp_dir().join(format!("voidb_test_{}.db", uuid::Uuid::new_v4()));
-        let conn = ConnectionConfig {
-            name: "test-sqlite".into(),
-            db_type: DatabaseType::SQLite,
-            plugin_id: Some("sqlite".into()),
-            plugin_config: Some(serde_json::json!({
-                "path": db_path.to_string_lossy(),
-            })),
-        };
-
-        let result = test_connection_by_plugin("sqlite", &conn).await;
-        let _ = std::fs::remove_file(&db_path);
-        assert!(result.is_ok(), "SQLite test failed: {:?}", result.err());
-        assert!(result.unwrap().contains("Opened SQLite database successfully"));
-    }
-
-    #[tokio::test]
-    async fn test_duckdb_connection_via_plugin() {
-        let db_path = std::env::temp_dir().join(format!("voidb_test_{}.duckdb", uuid::Uuid::new_v4()));
-        let conn = ConnectionConfig {
-            name: "test-duckdb".into(),
+    fn connection() -> ConnectionConfig {
+        ConnectionConfig {
+            name: "transport-fixture".into(),
             db_type: DatabaseType::Plugin,
-            plugin_id: Some("duckdb".into()),
-            plugin_config: Some(serde_json::json!({
-                "path": db_path.to_string_lossy(),
-            })),
-        };
-
-        let result = test_connection_by_plugin("duckdb", &conn).await;
-        let _ = std::fs::remove_file(&db_path);
-        assert!(result.is_ok(), "DuckDB test failed: {:?}", result.err());
-        assert!(result.unwrap().contains("DuckDB"));
-    }
-
-    #[tokio::test]
-    async fn test_docker_connection_via_plugin() {
-        let conn = ConnectionConfig {
-            name: "test-docker".into(),
-            db_type: DatabaseType::Plugin,
-            plugin_id: Some("docker".into()),
-            plugin_config: Some(serde_json::json!({
-                "connection": { "type": "Local" }
-            })),
-        };
-
-        let result = test_connection_by_plugin("docker", &conn).await;
-        // If docker daemon is reachable locally, verify it succeeds
-        if let Ok(msg) = result {
-            assert!(msg.contains("Connected: Docker"));
+            plugin_id: Some("fixture".into()),
+            plugin_config: Some(serde_json::json!({"password":"pipe-only-secret"})),
         }
     }
 
     #[tokio::test]
-    async fn test_redis_connection_via_plugin() {
-        let conn = ConnectionConfig {
-            name: "test-redis".into(),
-            db_type: DatabaseType::Plugin,
-            plugin_id: Some("redis".into()),
-            plugin_config: Some(serde_json::json!({
-                "host": "127.0.0.1",
-                "port": 16379,
-            })),
+    async fn missing_plugin_reports_unavailable_without_target_access() {
+        let discovery = ProcessPluginDiscovery {
+            roots: vec![],
+            candidates: vec![],
         };
-
-        let result = test_connection_by_plugin("redis", &conn).await;
-        if let Ok(msg) = result {
-            assert!(msg.contains("PONG"));
-        }
+        let error = test_connection_with_discovery("fixture", &connection(), &discovery)
+            .await
+            .expect_err("no installed runtime");
+        assert!(error.contains("plugin not installed or missing binary"));
+        assert!(!error.contains("pipe-only-secret"));
     }
 
+    #[cfg(unix)]
     #[tokio::test]
-    async fn test_postgres_connection_via_plugin() {
-        let conn = ConnectionConfig {
-            name: "test-postgres".into(),
-            db_type: DatabaseType::PostgreSQL,
-            plugin_id: Some("postgres".into()),
-            plugin_config: Some(serde_json::json!({
-                "host": "127.0.0.1",
-                "port": 15432,
-                "username": "postgres",
-                "password": "testpass",
-                "database": "testdb",
-            })),
+    async fn subprocess_receives_credentials_only_through_stdin() {
+        use std::os::unix::fs::PermissionsExt;
+        use voidb_core::{
+            ProcessPluginRoot, ProcessPluginRootKind, discover_process_plugins_from_roots,
         };
-
-        let result = test_connection_by_plugin("postgres", &conn).await;
-        if let Ok(msg) = result {
-            assert!(msg.contains("Connected successfully"));
-        }
-    }
-
-    #[tokio::test]
-    async fn test_mysql_connection_via_plugin() {
-        let conn = ConnectionConfig {
-            name: "test-mysql".into(),
-            db_type: DatabaseType::MySQL,
-            plugin_id: Some("mysql".into()),
-            plugin_config: Some(serde_json::json!({
-                "host": "127.0.0.1",
-                "port": 13306,
-                "username": "root",
-                "password": "testpass",
-                "database": "testdb",
-            })),
-        };
-
-        let result = test_connection_by_plugin("mysql", &conn).await;
-        if let Ok(msg) = result {
-            assert!(msg.contains("Connected successfully"));
-        }
-    }
-
-    #[tokio::test]
-    async fn test_ssh_connection_via_plugin() {
-        let conn = ConnectionConfig {
-            name: "test-ssh".into(),
-            db_type: DatabaseType::Plugin,
-            plugin_id: Some("ssh".into()),
-            plugin_config: Some(serde_json::json!({
-                "host": "127.0.0.1",
-                "port": 12222,
-                "username": "root",
-                "auth": {
-                    "type": "password",
-                    "password": "testpass"
-                }
-            })),
-        };
-
-        let result = test_connection_by_plugin("ssh", &conn).await;
-        if let Ok(msg) = result {
-            assert!(msg.contains("OK (root@127.0.0.1:12222)"));
-        }
+        let root = std::env::temp_dir().join(format!("voidb-transport-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(root.join("fixture/bin")).unwrap();
+        std::fs::create_dir_all(root.join("fixture/schemas")).unwrap();
+        let received = root.join("fixture/received.json");
+        let binary = root.join("fixture/bin/fixture-runtime");
+        std::fs::write(
+            &binary,
+            r#"#!/bin/sh
+[ "$#" = 2 ] && [ "$1" = test ] && [ "$2" = --stdin-config ] || exit 21
+cd "$(dirname "$0")/.." || exit 22
+cat > received.json
+printf 'connection fixture accepted'
+"#,
+        )
+        .unwrap();
+        std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o755)).unwrap();
+        std::fs::write(
+            root.join("fixture/plugin.toml"),
+            r#"id = "fixture"
+name = "Transport fixture"
+version = "0.3.3"
+protocol_version = "1"
+[runtime]
+command = "fixture-runtime"
+args = ["serve"]
+transport = "stdio-jsonrpc"
+[connections]
+profile_schema = "schemas/profile.schema.json"
+secret_classes = ["password"]
+[[capabilities]]
+id = "test"
+description = "Transport fixture"
+input_schema = "schemas/profile.schema.json"
+output_schema = "schemas/profile.schema.json"
+permissions = ["connection.test"]
+destructive = false
+streaming = false
+"#,
+        )
+        .unwrap();
+        std::fs::write(
+            root.join("fixture/schemas/profile.schema.json"),
+            r#"{"type":"object"}"#,
+        )
+        .unwrap();
+        let discovery = discover_process_plugins_from_roots(vec![ProcessPluginRoot::new(
+            &root,
+            ProcessPluginRootKind::EnvPath,
+            0,
+        )]);
+        assert!(
+            discovery
+                .effective_candidate("fixture")
+                .is_some_and(|c| c.resolved_runtime_command.is_some()),
+            "{discovery:?}"
+        );
+        let result = test_connection_with_discovery("fixture", &connection(), &discovery).await;
+        let payload = std::fs::read(&received);
+        std::fs::remove_dir_all(&root).unwrap();
+        assert_eq!(result.unwrap(), "connection fixture accepted");
+        assert_eq!(payload.unwrap(), serde_json::to_vec(&connection()).unwrap());
     }
 }

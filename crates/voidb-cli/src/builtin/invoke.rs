@@ -339,10 +339,82 @@ fn capability_matches_execution_modes(
         })
 }
 
+#[cfg(not(test))]
+fn authorization_discovery() -> ProcessPluginDiscovery {
+    discover_process_plugins()
+}
+
+#[cfg(test)]
+fn authorization_discovery() -> ProcessPluginDiscovery {
+    use std::collections::BTreeMap;
+    use std::path::PathBuf;
+    use voidb_core::{ProcessPluginManifest, ProcessPluginRootKind, ProcessPluginSource};
+
+    // Policy tests use metadata snapshots, never the user's plugin installation.
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/authorization");
+    let candidates = [
+        "mysql",
+        "postgres",
+        "sqlite",
+        "redis",
+        "ssh",
+        "duckdb",
+        "mongodb",
+        "elasticsearch",
+    ]
+    .into_iter()
+    .map(|id| {
+        let plugin_dir = root.join(id);
+        let manifest_path = plugin_dir.join("plugin.toml");
+        let manifest: ProcessPluginManifest =
+            toml::from_str(&std::fs::read_to_string(&manifest_path).expect("read catalog fixture"))
+                .expect("decode catalog fixture");
+        let mut resolved_schema_paths = BTreeMap::new();
+        for capability in &manifest.capabilities {
+            for (kind, path) in [
+                ("input_schema", &capability.input_schema),
+                ("output_schema", &capability.output_schema),
+            ] {
+                resolved_schema_paths.insert(
+                    format!("capabilities.{}.{kind}", capability.id),
+                    plugin_dir.join(path),
+                );
+            }
+        }
+        ProcessPluginCandidate {
+            id: manifest.id.clone(),
+            name: Some(manifest.name.clone()),
+            version: Some(manifest.version.clone()),
+            protocol_version: Some(manifest.protocol_version.clone()),
+            manifest_path,
+            source: ProcessPluginSource {
+                root: root.clone(),
+                plugin_dir,
+                kind: ProcessPluginRootKind::EnvPath,
+                trust_level: ProcessPluginRootKind::EnvPath.trust_level(),
+                precedence: 0,
+            },
+            state: ProcessPluginCandidateState::Available,
+            transport: Some(manifest.runtime.transport.clone()),
+            capability_count: manifest.capabilities.len(),
+            tui: false,
+            diagnostics: Vec::new(),
+            manifest: Some(manifest),
+            resolved_runtime_command: None,
+            resolved_schema_paths,
+        }
+    })
+    .collect();
+    ProcessPluginDiscovery {
+        roots: Vec::new(),
+        candidates,
+    }
+}
+
 pub(crate) fn resolved_capability_risk(
     capability_ref: &str,
 ) -> Result<CapabilityRiskLevel, String> {
-    let discovery = discover_process_plugins();
+    let discovery = authorization_discovery();
     resolve_capability(capability_ref, &discovery)
         .map(|capability| capability.effective_risk())
         .map_err(|error| error.message)
@@ -351,7 +423,7 @@ pub(crate) fn resolved_capability_risk(
 pub(crate) fn resolved_authorization_capabilities(
     plugin_id: Option<&str>,
 ) -> Result<Vec<CapabilityDefinition>, String> {
-    let discovery = discover_process_plugins();
+    let discovery = authorization_discovery();
     match plugin_id {
         Some(plugin_id) => {
             capabilities_for_plugin(plugin_id, &discovery).map_err(|error| error.message)
@@ -746,18 +818,7 @@ async fn run_invocation(
     ctx: &CliContext,
     options: InvokeRunOptions,
 ) -> Result<InvokeRunData, InvokeRunError> {
-    let (_cancel_tx, cancel_rx) = watch::channel(false);
-    run_invocation_with_id(
-        ctx,
-        options,
-        next_invocation_id(),
-        false,
-        Uuid::new_v4().to_string(),
-        DEFAULT_INVOCATION_OUTPUT_BYTES,
-        cancel_rx,
-        None,
-    )
-    .await
+    run_invocation_with_discovery(ctx, options, &authorization_discovery()).await
 }
 
 #[allow(clippy::result_large_err)]
@@ -1482,8 +1543,8 @@ fn process_capability_definitions(
                     let mut auth = capability.authorization.clone();
                     if !auth.declared {
                         auth.declared = true;
+                        auth.capability_wide_allowed = true;
                     }
-                    auth.capability_wide_allowed = true;
                     auth
                 },
                 risk: capability.risk.unwrap_or_else(|| {
@@ -2561,8 +2622,6 @@ mod tests {
         ProcessPluginRootKind, discover_process_plugins_from_roots,
         migrated_profile_from_connection,
     };
-    use voidb_plugin_duckdb::{DuckDbConfig, DuckDbService};
-    use voidb_plugin_sqlite::{SqliteConfig, SqliteService};
 
     use super::*;
 
@@ -2587,7 +2646,7 @@ mod tests {
 
     #[test]
     fn lists_builtin_capabilities() {
-        let discovery = empty_discovery();
+        let discovery = catalog_fixture_discovery();
         let capabilities = supported_capabilities(&discovery);
 
         assert!(
@@ -2666,7 +2725,7 @@ mod tests {
     fn classifies_every_builtin_capability_execution_mode() {
         use voidb_core::CapabilityExecutionMode;
 
-        let capabilities = supported_capabilities(&empty_discovery());
+        let capabilities = supported_capabilities(&catalog_fixture_discovery());
         assert_eq!(capabilities.len(), 68);
         assert!(capabilities.iter().all(|capability| {
             !capability.supports_session_execution() || capability.session_handoff.is_some()
@@ -2719,10 +2778,25 @@ mod tests {
     #[test]
     fn sql_plugins_share_transfer_authorization_and_session_contracts() {
         let catalogs = [
-            ("postgres", postgres_capabilities()),
-            ("mysql", mysql_capabilities()),
-            ("sqlite", sqlite_capabilities()),
-            ("duckdb", duckdb_capabilities()),
+            (
+                "postgres",
+                resolved_authorization_capabilities(Some("postgres"))
+                    .expect("postgres fixture catalog"),
+            ),
+            (
+                "mysql",
+                resolved_authorization_capabilities(Some("mysql")).expect("mysql fixture catalog"),
+            ),
+            (
+                "sqlite",
+                resolved_authorization_capabilities(Some("sqlite"))
+                    .expect("sqlite fixture catalog"),
+            ),
+            (
+                "duckdb",
+                resolved_authorization_capabilities(Some("duckdb"))
+                    .expect("duckdb fixture catalog"),
+            ),
         ];
 
         for (plugin, capabilities) in catalogs {
@@ -2783,7 +2857,7 @@ mod tests {
     #[test]
     fn generated_builtin_catalog_snapshot_covers_every_plugin_and_mode() {
         let mut snapshot = std::collections::BTreeMap::<String, [usize; 4]>::new();
-        for capability in supported_capabilities(&empty_discovery()) {
+        for capability in supported_capabilities(&catalog_fixture_discovery()) {
             let counts = snapshot.entry(capability.plugin_id.clone()).or_default();
             counts[0] += 1;
             match capability.execution_mode {
@@ -2809,7 +2883,8 @@ mod tests {
 
     #[test]
     fn execution_mode_filters_include_capabilities_supported_by_both_transports() {
-        let definitions = ssh_capabilities();
+        let definitions =
+            resolved_authorization_capabilities(Some("ssh")).expect("ssh fixture catalog");
         let terminal = find_capability(&definitions, "terminal_read");
         let exec = find_capability(&definitions, "exec");
         let diagnostics = find_capability(&definitions, "diagnostics");
@@ -2873,7 +2948,8 @@ mod tests {
 
     #[test]
     fn capability_summaries_include_execution_mode_and_handoff() {
-        let terminal = ssh_capabilities()
+        let terminal = resolved_authorization_capabilities(Some("ssh"))
+            .expect("ssh fixture catalog")
             .into_iter()
             .find(|capability| capability.id == "terminal_read")
             .expect("terminal capability");
@@ -2927,7 +3003,8 @@ mod tests {
         assert!(encoded["required_secret_classes"].is_array());
 
         let table = capability_list_table(&[CapabilitySummary::from(
-            ssh_capabilities()
+            resolved_authorization_capabilities(Some("ssh"))
+                .expect("ssh fixture catalog")
                 .into_iter()
                 .find(|capability| capability.id == "terminal_read")
                 .expect("terminal capability"),
@@ -2952,7 +3029,7 @@ mod tests {
                 page_limit: None,
                 page_cursor: None,
             },
-            &empty_discovery(),
+            &catalog_fixture_discovery(),
             &[],
         )
         .await
@@ -2990,9 +3067,11 @@ mod tests {
 
     #[test]
     fn side_effecting_live_start_guidance_requests_grant_and_open_acknowledgements() {
-        let definitions = ssh_capabilities();
+        let definitions =
+            resolved_authorization_capabilities(Some("ssh")).expect("ssh fixture catalog");
         let capability = find_capability(&definitions, "terminal_read");
-        let guidance = session_handoff_guidance(capability, "id:profile:test", &empty_discovery());
+        let guidance =
+            session_handoff_guidance(capability, "id:profile:test", &catalog_fixture_discovery());
 
         assert_eq!(guidance["requires_destructive_acknowledgement"], true);
         assert_eq!(guidance["requires_start_acknowledgement"], false);
@@ -3013,7 +3092,7 @@ mod tests {
 
     #[test]
     fn ssh_release_candidate_catalog_is_bounded_and_gated() {
-        let discovery = empty_discovery();
+        let discovery = catalog_fixture_discovery();
         let ssh = capabilities_for_plugin("ssh", &discovery).expect("ssh capabilities");
 
         for id in ["exec", "sftp_put", "sftp_mkdir", "sftp_rm"] {
@@ -3056,7 +3135,7 @@ mod tests {
 
     #[test]
     fn local_filesystem_boundary_capability_policy_is_scoped_and_explicit() {
-        let discovery = empty_discovery();
+        let discovery = catalog_fixture_discovery();
         let ssh = capabilities_for_plugin("ssh", &discovery).expect("ssh capabilities");
 
         let get = find_capability(&ssh, "sftp_get");
@@ -3083,7 +3162,7 @@ mod tests {
 
     #[test]
     fn duckdb_and_redis_release_readiness_catalog_is_bounded_and_gated() {
-        let discovery = empty_discovery();
+        let discovery = catalog_fixture_discovery();
         let duckdb = capabilities_for_plugin("duckdb", &discovery).expect("duckdb capabilities");
         let redis = capabilities_for_plugin("redis", &discovery).expect("redis capabilities");
 
@@ -3239,7 +3318,8 @@ mod tests {
 
     #[test]
     fn effective_timeout_prefers_override_and_rejects_zero() {
-        let capability = sqlite_capabilities()
+        let capability = resolved_authorization_capabilities(Some("sqlite"))
+            .expect("sqlite fixture catalog")
             .into_iter()
             .find(|capability| capability.id == "query")
             .expect("sqlite query");
@@ -3399,222 +3479,11 @@ mod tests {
         assert_eq!(events[5]["data"]["status"], "cancelled");
     }
 
-    #[tokio::test]
-    async fn invokes_sqlite_query_from_legacy_profile() {
-        let path = temp_db_path();
-        seed_sqlite(
-            &path,
-            "create table users(id integer primary key, name text);
-             insert into users(name) values ('Ada');",
-        )
-        .await;
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![sqlite_connection("local", &path)],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let data = run_invocation_with_discovery(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "sqlite.query".into(),
-                profile_ref: "local".into(),
-                input: json!({ "sql": "select name from users" }),
-                timeout_ms: Some(5_000),
-                dry_run: false,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-            &empty_discovery(),
-        )
-        .await
-        .expect("invoke sqlite query");
-
-        assert_eq!(data.plugin_id, "sqlite");
-        assert_eq!(data.status, voidb_core::InvocationStatus::Succeeded);
-        assert_eq!(data.output["statements"][0]["rows"][0]["name"], "Ada");
-        let envelope = serde_json::to_value(success_envelope(&data)).expect("serialize envelope");
-        assert_eq!(envelope["ok"], true);
-        assert_eq!(envelope["schema_version"], INVOKE_CLI_SCHEMA_VERSION);
-        assert_eq!(envelope["command"], "invoke");
-        assert_eq!(envelope["warnings"], json!([]));
-        assert_eq!(envelope["data"]["plugin_id"], "sqlite");
-        assert_eq!(envelope["data"]["capability_id"], "query");
-        assert_eq!(envelope["data"]["status"], "succeeded");
-        assert_eq!(envelope["data"]["timing"]["timeout_ms"], 5_000);
-        assert_eq!(envelope["data"]["timing"]["timeout_source"], "override");
-        assert_eq!(envelope["data"]["redaction"], "not_required");
-        let _ = fs::remove_file(path);
-    }
-
-    #[tokio::test]
-    async fn invokes_sqlite_explain_from_legacy_profile() {
-        let path = temp_db_path();
-        seed_sqlite(
-            &path,
-            "create table users(id integer primary key, name text);
-             insert into users(name) values ('Ada');",
-        )
-        .await;
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![sqlite_connection("local", &path)],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let data = run_invocation_with_discovery(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "sqlite.explain".into(),
-                profile_ref: "local".into(),
-                input: json!({ "sql": "select name from users" }),
-                timeout_ms: None,
-                dry_run: false,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-            &empty_discovery(),
-        )
-        .await
-        .expect("invoke sqlite explain");
-
-        assert_eq!(data.plugin_id, "sqlite");
-        assert_eq!(data.capability_id, "explain");
-        assert_eq!(data.output["analyze"], false);
-        assert_eq!(data.output["dialect"], "sqlite");
-        assert_eq!(data.output["explained_statement_count"], 1);
-        let _ = fs::remove_file(path);
-    }
-
-    #[tokio::test]
-    async fn invokes_sqlite_query_from_migrated_profile() {
-        let path = temp_db_path();
-        seed_sqlite(
-            &path,
-            "create table users(id integer primary key, name text);
-             insert into users(name) values ('Grace');",
-        )
-        .await;
-        let connection = sqlite_connection("local", &path);
-        let migrated_profile = migrated_profile_from_connection(&connection);
-        let profile_id = migrated_profile.id.clone();
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![connection],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let data = run_invocation_with_discovery_and_profiles(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "sqlite.query".into(),
-                profile_ref: format!("id:{}", profile_id),
-                input: json!({ "sql": "select name from users" }),
-                timeout_ms: Some(5_000),
-                dry_run: false,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-            &empty_discovery(),
-            &[migrated_profile],
-        )
-        .await
-        .expect("invoke sqlite query through migrated profile");
-
-        assert_eq!(data.plugin_id, "sqlite");
-        assert_eq!(data.profile, ConnectionProfileRef::Id(profile_id));
-        assert_eq!(data.output["statements"][0]["rows"][0]["name"], "Grace");
-        let _ = fs::remove_file(path);
-    }
-
     #[test]
     fn profile_matcher_accepts_bare_immutable_profile_id() {
         let profile = migrated_profile_from_connection(&sqlite_connection("local", ":memory:"));
 
         assert!(profile_matches_ref(&profile, &profile.id));
-    }
-
-    #[tokio::test]
-    async fn destructive_sqlite_exec_requires_ack_or_dry_run() {
-        let path = temp_db_path();
-        seed_sqlite(
-            &path,
-            "create table users(id integer primary key, name text);",
-        )
-        .await;
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![sqlite_connection("local", &path)],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let error = run_invocation(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "sqlite.exec".into(),
-                profile_ref: "local".into(),
-                input: json!({ "sql": "insert into users(name) values ('Ada')" }),
-                timeout_ms: None,
-                dry_run: false,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect_err("destructive denied");
-
-        assert_eq!(error.code, "policy.destructive_denied_by_default");
-        assert_eq!(exit_code_for_error(&error), 3);
-        let error_envelope = serde_json::to_value(JsonErrorEnvelope {
-            ok: false,
-            schema_version: INVOKE_CLI_SCHEMA_VERSION,
-            command: "invoke",
-            exit_code: exit_code_for_error(&error),
-            error: (*error).clone(),
-        })
-        .expect("serialize error envelope");
-        assert_eq!(error_envelope["ok"], false);
-        assert_eq!(error_envelope["command"], "invoke");
-        assert_eq!(error_envelope["exit_code"], 3);
-        assert_eq!(error_envelope["error"]["category"], "policy");
-        assert_eq!(
-            error_envelope["error"]["code"],
-            "policy.destructive_denied_by_default"
-        );
-
-        let data = run_invocation_with_discovery(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "sqlite.exec".into(),
-                profile_ref: "local".into(),
-                input: json!({ "sql": "insert into users(name) values ('Ada')" }),
-                timeout_ms: None,
-                dry_run: false,
-                destructive_ack: true,
-                page_limit: None,
-                page_cursor: None,
-            },
-            &empty_discovery(),
-        )
-        .await
-        .expect("destructive acknowledged");
-
-        assert_eq!(data.output_summary["rows_affected"], 1);
-        assert_eq!(data.output["mutation_gate"]["acknowledged"], true);
-        assert_eq!(data.output_summary["mutation_gate"]["dry_run"], false);
-        assert_eq!(
-            data.policy_decision.reason.code,
-            "policy.destructive_invocation_acknowledged"
-        );
-        assert_eq!(
-            data.warnings[0].code,
-            "policy.destructive_invocation_acknowledged"
-        );
-        let _ = fs::remove_file(path);
     }
 
     #[tokio::test]
@@ -3675,74 +3544,67 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn redis_dry_run_does_not_open_target_connection() {
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![redis_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let data = run_invocation_with_discovery(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "redis.set".into(),
-                profile_ref: "cache".into(),
-                input: json!({ "key": "agent:test", "value": "value" }),
-                timeout_ms: None,
-                dry_run: true,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-            &empty_discovery(),
-        )
-        .await
-        .expect("redis dry-run");
-
-        assert_eq!(data.output["dry_run"], true);
-        assert_eq!(data.output["operation"], "set");
-    }
-
-    #[tokio::test]
-    async fn ssh_exec_dry_run_does_not_open_target_connection() {
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![ssh_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let data = run_invocation(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "ssh.exec".into(),
-                profile_ref: "shell".into(),
-                input: json!({ "command": "rm -rf /tmp/nope" }),
-                timeout_ms: None,
-                dry_run: true,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect("ssh exec dry-run");
-
-        assert_eq!(data.plugin_id, "ssh");
-        assert_eq!(data.output["dry_run"], true);
-        assert_eq!(data.output["operation"], "exec");
-        assert_eq!(data.runtime.kind, "builtin");
+    async fn external_dry_run_requires_plugin_runtime_after_policy_validation() {
+        for (connection, capability_ref, input) in [
+            (
+                redis_connection(),
+                "redis.set",
+                json!({"key":"agent:test", "value":"value"}),
+            ),
+            (ssh_connection(), "ssh.exec", json!({"command":"uptime"})),
+            (
+                postgres_legacy_connection(),
+                "postgres.exec",
+                json!({"sql":"create table items(id integer)"}),
+            ),
+            (
+                duckdb_connection("analytics", ":memory:"),
+                "duckdb.exec",
+                json!({"sql":"create table items(id integer)"}),
+            ),
+        ] {
+            let profile_ref = connection.name.clone();
+            let ctx = CliContext::new(AppConfig {
+                connections: vec![connection],
+                ..Default::default()
+            });
+            // A metadata-only candidate cannot execute; the service owns dry-run output.
+            let error = run_invocation_with_discovery(
+                &ctx,
+                InvokeRunOptions {
+                    capability_ref: capability_ref.into(),
+                    profile_ref,
+                    input,
+                    timeout_ms: None,
+                    dry_run: true,
+                    destructive_ack: false,
+                    page_limit: None,
+                    page_cursor: None,
+                },
+                &catalog_fixture_discovery(),
+            )
+            .await
+            .expect_err("runtime must be present even for a service dry-run");
+            assert_eq!(
+                error.error.code,
+                "unavailable.process_plugin_command_unresolved"
+            );
+            assert_eq!(
+                error.policy_decision.unwrap().outcome,
+                PolicyDecisionOutcome::DryRunOnly
+            );
+        }
     }
 
     #[test]
     fn ssh_policy_denials_have_redacted_audit_context() {
-        for (capability_ref, profile_ref, input, sensitive_value) in [
-            (
+        {
+            let (capability_ref, profile_ref, input, sensitive_value) = (
                 "ssh.exec",
                 "shell",
                 json!({ "command": "cat /etc/shadow" }),
                 "cat /etc/shadow",
-            ),
-        ] {
+            );
             let decision = CapabilityPolicyDecision {
                 outcome: PolicyDecisionOutcome::RequiresAcknowledgement,
                 risk: CapabilityRiskLevel::Destructive,
@@ -3791,8 +3653,8 @@ mod tests {
 
     #[test]
     fn local_filesystem_boundary_audit_denials_keep_only_opaque_scope_metadata() {
-        for (capability_ref, profile_ref, input, local_root, relative_path) in [
-            (
+        {
+            let (capability_ref, profile_ref, input, local_root, relative_path) = (
                 "ssh.sftp_get",
                 "shell",
                 json!({
@@ -3802,8 +3664,7 @@ mod tests {
                 }),
                 "/Users/private/approved-downloads",
                 "../outside.txt",
-            ),
-        ] {
+            );
             let error = CapabilityError {
                 category: CapabilityErrorCategory::Permission,
                 code: "permission.local_path_outside_scope".into(),
@@ -3902,107 +3763,6 @@ mod tests {
             let encoded = encoded_audit_context(&event);
             assert!(!encoded.contains(sensitive_value));
         }
-    }
-
-    #[tokio::test]
-    async fn postgres_exec_dry_run_accepts_legacy_postgresql_profile() {
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![postgres_legacy_connection()],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let data = run_invocation(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "postgres.exec".into(),
-                profile_ref: "warehouse".into(),
-                input: json!({ "sql": "drop table audit_log" }),
-                timeout_ms: None,
-                dry_run: true,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect("postgres exec dry-run");
-
-        assert_eq!(data.plugin_id, "postgres");
-        assert_eq!(data.output["dry_run"], true);
-        assert_eq!(data.output["operation"], "exec");
-        assert_eq!(data.runtime.kind, "builtin");
-    }
-
-    #[tokio::test]
-    async fn invokes_duckdb_query_from_legacy_profile() {
-        let path = temp_duckdb_path();
-        seed_duckdb(
-            &path,
-            "create table users(id integer primary key, name varchar);
-             insert into users values (1, 'Ada');",
-        )
-        .await;
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![duckdb_connection("analytics", &path)],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let data = run_invocation(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "duckdb.query".into(),
-                profile_ref: "analytics".into(),
-                input: json!({ "sql": "select name from users" }),
-                timeout_ms: Some(5_000),
-                dry_run: false,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect("invoke duckdb query");
-
-        assert_eq!(data.plugin_id, "duckdb");
-        assert_eq!(data.status, voidb_core::InvocationStatus::Succeeded);
-        assert_eq!(data.output["statements"][0]["rows"][0]["name"], "Ada");
-        assert_eq!(data.runtime.kind, "builtin");
-        let _ = fs::remove_file(path);
-    }
-
-    #[tokio::test]
-    async fn duckdb_exec_dry_run_does_not_open_target_connection() {
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![duckdb_connection(
-                "analytics",
-                "/no/such/directory/voidb-dry-run.duckdb",
-            )],
-            settings: Default::default(),
-            ..Default::default()
-        });
-
-        let data = run_invocation(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "duckdb.exec".into(),
-                profile_ref: "analytics".into(),
-                input: json!({ "sql": "drop table scratch" }),
-                timeout_ms: None,
-                dry_run: true,
-                destructive_ack: false,
-                page_limit: None,
-                page_cursor: None,
-            },
-        )
-        .await
-        .expect("duckdb exec dry-run");
-
-        assert_eq!(data.plugin_id, "duckdb");
-        assert_eq!(data.output["dry_run"], true);
-        assert_eq!(data.output["operation"], "exec");
-        assert_eq!(data.runtime.kind, "builtin");
     }
 
     #[tokio::test]
@@ -4128,54 +3888,6 @@ mod tests {
         );
         assert_eq!(data.credential_refs.len(), 1);
         assert!(!encoded.contains("super-secret"));
-    }
-
-    #[tokio::test]
-    async fn pre_cancelled_in_process_invocation_terminates_structurally() {
-        let path = temp_db_path();
-        seed_sqlite(&path, "create table items(id integer);").await;
-        let ctx = CliContext::new(AppConfig {
-            connections: vec![sqlite_connection("local", &path)],
-            settings: Default::default(),
-            ..Default::default()
-        });
-        let profiles = voidb_core::connection_configs_to_profiles(&ctx.config.connections);
-        let (cancel_tx, cancel_rx) = watch::channel(false);
-        cancel_tx.send(true).expect("pre-cancel");
-
-        let error = run_invocation_with_discovery_and_profiles_with_id(
-            &ctx,
-            InvokeRunOptions {
-                capability_ref: "sqlite.query".into(),
-                profile_ref: "local".into(),
-                input: json!({ "sql": "select * from items" }),
-                timeout_ms: Some(1_000),
-                dry_run: false,
-                destructive_ack: false,
-                page_limit: Some(10),
-                page_cursor: None,
-            },
-            &empty_discovery(),
-            &profiles,
-            "caller-owned-builtin-01".into(),
-            false,
-            "cancel-builtin-01".into(),
-            DEFAULT_INVOCATION_OUTPUT_BYTES,
-            cancel_rx,
-            None,
-        )
-        .await
-        .expect_err("cancelled builtin");
-
-        assert_eq!(error.category, CapabilityErrorCategory::Cancellation);
-        assert_eq!(error.code, "cancellation.requested");
-        assert_eq!(
-            error
-                .grant
-                .as_ref()
-                .map(|grant| grant.invocation_id.as_str()),
-            Some("caller-owned-builtin-01")
-        );
     }
 
     #[cfg(unix)]
@@ -4519,7 +4231,6 @@ mod tests {
         }
     }
 
-
     #[cfg(unix)]
     fn process_connection() -> ConnectionConfig {
         ConnectionConfig {
@@ -4533,39 +4244,12 @@ mod tests {
         }
     }
 
-    fn temp_db_path() -> String {
-        static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-
-        let id = NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        std::env::temp_dir()
-            .join(format!(
-                "voidb-invoke-sqlite-{}-{}.db",
-                std::process::id(),
-                id
-            ))
-            .to_string_lossy()
-            .into_owned()
-    }
-
-    fn temp_duckdb_path() -> String {
-        static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-
-        let id = NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        std::env::temp_dir()
-            .join(format!(
-                "voidb-invoke-duckdb-{}-{}.duckdb",
-                std::process::id(),
-                id
-            ))
-            .to_string_lossy()
-            .into_owned()
-    }
-
-    fn empty_discovery() -> ProcessPluginDiscovery {
-        ProcessPluginDiscovery {
-            roots: Vec::new(),
-            candidates: Vec::new(),
-        }
+    fn catalog_fixture_discovery() -> ProcessPluginDiscovery {
+        let mut discovery = authorization_discovery();
+        discovery
+            .candidates
+            .retain(|candidate| !matches!(candidate.id.as_str(), "mongodb" | "elasticsearch"));
+        discovery
     }
 
     #[cfg(unix)]
@@ -4721,17 +4405,5 @@ done
         let mut permissions = fs::metadata(path).expect("metadata").permissions();
         permissions.set_mode(0o755);
         fs::set_permissions(path, permissions).expect("chmod");
-    }
-
-    async fn seed_sqlite(path: &str, sql: &str) {
-        let mut service = SqliteService::new_direct(&SqliteConfig::new(path.into()))
-            .expect("create sqlite service");
-        service.execute_query(sql).await.expect("seed sqlite");
-    }
-
-    async fn seed_duckdb(path: &str, sql: &str) {
-        let mut service = DuckDbService::new_direct(&DuckDbConfig::new(path.into()))
-            .expect("create duckdb service");
-        service.execute_query(sql).await.expect("seed duckdb");
     }
 }

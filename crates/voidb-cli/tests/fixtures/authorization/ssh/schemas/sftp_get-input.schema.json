@@ -1,0 +1,25 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "local_path": {
+      "description": "New destination path relative to local_root.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "local_root": {
+      "description": "Human-approved absolute local root; never returned in output.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "remote_path": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "remote_path",
+    "local_root",
+    "local_path"
+  ],
+  "type": "object"
+}

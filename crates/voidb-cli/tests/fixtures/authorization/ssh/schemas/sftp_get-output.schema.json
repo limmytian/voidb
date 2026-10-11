@@ -1,0 +1,22 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "bytes": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "operation": {
+      "const": "downloaded",
+      "type": "string"
+    },
+    "paths": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "operation",
+    "bytes",
+    "paths"
+  ],
+  "type": "object"
+}

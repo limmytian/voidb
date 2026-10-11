@@ -1,0 +1,22 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "auth_method": {
+      "type": "string"
+    },
+    "connect_timeout_secs": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "keep_alive_interval_secs": {
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "auth_method",
+    "connect_timeout_secs",
+    "keep_alive_interval_secs"
+  ],
+  "type": "object"
+}

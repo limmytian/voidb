@@ -1,0 +1,23 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "after_offset": {
+      "default": 0,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "max_bytes": {
+      "default": 32768,
+      "maximum": 131072,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "wait_ms": {
+      "default": 0,
+      "maximum": 1000,
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "type": "object"
+}

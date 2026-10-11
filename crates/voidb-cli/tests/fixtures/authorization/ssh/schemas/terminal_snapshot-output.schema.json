@@ -1,0 +1,49 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "cursor": {
+      "type": "object"
+    },
+    "end_offset": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "exit_code": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "health": {
+      "type": "string"
+    },
+    "lines": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "modes": {
+      "type": "object"
+    },
+    "retained_start_offset": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "size": {
+      "type": "object"
+    },
+    "title": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "lines",
+    "cursor",
+    "size",
+    "modes",
+    "end_offset",
+    "health"
+  ],
+  "type": "object"
+}

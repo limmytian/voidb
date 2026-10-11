@@ -1,0 +1,16 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "auth_method": {
+      "type": "string"
+    },
+    "reachable": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "reachable",
+    "auth_method"
+  ],
+  "type": "object"
+}

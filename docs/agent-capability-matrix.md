@@ -11,80 +11,12 @@ The committed output is `docs/agent-capability-matrix.md`. Regenerate with `carg
 | Plugin | Posture | Capabilities | Risks | Modes | Timeouts (ms) | Stream | Agent session | Standalone TUI | TUI context handoff | Validation | Known limit |
 |---|---|---:|---|---|---|---:|---|---|---|---|---|
 | `connections` | platform | 0 |  |  |  | 0 | no | yes | Profile metadata, credential approval, and JIT authorization only | `cargo test -p voidb-tui`; `scripts/tui-quality-gate.sh` | Owns no target driver, live capability session, or target operation dispatch. |
-| `duckdb` | beta | 9 | destructive:2, read_only:7 | both, stateless | 30000, 60000 | 1 | yes | no | None; capability and agent-owned session only | DuckDB plugin tests; CLI invoke tests; Core SQL contract | Bundled native DuckDB makes clean builds and full gates materially slower. |
-| `mysql` | release_candidate | 9 | destructive:2, read_only:7 | both, stateless | 30000, 60000 | 1 | yes | no | None; capability and agent-owned session only | MySQL plugin tests; CLI invoke tests; Core SQL contract; MySQL fixture smoke | Server-version and provider-specific compatibility still requires fixture evidence. |
-| `postgres` | release_candidate | 9 | destructive:2, read_only:7 | both, stateless | 30000, 60000 | 1 | yes | no | None; capability and agent-owned session only | PostgreSQL plugin tests; CLI invoke tests; Core SQL contract | Live PostgreSQL fixture coverage remains opt-in. |
-| `redis` | release_candidate | 11 | destructive:4, external_side_effect:1, read_only:6 | both, session_only, stateless | 30000 | 3 | yes | no | None; capability and agent-owned session only | `scripts/check-data-search-live-session-conformance.sh`; Redis plugin tests | Cluster/provider behavior remains outside deterministic local coverage. |
-| `sqlite` | release_candidate | 9 | destructive:2, read_only:7 | both, stateless | 30000, 60000 | 1 | yes | no | None; capability and agent-owned session only | SQLite plugin tests; CLI invoke tests; Core SQL contract | Local filesystem policy applies; there is intentionally no human data-inspector TUI. |
-| `ssh` | release_candidate | 15 | destructive:8, mutating:1, read_only:6 | both, session_only, stateless | 30000 | 1 | yes | yes | Explicit bounded live-PTY share with one-shot local review | SSH plugin tests; external-agent boundary gate; SSH fixture smoke; `scripts/tui-quality-gate.sh` | Host-key, authentication-agent, and terminal-application behavior needs opt-in live evidence. |
 | `sync` | beta_opt_in | 6 | destructive:2, read_only:4 | stateless | 5000, 10000, 30000, 120000, 180000 | 0 | no | no | None; encrypted plugin-owned operations only | `scripts/release-sync-smoke.sh`; Sync plugin and standalone server tests | Must remain opt-in; no generic live handle, plaintext key, or decrypted bundle may cross the boundary. |
 
 ## Capability Inventory
 
 | Capability | Risk | Mode | Timeout (ms) | Stream | Cancellation | Dry run | Authorization | Live protocol |
 |---|---|---|---:|---|---|---|---|---:|
-| `duckdb.catalogs` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `duckdb.describe_table` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `duckdb.exec` | destructive | both | 30000 | no | invoke caller-token/SIGINT; session call-cancel + close | yes | declared | — |
-| `duckdb.explain` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `duckdb.export_query` | read_only | stateless | 60000 | yes | invoke caller-token/SIGINT | no | declared | — |
-| `duckdb.import_apply` | destructive | stateless | 60000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `duckdb.import_plan` | read_only | stateless | 60000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `duckdb.query` | read_only | both | 30000 | no | invoke caller-token/SIGINT; session call-cancel + close | no | declared | — |
-| `duckdb.tables` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `mysql.catalogs` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `mysql.describe_table` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `mysql.exec` | destructive | both | 30000 | no | invoke caller-token/SIGINT; session call-cancel + close | yes | declared | — |
-| `mysql.explain` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `mysql.export_query` | read_only | stateless | 60000 | yes | invoke caller-token/SIGINT | no | declared | — |
-| `mysql.import_apply` | destructive | stateless | 60000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `mysql.import_plan` | read_only | stateless | 60000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `mysql.query` | read_only | both | 30000 | no | invoke caller-token/SIGINT; session call-cancel + close | no | declared | — |
-| `mysql.tables` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `postgres.catalogs` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `postgres.describe_table` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `postgres.exec` | destructive | both | 30000 | no | invoke caller-token/SIGINT; session call-cancel + close | yes | declared | — |
-| `postgres.explain` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `postgres.export_query` | read_only | stateless | 60000 | yes | invoke caller-token/SIGINT | no | declared | — |
-| `postgres.import_apply` | destructive | stateless | 60000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `postgres.import_plan` | read_only | stateless | 60000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `postgres.query` | read_only | both | 30000 | no | invoke caller-token/SIGINT; session call-cancel + close | no | declared | — |
-| `postgres.tables` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `redis.del` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `redis.exec` | destructive | both | 30000 | no | invoke caller-token/SIGINT; session call-cancel + close | yes | declared | — |
-| `redis.expire` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `redis.get` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `redis.info` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `redis.keys` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `redis.monitor_read` | external_side_effect | session_only | 30000 | yes | session call-only cancel + stop-observation close | no | declared | 1 |
-| `redis.pubsub_read` | read_only | session_only | 30000 | yes | session call-only cancel + stop-observation close | no | declared | 1 |
-| `redis.set` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `redis.stream_read` | read_only | session_only | 30000 | yes | session call-and-source cancel + stop-observation close | no | declared | 1 |
-| `redis.ttl` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `sqlite.catalogs` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `sqlite.describe_table` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `sqlite.exec` | destructive | both | 30000 | no | invoke caller-token/SIGINT; session call-cancel + close | yes | declared | — |
-| `sqlite.explain` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `sqlite.export_query` | read_only | stateless | 60000 | yes | invoke caller-token/SIGINT | no | declared | — |
-| `sqlite.import_apply` | destructive | stateless | 60000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `sqlite.import_plan` | read_only | stateless | 60000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `sqlite.query` | read_only | both | 30000 | no | invoke caller-token/SIGINT; session call-cancel + close | no | declared | — |
-| `sqlite.tables` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `ssh.diagnostics` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `ssh.exec` | destructive | both | 30000 | no | invoke caller-token/SIGINT; session call-cancel + close | yes | declared | — |
-| `ssh.forward_open` | destructive | session_only | 30000 | no | session call-cancel + close | yes | declared | — |
-| `ssh.forward_status` | read_only | session_only | 30000 | no | session call-cancel + close | no | declared | — |
-| `ssh.sftp_get` | mutating | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
-| `ssh.sftp_list` | read_only | both | 30000 | no | invoke caller-token/SIGINT; session call-cancel + close | no | declared | — |
-| `ssh.sftp_mkdir` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `ssh.sftp_put` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `ssh.sftp_rm` | destructive | stateless | 30000 | no | invoke caller-token/SIGINT | yes | declared | — |
-| `ssh.terminal_read` | read_only | session_only | 30000 | yes | session call-cancel + close | no | declared | — |
-| `ssh.terminal_resize` | destructive | session_only | 30000 | no | session call-cancel + close | no | declared | — |
-| `ssh.terminal_signal` | destructive | session_only | 30000 | no | session call-cancel + close | no | declared | — |
-| `ssh.terminal_snapshot` | read_only | session_only | 30000 | no | session call-cancel + close | no | declared | — |
-| `ssh.terminal_write` | destructive | session_only | 30000 | no | session call-cancel + close | no | declared | — |
-| `ssh.test` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |
 | `sync.conflict_resolve` | destructive | stateless | 120000 | no | invoke caller-token/SIGINT | yes | declared | — |
 | `sync.diagnostics` | read_only | stateless | 10000 | no | invoke caller-token/SIGINT | no | declared | — |
 | `sync.diff` | read_only | stateless | 30000 | no | invoke caller-token/SIGINT | no | declared | — |

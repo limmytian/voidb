@@ -66,54 +66,6 @@ const PLUGIN_EXPERIENCE: &[PluginExperience] = &[
         known_limit: "Owns no target driver, live capability session, or target operation dispatch.",
     },
     PluginExperience {
-        plugin_id: "duckdb",
-        release_posture: "beta",
-        standalone_tui: false,
-        tui_context_handoff: "None; capability and agent-owned session only",
-        validation_coverage: "DuckDB plugin tests; CLI invoke tests; Core SQL contract",
-        known_limit: "Bundled native DuckDB makes clean builds and full gates materially slower.",
-    },
-    PluginExperience {
-        plugin_id: "mysql",
-        release_posture: "release_candidate",
-        standalone_tui: false,
-        tui_context_handoff: "None; capability and agent-owned session only",
-        validation_coverage: "MySQL plugin tests; CLI invoke tests; Core SQL contract; MySQL fixture smoke",
-        known_limit: "Server-version and provider-specific compatibility still requires fixture evidence.",
-    },
-    PluginExperience {
-        plugin_id: "postgres",
-        release_posture: "release_candidate",
-        standalone_tui: false,
-        tui_context_handoff: "None; capability and agent-owned session only",
-        validation_coverage: "PostgreSQL plugin tests; CLI invoke tests; Core SQL contract",
-        known_limit: "Live PostgreSQL fixture coverage remains opt-in.",
-    },
-    PluginExperience {
-        plugin_id: "redis",
-        release_posture: "release_candidate",
-        standalone_tui: false,
-        tui_context_handoff: "None; capability and agent-owned session only",
-        validation_coverage: "`scripts/check-data-search-live-session-conformance.sh`; Redis plugin tests",
-        known_limit: "Cluster/provider behavior remains outside deterministic local coverage.",
-    },
-    PluginExperience {
-        plugin_id: "sqlite",
-        release_posture: "release_candidate",
-        standalone_tui: false,
-        tui_context_handoff: "None; capability and agent-owned session only",
-        validation_coverage: "SQLite plugin tests; CLI invoke tests; Core SQL contract",
-        known_limit: "Local filesystem policy applies; there is intentionally no human data-inspector TUI.",
-    },
-    PluginExperience {
-        plugin_id: "ssh",
-        release_posture: "release_candidate",
-        standalone_tui: true,
-        tui_context_handoff: "Explicit bounded live-PTY share with one-shot local review",
-        validation_coverage: "SSH plugin tests; external-agent boundary gate; SSH fixture smoke; `scripts/tui-quality-gate.sh`",
-        known_limit: "Host-key, authentication-agent, and terminal-application behavior needs opt-in live evidence.",
-    },
-    PluginExperience {
         plugin_id: "sync",
         release_posture: "beta_opt_in",
         standalone_tui: false,
@@ -454,7 +406,10 @@ mod tests {
     #[test]
     fn matrix_covers_every_builtin_plugin_and_capability() {
         let matrix = build().expect("build matrix");
-        assert!(matrix.capabilities.len() >= 60);
+        assert_eq!(
+            matrix.capabilities.len(),
+            super::super::invoke::builtin_capabilities().len()
+        );
         assert!(
             matrix
                 .capabilities

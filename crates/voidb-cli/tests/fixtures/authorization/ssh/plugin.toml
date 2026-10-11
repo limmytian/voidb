@@ -1,0 +1,641 @@
+id = "ssh"
+name = "SSH and SFTP Remote Management Plugin"
+version = "0.3.3"
+protocol_version = "1"
+description = "SSH terminal, port forwarding, and SFTP management process plugin for VoidB."
+license = "Apache-2.0"
+homepage = "https://github.com/limmytian/voidb-plugin-ssh"
+
+[runtime]
+command = "voidb-plugin-ssh"
+args = ["serve"]
+transport = "stdio-jsonrpc"
+
+[runtime.env]
+
+[connections]
+profile_schema = "schemas/profile.schema.json"
+secret_classes = [
+    "password",
+    "private_key",
+]
+
+[[capabilities]]
+id = "test"
+description = "Connect and authenticate to an SSH target without opening an interactive shell."
+input_schema = "schemas/test-input.schema.json"
+output_schema = "schemas/test-output.schema.json"
+permissions = [
+    "connection.test",
+    "ssh.test",
+]
+risk = "read_only"
+destructive = false
+streaming = false
+execution_mode = "stateless"
+connection_required = true
+required_secret_classes = []
+supports_dry_run = false
+default_timeout_ms = 30000
+
+[capabilities.authorization]
+declared = true
+interactive_execute = false
+session_purposes = []
+capability_wide_allowed = true
+
+[[capabilities]]
+id = "exec"
+description = "Execute a remote SSH command and return bounded stdout, stderr, and exit status."
+input_schema = "schemas/exec-input.schema.json"
+output_schema = "schemas/exec-output.schema.json"
+permissions = [
+    "connection.read",
+    "ssh.exec",
+]
+risk = "destructive"
+destructive = true
+streaming = false
+execution_mode = "both"
+connection_required = true
+required_secret_classes = []
+supports_dry_run = true
+default_timeout_ms = 30000
+
+[capabilities.authorization]
+declared = true
+interactive_execute = true
+capability_wide_allowed = true
+
+[[capabilities.authorization.session_purposes]]
+kind = "interactive_terminal"
+
+[capabilities.authorization.approval_schema]
+version = 1
+
+[[capabilities.authorization.approval_schema.fields]]
+path = "/command"
+label = "Remote command"
+description = "Exact shell command string; argv-style execution is not currently exposed."
+value_type = "string"
+required = true
+constraint = "exact"
+risk_emphasis = "destructive"
+
+[capabilities.session_handoff]
+capabilities = ["ssh.exec"]
+
+[capabilities.session_handoff.purpose]
+kind = "interactive_terminal"
+
+[[capabilities]]
+id = "terminal_read"
+description = "Read a bounded incremental output window from an agent-owned interactive SSH PTY."
+input_schema = "schemas/terminal_read-input.schema.json"
+output_schema = "schemas/terminal_read-output.schema.json"
+permissions = [
+    "connection.read",
+    "ssh.terminal.read",
+]
+risk = "read_only"
+destructive = false
+streaming = true
+execution_mode = "session_only"
+connection_required = true
+required_secret_classes = []
+supports_dry_run = false
+default_timeout_ms = 30000
+
+[capabilities.authorization]
+declared = true
+interactive_execute = false
+capability_wide_allowed = true
+
+[[capabilities.authorization.session_purposes]]
+kind = "interactive_terminal"
+
+[capabilities.session_handoff]
+capabilities = [
+    "ssh.terminal_read",
+    "ssh.terminal_snapshot",
+    "ssh.terminal_write",
+    "ssh.terminal_resize",
+    "ssh.terminal_signal",
+]
+
+[capabilities.session_handoff.purpose]
+kind = "interactive_terminal"
+
+[[capabilities]]
+id = "terminal_snapshot"
+description = "Return a bounded plain-text screen snapshot and terminal mode metadata for an agent-owned SSH PTY."
+input_schema = "schemas/terminal_snapshot-input.schema.json"
+output_schema = "schemas/terminal_snapshot-output.schema.json"
+permissions = [
+    "connection.read",
+    "ssh.terminal.read",
+]
+risk = "read_only"
+destructive = false
+streaming = false
+execution_mode = "session_only"
+connection_required = true
+required_secret_classes = []
+supports_dry_run = false
+default_timeout_ms = 30000
+
+[capabilities.authorization]
+declared = true
+interactive_execute = false
+capability_wide_allowed = true
+
+[[capabilities.authorization.session_purposes]]
+kind = "interactive_terminal"
+
+[capabilities.session_handoff]
+capabilities = [
+    "ssh.terminal_read",
+    "ssh.terminal_snapshot",
+    "ssh.terminal_write",
+    "ssh.terminal_resize",
+    "ssh.terminal_signal",
+]
+
+[capabilities.session_handoff.purpose]
+kind = "interactive_terminal"
+
+[[capabilities]]
+id = "terminal_write"
+description = "Write bounded text or named keys to an agent-owned interactive SSH PTY."
+input_schema = "schemas/terminal_write-input.schema.json"
+output_schema = "schemas/terminal_write-output.schema.json"
+permissions = [
+    "connection.write",
+    "ssh.terminal.control",
+]
+risk = "destructive"
+destructive = true
+streaming = false
+execution_mode = "session_only"
+connection_required = true
+required_secret_classes = []
+supports_dry_run = false
+default_timeout_ms = 30000
+
+[capabilities.authorization]
+declared = true
+interactive_execute = false
+note = "Interactive PTY control is intentionally Custom-only and requires a short-lived destructive grant."
+capability_wide_allowed = true
+
+[[capabilities.authorization.session_purposes]]
+kind = "interactive_terminal"
+
+[capabilities.session_handoff]
+capabilities = [
+    "ssh.terminal_read",
+    "ssh.terminal_snapshot",
+    "ssh.terminal_write",
+    "ssh.terminal_resize",
+    "ssh.terminal_signal",
+]
+
+[capabilities.session_handoff.purpose]
+kind = "interactive_terminal"
+
+[[capabilities]]
+id = "terminal_resize"
+description = "Resize an agent-owned interactive SSH PTY and its terminal parser."
+input_schema = "schemas/terminal_resize-input.schema.json"
+output_schema = "schemas/terminal_resize-output.schema.json"
+permissions = [
+    "connection.write",
+    "ssh.terminal.control",
+]
+risk = "destructive"
+destructive = true
+streaming = false
+execution_mode = "session_only"
+connection_required = true
+required_secret_classes = []
+supports_dry_run = false
+default_timeout_ms = 30000
+
+[capabilities.authorization]
+declared = true
+interactive_execute = false
+capability_wide_allowed = true
+
+[[capabilities.authorization.session_purposes]]
+kind = "interactive_terminal"
+
+[capabilities.session_handoff]
+capabilities = [
+    "ssh.terminal_read",
+    "ssh.terminal_snapshot",
+    "ssh.terminal_write",
+    "ssh.terminal_resize",
+    "ssh.terminal_signal",
+]
+
+[capabilities.session_handoff.purpose]
+kind = "interactive_terminal"
+
+[[capabilities]]
+id = "terminal_signal"
+description = "Send a named process signal to an agent-owned interactive SSH PTY."
+input_schema = "schemas/terminal_signal-input.schema.json"
+output_schema = "schemas/terminal_signal-output.schema.json"
+permissions = [
+    "connection.write",
+    "ssh.terminal.control",
+]
+risk = "destructive"
+destructive = true
+streaming = false
+execution_mode = "session_only"
+connection_required = true
+required_secret_classes = []
+supports_dry_run = false
+default_timeout_ms = 30000
+
+[capabilities.authorization]
+declared = true
+interactive_execute = false
+capability_wide_allowed = true
+
+[[capabilities.authorization.session_purposes]]
+kind = "interactive_terminal"
+
+[capabilities.authorization.approval_schema]
+version = 1
+
+[[capabilities.authorization.approval_schema.fields]]
+path = "/signal"
+label = "Terminal signal"
+value_type = "string"
+required = true
+constraint = "exact"
+risk_emphasis = "destructive"
+
+[capabilities.session_handoff]
+capabilities = [
+    "ssh.terminal_read",
+    "ssh.terminal_snapshot",
+    "ssh.terminal_write",
+    "ssh.terminal_resize",
+    "ssh.terminal_signal",
+]
+
+[capabilities.session_handoff.purpose]
+kind = "interactive_terminal"
+
+[[capabilities]]
+id = "forward_open"
+description = "Open a local TCP forward inside a persistent SSH agent session."
+input_schema = "schemas/forward_open-input.schema.json"
+output_schema = "schemas/forward_open-output.schema.json"
+permissions = [
+    "connection.forward",
+    "ssh.forward",
+]
+risk = "destructive"
+destructive = true
+streaming = false
+execution_mode = "session_only"
+connection_required = true
+required_secret_classes = []
+supports_dry_run = true
+default_timeout_ms = 30000
+
+[capabilities.authorization]
+declared = true
+interactive_execute = false
+capability_wide_allowed = true
+
+[[capabilities.authorization.session_purposes]]
+kind = "port_forward"
+
+[capabilities.authorization.approval_schema]
+version = 1
+
+[[capabilities.authorization.approval_schema.fields]]
+path = "/remote_host"
+label = "Remote host"
+value_type = "resource_id"
+required = true
+constraint = "exact"
+risk_emphasis = "normal"
+
+[[capabilities.authorization.approval_schema.fields]]
+path = "/remote_port"
+label = "Remote port"
+value_type = "integer"
+required = true
+constraint = "exact"
+risk_emphasis = "normal"
+
+[capabilities.session_handoff]
+capabilities = [
+    "ssh.forward_open",
+    "ssh.forward_status",
+]
+
+[capabilities.session_handoff.purpose]
+kind = "port_forward"
+
+[[capabilities]]
+id = "forward_status"
+description = "Inspect a local forward inside a persistent SSH agent session."
+input_schema = "schemas/forward_status-input.schema.json"
+output_schema = "schemas/forward_status-output.schema.json"
+permissions = [
+    "connection.read",
+    "ssh.forward",
+]
+risk = "read_only"
+destructive = false
+streaming = false
+execution_mode = "session_only"
+connection_required = true
+required_secret_classes = []
+supports_dry_run = false
+default_timeout_ms = 30000
+
+[capabilities.authorization]
+declared = true
+interactive_execute = false
+capability_wide_allowed = true
+
+[[capabilities.authorization.session_purposes]]
+kind = "port_forward"
+
+[capabilities.session_handoff]
+capabilities = [
+    "ssh.forward_open",
+    "ssh.forward_status",
+]
+
+[capabilities.session_handoff.purpose]
+kind = "port_forward"
+
+[[capabilities]]
+id = "sftp_list"
+description = "List a remote SFTP directory with bounded, cursor-based output."
+input_schema = "schemas/sftp_list-input.schema.json"
+output_schema = "schemas/sftp_list-output.schema.json"
+permissions = [
+    "connection.read",
+    "sftp.list",
+]
+risk = "read_only"
+destructive = false
+streaming = false
+execution_mode = "both"
+connection_required = true
+required_secret_classes = []
+supports_dry_run = false
+default_timeout_ms = 30000
+
+[capabilities.authorization]
+declared = true
+interactive_execute = false
+capability_wide_allowed = true
+
+[[capabilities.authorization.session_purposes]]
+kind = "file_transfer"
+
+[capabilities.authorization.approval_schema]
+version = 1
+
+[[capabilities.authorization.approval_schema.fields]]
+path = "/path"
+label = "Remote path"
+value_type = "path"
+required = true
+constraint = "prefix"
+risk_emphasis = "normal"
+
+[capabilities.session_handoff]
+capabilities = ["ssh.sftp_list"]
+
+[capabilities.session_handoff.purpose]
+kind = "file_transfer"
+
+[[capabilities]]
+id = "sftp_get"
+description = "Download a remote SFTP file to a local path and return transfer metadata."
+input_schema = "schemas/sftp_get-input.schema.json"
+output_schema = "schemas/sftp_get-output.schema.json"
+permissions = [
+    "connection.read",
+    "sftp.read",
+    "local.write",
+]
+risk = "mutating"
+destructive = false
+streaming = false
+execution_mode = "stateless"
+connection_required = true
+required_secret_classes = []
+supports_dry_run = false
+default_timeout_ms = 30000
+
+[capabilities.authorization]
+declared = true
+interactive_execute = false
+capability_wide_allowed = false
+
+[[capabilities.authorization.session_purposes]]
+kind = "file_transfer"
+
+[capabilities.authorization.approval_schema]
+version = 1
+
+[[capabilities.authorization.approval_schema.fields]]
+path = "/remote_path"
+label = "Remote path"
+value_type = "path"
+required = true
+constraint = "prefix"
+risk_emphasis = "normal"
+
+[[capabilities.authorization.approval_schema.fields]]
+path = "/local_root"
+label = "Approved local root"
+value_type = "path"
+required = true
+constraint = "exact"
+risk_emphasis = "privilege_escalation"
+
+[[capabilities.authorization.approval_schema.fields]]
+path = "/local_path"
+label = "Relative local path"
+value_type = "path"
+required = true
+constraint = "exact"
+risk_emphasis = "destructive"
+
+[[capabilities]]
+id = "sftp_put"
+description = "Upload a local file to a remote SFTP path and return transfer metadata."
+input_schema = "schemas/sftp_put-input.schema.json"
+output_schema = "schemas/sftp_put-output.schema.json"
+permissions = [
+    "connection.write",
+    "sftp.write",
+    "local.read",
+]
+risk = "destructive"
+destructive = true
+streaming = false
+execution_mode = "stateless"
+connection_required = true
+required_secret_classes = []
+supports_dry_run = true
+default_timeout_ms = 30000
+
+[capabilities.authorization]
+declared = true
+interactive_execute = false
+capability_wide_allowed = false
+
+[[capabilities.authorization.session_purposes]]
+kind = "file_transfer"
+
+[capabilities.authorization.approval_schema]
+version = 1
+
+[[capabilities.authorization.approval_schema.fields]]
+path = "/remote_path"
+label = "Remote path"
+value_type = "path"
+required = true
+constraint = "prefix"
+risk_emphasis = "destructive"
+
+[[capabilities.authorization.approval_schema.fields]]
+path = "/local_root"
+label = "Approved local root"
+value_type = "path"
+required = true
+constraint = "exact"
+risk_emphasis = "privilege_escalation"
+
+[[capabilities.authorization.approval_schema.fields]]
+path = "/local_path"
+label = "Relative local path"
+value_type = "path"
+required = true
+constraint = "exact"
+risk_emphasis = "normal"
+
+[[capabilities]]
+id = "sftp_mkdir"
+description = "Create a remote SFTP directory."
+input_schema = "schemas/sftp_mkdir-input.schema.json"
+output_schema = "schemas/sftp_mkdir-output.schema.json"
+permissions = [
+    "connection.write",
+    "sftp.write",
+]
+risk = "destructive"
+destructive = true
+streaming = false
+execution_mode = "stateless"
+connection_required = true
+required_secret_classes = []
+supports_dry_run = true
+default_timeout_ms = 30000
+
+[capabilities.authorization]
+declared = true
+interactive_execute = false
+capability_wide_allowed = true
+
+[[capabilities.authorization.session_purposes]]
+kind = "file_transfer"
+
+[capabilities.authorization.approval_schema]
+version = 1
+
+[[capabilities.authorization.approval_schema.fields]]
+path = "/path"
+label = "Remote path"
+value_type = "path"
+required = true
+constraint = "prefix"
+risk_emphasis = "destructive"
+
+[[capabilities]]
+id = "sftp_rm"
+description = "Remove a remote SFTP file."
+input_schema = "schemas/sftp_rm-input.schema.json"
+output_schema = "schemas/sftp_rm-output.schema.json"
+permissions = [
+    "connection.write",
+    "sftp.delete",
+]
+risk = "destructive"
+destructive = true
+streaming = false
+execution_mode = "stateless"
+connection_required = true
+required_secret_classes = []
+supports_dry_run = true
+default_timeout_ms = 30000
+
+[capabilities.authorization]
+declared = true
+interactive_execute = false
+capability_wide_allowed = true
+
+[[capabilities.authorization.session_purposes]]
+kind = "file_transfer"
+
+[capabilities.authorization.approval_schema]
+version = 1
+
+[[capabilities.authorization.approval_schema.fields]]
+path = "/path"
+label = "Remote path"
+value_type = "path"
+required = true
+constraint = "prefix"
+risk_emphasis = "destructive"
+
+[[capabilities]]
+id = "diagnostics"
+description = "Return agent-safe SSH profile diagnostics without opening a network connection."
+input_schema = "schemas/diagnostics-input.schema.json"
+output_schema = "schemas/diagnostics-output.schema.json"
+permissions = [
+    "connection.read",
+    "ssh.diagnostics",
+]
+risk = "read_only"
+destructive = false
+streaming = false
+execution_mode = "stateless"
+connection_required = true
+required_secret_classes = []
+supports_dry_run = false
+default_timeout_ms = 30000
+
+[capabilities.authorization]
+declared = true
+interactive_execute = false
+session_purposes = []
+capability_wide_allowed = true
+
+[ui]
+tui = true
+raw_input = false
+
+[requirements]
+voidb_core = ">=0.1.0"
+platforms = [
+    "darwin",
+    "linux",
+    "windows",
+]

@@ -1,0 +1,19 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "signal": {
+      "enum": [
+        "INT",
+        "TERM",
+        "HUP",
+        "QUIT",
+        "KILL"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "signal"
+  ],
+  "type": "object"
+}

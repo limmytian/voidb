@@ -1,0 +1,53 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "closed": {
+      "type": "boolean"
+    },
+    "end_offset": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "gap": {
+      "type": "boolean"
+    },
+    "more": {
+      "type": "boolean"
+    },
+    "next_offset": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "requested_offset": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "retained_start_offset": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "source_bytes": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "start_offset": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "text": {
+      "type": "string"
+    },
+    "timed_out": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "text",
+    "next_offset",
+    "end_offset",
+    "gap",
+    "more",
+    "closed"
+  ],
+  "type": "object"
+}

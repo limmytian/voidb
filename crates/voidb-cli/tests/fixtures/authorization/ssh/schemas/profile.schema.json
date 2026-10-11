@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "host": {
+      "type": "string"
+    },
+    "password": {
+      "type": "string"
+    },
+    "port": {
+      "default": 22,
+      "type": "integer"
+    },
+    "private_key_path": {
+      "type": "string"
+    },
+    "user": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "host",
+    "port",
+    "user"
+  ],
+  "title": "SshConnectionProfile",
+  "type": "object"
+}

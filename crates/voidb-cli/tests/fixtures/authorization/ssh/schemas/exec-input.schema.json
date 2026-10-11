@@ -1,0 +1,25 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "command": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "max_stderr_bytes": {
+      "default": 65536,
+      "maximum": 1048576,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "max_stdout_bytes": {
+      "default": 65536,
+      "maximum": 1048576,
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "command"
+  ],
+  "type": "object"
+}

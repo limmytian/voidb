@@ -32,6 +32,9 @@ jobs:
       - name: Tests (voidb-cli default)
         run: cargo test -p voidb-cli
 
+      - name: Tests (CLI full feature contracts)
+        run: cargo test -p voidb-cli --features full
+
       - name: Tests (voidb-tui)
         run: cargo test -p voidb-tui
 

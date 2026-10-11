@@ -1,0 +1,11 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "path": {
+      "default": ".",
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "type": "object"
+}

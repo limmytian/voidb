@@ -1,0 +1,31 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "enter": {
+      "type": "boolean"
+    },
+    "key_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "paste": {
+      "type": "boolean"
+    },
+    "text_bytes": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "written_bytes": {
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "written_bytes",
+    "text_bytes",
+    "key_count",
+    "paste",
+    "enter"
+  ],
+  "type": "object"
+}

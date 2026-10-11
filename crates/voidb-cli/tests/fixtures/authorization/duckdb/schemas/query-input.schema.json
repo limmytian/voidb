@@ -1,0 +1,14 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "sql": {
+      "description": "Read-oriented DuckDB SQL. Mutating statements must use duckdb.exec.",
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "sql"
+  ],
+  "type": "object"
+}

@@ -1,0 +1,56 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "exit_code": {
+      "minimum": 0,
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "max_stderr_bytes": {
+      "default": 65536,
+      "maximum": 1048576,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "max_stdout_bytes": {
+      "default": 65536,
+      "maximum": 1048576,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "stderr": {
+      "type": "string"
+    },
+    "stderr_bytes": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "stderr_truncated": {
+      "type": "boolean"
+    },
+    "stdout": {
+      "type": "string"
+    },
+    "stdout_bytes": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "stdout_truncated": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "stdout",
+    "stderr",
+    "exit_code",
+    "stdout_bytes",
+    "stderr_bytes",
+    "stdout_truncated",
+    "stderr_truncated",
+    "max_stdout_bytes",
+    "max_stderr_bytes"
+  ],
+  "type": "object"
+}

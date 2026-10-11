@@ -1,0 +1,42 @@
+{
+  "additionalProperties": false,
+  "anyOf": [
+    {
+      "required": [
+        "text"
+      ]
+    },
+    {
+      "required": [
+        "keys"
+      ]
+    },
+    {
+      "required": [
+        "enter"
+      ]
+    }
+  ],
+  "properties": {
+    "enter": {
+      "default": false,
+      "type": "boolean"
+    },
+    "keys": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 256,
+      "type": "array"
+    },
+    "paste": {
+      "default": false,
+      "type": "boolean"
+    },
+    "text": {
+      "maxLength": 16384,
+      "type": "string"
+    }
+  },
+  "type": "object"
+}

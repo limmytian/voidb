@@ -1,0 +1,21 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "completed": {
+      "type": "boolean"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "operation": {
+      "const": "rm",
+      "type": "string"
+    }
+  },
+  "required": [
+    "operation",
+    "completed",
+    "metadata"
+  ],
+  "type": "object"
+}
