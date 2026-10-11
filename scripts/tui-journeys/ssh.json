@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "ssh",
-  "command": ["${VOIDB_CLI}", "ssh", "tui", "--fixture", "crates/plugins/voidb-plugin-ssh/fixtures/ssh_tui_terminal_core.json"],
+  "command": ["${VOIDB_CLI}", "ssh", "tui", "--fixture", "../voidb-plugin-ssh/fixtures/ssh_tui_terminal_core.json"],
   "rows": 30,
   "cols": 100,
   "timeout_ms": 12000,

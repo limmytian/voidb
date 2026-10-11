@@ -342,16 +342,18 @@ impl RegistryPluginVersion {
         current_plat: &str,
     ) -> Option<&RegistryPackageArtifact> {
         // 1. Exact match on target triple (e.g., aarch64-apple-darwin)
-        if let Some(artifact) = self.packages.iter().find(|p| {
-            p.target.as_deref().is_some_and(|t| t == current_target)
-        }) {
+        if let Some(artifact) = self
+            .packages
+            .iter()
+            .find(|p| p.target.as_deref().is_some_and(|t| t == current_target))
+        {
             return Some(artifact);
         }
 
         // 2. Exact match on platform or platform prefix in target
         if let Some(artifact) = self.packages.iter().find(|p| {
             if let Some(target) = p.target.as_deref() {
-                target == current_plat || target.contains(current_plat)
+                target == current_plat
             } else {
                 false
             }
@@ -361,13 +363,23 @@ impl RegistryPluginVersion {
 
         // 3. Match universal or platform-agnostic target
         if let Some(artifact) = self.packages.iter().find(|p| {
-            p.target.as_deref().is_some_and(|t| t == "universal" || t == "all" || t == "any")
+            p.target
+                .as_deref()
+                .is_some_and(|t| t == "universal" || t == "all" || t == "any")
         }) {
             return Some(artifact);
         }
 
-        // 4. Default fallback: artifact with no target specified, or first package
-        self.packages.iter().find(|p| p.target.is_none()).or_else(|| self.packages.first())
+        // Legacy unqualified archives are allowed only on a declared platform.
+        if !self.platforms.is_empty()
+            && !self
+                .platforms
+                .iter()
+                .any(|platform| platform == current_plat)
+        {
+            return None;
+        }
+        self.packages.iter().find(|p| p.target.is_none())
     }
 }
 
@@ -479,5 +491,30 @@ mod tests {
         let schema_json: serde_json::Value = serde_json::from_str(include_str!("../../../schemas/plugin-registry.schema.json")).unwrap();
         let compiled = jsonschema::validator_for(&schema_json).unwrap();
         assert!(compiled.is_valid(&json_value));
+    }
+    #[test]
+    fn architecture_specific_packages_never_fall_back_to_another_architecture() {
+        let version: RegistryPluginVersion = serde_json::from_value(serde_json::json!({
+            "version":"0.3.3", "protocol_version":"1", "platforms":["darwin"],
+            "packages":[{"filename":"plugin-aarch64-apple-darwin.tar.gz", "format":"tar.gz",
+                "target":"aarch64-apple-darwin", "url":"https://example.invalid/plugin.tar.gz",
+                "sha256":"digest"}]
+        }))
+        .unwrap();
+        assert!(
+            version
+                .find_matching_package("aarch64-apple-darwin", "darwin")
+                .is_some()
+        );
+        assert!(
+            version
+                .find_matching_package("x86_64-apple-darwin", "darwin")
+                .is_none()
+        );
+        assert!(
+            version
+                .find_matching_package("x86_64-pc-windows-msvc", "windows")
+                .is_none()
+        );
     }
 }

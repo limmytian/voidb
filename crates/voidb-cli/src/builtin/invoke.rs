@@ -366,9 +366,12 @@ fn authorization_discovery() -> ProcessPluginDiscovery {
     .map(|id| {
         let plugin_dir = root.join(id);
         let manifest_path = plugin_dir.join("plugin.toml");
-        let manifest: ProcessPluginManifest =
-            toml::from_str(&std::fs::read_to_string(&manifest_path).expect("read catalog fixture"))
-                .expect("decode catalog fixture");
+        let content = std::fs::read_to_string(&manifest_path).expect("read catalog fixture");
+        let decoded: toml::Value = toml::from_str(&content).expect("decode catalog fixture");
+        voidb_core::process_plugin::validate_process_plugin_manifest_json(
+            &serde_json::to_value(decoded).expect("encode manifest JSON"),
+        ).expect("catalog fixture must satisfy discovery schema");
+        let manifest: ProcessPluginManifest = toml::from_str(&content).expect("decode catalog contract");
         let mut resolved_schema_paths = BTreeMap::new();
         for capability in &manifest.capabilities {
             for (kind, path) in [

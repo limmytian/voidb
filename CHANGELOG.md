@@ -8,10 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.3.3] - 2026-10-09
 
 ### Security
+- Preserve explicit restrictions on capability-wide authorization and validate bounded live-session metadata when discovering process plugins.
+- Require verified release checksums before installation and initialize bundled plugins through the CLI installation record gate.
 - **Runtime Binary Integrity Verification Gate**: Introduced SHA-256 binary digest verification before executing any external process plugin. Blocks unauthorized binary replacement or tampering with `SECURITY GATE BLOCKED` to prevent credential leakage.
 - **Secure Stdio IPC Credential Channel**: Refactored `test_connection_by_plugin` across all 14 plugins to transfer decrypted connection configurations via secure anonymous pipes (`--stdin-config`), eliminating plaintext credentials in `ps aux` command-line arguments.
 
 ### Fixed
+- Make broker contract tests independent of installed plugins and export complete authorization and session metadata from all official plugin services.
+- Match registry packages by exact architecture and align release asset names with installer and Homebrew conventions.
 - **Plugin CLI Argument Discovery**: Fixed Clap 4 `ArgMatches` panic by guarding against undeclared argument IDs using `.ids().any(...)` across all 14 plugins.
 - **Graceful Raw Configuration Fallback**: Plugin commands not requiring profile secrets (e.g., `docker ps`, local SQLite/DuckDB) no longer block on master password prompts.
 - **SSH Auth & Host Key Validation**: Fixed `SshAuthMethod` serde deserialization aliases and added strict host key failure reporting and TUI prompt handling in `voidb-plugin-ssh`.

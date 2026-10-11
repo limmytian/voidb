@@ -15,17 +15,20 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            artifact_name: voidb
+            platform: linux-x64
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
-            artifact_name: voidb
+            platform: linux-arm64
             use_cross: true
           - target: aarch64-apple-darwin
             os: macos-latest
-            artifact_name: voidb
+            platform: darwin-arm64
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            platform: darwin-x64
           - target: x86_64-pc-windows-msvc
             os: windows-latest
-            artifact_name: voidb.exe
+            platform: windows-x64
 
     steps:
       - uses: actions/checkout@v4
@@ -52,14 +55,22 @@ jobs:
           fi
         shell: bash
 
+      - name: Stage Verified Default Plugins (Unix)
+        if: runner.os != 'Windows'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/download-release-plugins.py --version "${GITHUB_REF_NAME#v}" --target "${{ matrix.target }}" --output stage
+        shell: bash
+
       - name: Package Binaries (Unix)
         if: runner.os != 'Windows'
         run: |
           mkdir -p dist
           cp target/${{ matrix.target }}/release/voidb dist/voidb
           cp target/${{ matrix.target }}/release/voidb-cli dist/voidb-cli
+          cp -R stage/${{ matrix.target }}/plugins dist/plugins
           cd dist
-          tar -czf voidb-${{ github.ref_name }}-${{ matrix.target }}.tar.gz voidb voidb-cli
+          tar -czf voidb-${GITHUB_REF_NAME#v}-${{ matrix.platform }}.tar.gz voidb voidb-cli plugins
         shell: bash
 
       - name: Package Binaries (Windows)
@@ -69,14 +80,16 @@ jobs:
           cp target/${{ matrix.target }}/release/voidb.exe dist/voidb.exe
           cp target/${{ matrix.target }}/release/voidb-cli.exe dist/voidb-cli.exe
           cd dist
-          7z a voidb-${{ github.ref_name }}-${{ matrix.target }}.zip voidb.exe voidb-cli.exe
+          7z a voidb-${GITHUB_REF_NAME#v}-${{ matrix.platform }}.zip voidb.exe voidb-cli.exe
         shell: bash
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: voidb-${{ matrix.target }}
-          path: dist/*.*
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
 
   publish-release:
     name: Publish GitHub Release

@@ -20,6 +20,12 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
 
+      - name: Install System Dependencies
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+
+      - name: Verify Release Archive Staging
+        run: python3 -m unittest discover -s scripts/tests -v
+
       - name: Clippy (Fast Tier)
         run: |
           cargo clippy -p voidb-core --all-targets --no-deps

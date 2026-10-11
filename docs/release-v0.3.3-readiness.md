@@ -64,3 +64,19 @@ The release owner confirmed that the six missing repositories should be public u
 - All 14 independent repositories: contract `--check`, `cargo test --all-targets --no-fail-fast`, strict `cargo clippy --all-targets --no-deps -- -D warnings`, and `git diff --check` passed.
 
 The main repair commit must be synchronized first so the immutable SDK/core revision becomes available on GitHub. This is a dependency-bootstrap push, not a release tag. Plugin remote synchronization and release publication remain separate gates.
+
+## Distribution alignment
+
+Unix release archives contain the shell, CLI and six default plugins, downloaded
+from the matching verified plugin releases. Four Unix architectures are planned:
+Linux x64/arm64 and macOS x64/arm64. Windows packages contain the shell and CLI;
+no Windows plugin binaries are claimed. Publish the SDK source commit first,
+then all fourteen plugin releases, and only then tag the main release that
+consumes their assets. Registry generation reads published archives for all
+four supported plugin targets instead of source checkouts.
+
+Pre-release checks cover missing/corrupt checksums, unsafe archive paths,
+installation records, architecture selection, manifest schema roundtrips and
+unbounded live-session rejection. The isolated Connection Manager/SSH PTY
+quality gate passed before publication; final downloadable package acceptance
+remains a separate gate.

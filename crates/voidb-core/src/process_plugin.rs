@@ -40,6 +40,11 @@ static PLUGIN_MANIFEST_SCHEMA: Lazy<Value> = Lazy::new(|| {
         .expect("plugin manifest schema is valid JSON")
 });
 
+/// Validate decoded TOML JSON against the process manifest contract.
+pub fn validate_process_plugin_manifest_json(value: &Value) -> Result<(), String> {
+    jsonschema::validate(&PLUGIN_MANIFEST_SCHEMA, value).map_err(|error| error.to_string())
+}
+
 /// Parsed `plugin.toml` manifest for a process plugin.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ProcessPluginManifest {
@@ -2044,7 +2049,7 @@ fn discover_candidate(root: &ProcessPluginRoot, plugin_dir: PathBuf) -> ProcessP
         }
     };
 
-    if let Err(error) = jsonschema::validate(&PLUGIN_MANIFEST_SCHEMA, &manifest_json) {
+    if let Err(error) = validate_process_plugin_manifest_json(&manifest_json) {
         return invalid_candidate(
             manifest_json_id(&manifest_json).unwrap_or(fallback_id),
             manifest_path,
@@ -2263,6 +2268,18 @@ fn validate_capability_semantics(
         .collect::<HashSet<_>>();
 
     for capability in &manifest.capabilities {
+        if let Some(handoff) = &capability.session_handoff
+            && let Some(contract) = &handoff.live_session
+            && let Err(error) = contract.validate(&handoff.capabilities)
+        {
+            *invalid = true;
+            diagnostics.push(ProcessPluginDiagnostic::error(
+                "manifest.live_session_invalid",
+                "Live-session metadata violates the bounded session contract.",
+                json!({ "capability_id": capability.id, "reason": error.message }),
+            ));
+        }
+
         let declared_risk = capability
             .risk
             .unwrap_or_else(|| CapabilityRiskLevel::from_destructive(capability.destructive));
@@ -2879,8 +2896,47 @@ mod tests {
             }),
         );
 
-        jsonschema::validate(&PLUGIN_MANIFEST_SCHEMA, &manifest_json)
+        validate_process_plugin_manifest_json(&manifest_json)
             .expect("session execution metadata should match the manifest schema");
+    }
+
+    #[test]
+    fn manifest_roundtrip_preserves_authorization_and_rejects_unbounded_live_sessions() {
+        let temp = TempDir::new("live-contract-roundtrip");
+        write_valid_plugin(temp.path(), "fixture", "fixture", "1", &[current_platform()]);
+        let path = temp.path().join("fixture/plugin.toml");
+        let value: toml::Value = toml::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        let mut json = serde_json::to_value(value).unwrap();
+        let contract: crate::AgentLiveSessionContract = serde_json::from_value(json!({
+            "kind":{"kind":"events"},
+            "resource":{"resource_type":"fixture_events", "identity_schema":{"type":"object"}, "identity_fields":["/resource_id"]},
+            "start_parameters_schema":{"type":"object"}, "event_schema":{"type":"object"},
+            "operations":{"events":"fixture.get"}
+        })).unwrap();
+        json["capabilities"][0]["authorization"] = json!({
+            "declared":true, "capability_wide_allowed":false,
+            "approval_schema":{"version":1, "fields":[{"path":"/local_root", "label":"Local root",
+                "value_type":"path", "required":true, "constraint":"prefix"}]}
+        });
+        json["capabilities"][0]["execution_mode"] = json!("both");
+        json["capabilities"][0]["session_handoff"] = json!({
+            "purpose":{"kind":"watch_stream"}, "capabilities":["fixture.get"], "live_session":contract
+        });
+        validate_process_plugin_manifest_json(&json).unwrap();
+        let manifest: ProcessPluginManifest = serde_json::from_value(json.clone()).unwrap();
+        fs::write(&path, toml::to_string(&manifest).unwrap()).unwrap();
+        let roots = vec![ProcessPluginRoot::new(temp.path(), ProcessPluginRootKind::User, 0)];
+        let discovery = discover_process_plugins_from_roots(roots.clone());
+        assert_eq!(discovery.candidates[0].state, ProcessPluginCandidateState::Available, "{:?}", discovery.candidates[0].diagnostics);
+        assert!(!discovery.candidates[0].manifest.as_ref().unwrap().capabilities[0].authorization.capability_wide_allowed);
+        json["capabilities"][0]["session_handoff"]["live_session"]["buffer"]["max_events"] =
+            json!(crate::MAX_AGENT_LIVE_SESSION_BUFFER_EVENTS + 1);
+        validate_process_plugin_manifest_json(&json).unwrap();
+        let invalid: ProcessPluginManifest = serde_json::from_value(json).unwrap();
+        fs::write(&path, toml::to_string(&invalid).unwrap()).unwrap();
+        let discovery = discover_process_plugins_from_roots(roots);
+        assert_eq!(discovery.candidates[0].state, ProcessPluginCandidateState::Invalid);
+        assert!(discovery.candidates[0].diagnostics.iter().any(|d| d.code == "manifest.live_session_invalid"));
     }
 
     #[test]

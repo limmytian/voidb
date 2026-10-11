@@ -167,6 +167,9 @@
           },
           "uniqueItems": true,
           "default": []
+        },
+        "live_session": {
+          "$ref": "#/$defs/agentLiveSessionContract"
         }
       }
     },
@@ -367,11 +370,25 @@
                           "privilege_escalation",
                           "destructive"
                         ]
+                      },
+                      "constraint": {
+                        "type": "string",
+                        "enum": [
+                          "exact",
+                          "prefix",
+                          "subset",
+                          "maximum"
+                        ],
+                        "default": "exact"
                       }
                     }
                   }
                 }
               }
+            },
+            "capability_wide_allowed": {
+              "type": "boolean",
+              "default": false
             }
           }
         },
@@ -452,6 +469,246 @@
           "uniqueItems": true
         }
       }
+    },
+    "agentLiveSessionContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "protocol_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "kind": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "log",
+                "metrics",
+                "events",
+                "watch",
+                "exec",
+                "attach",
+                "port_forward",
+                "progressive_output",
+                "wait",
+                "queue",
+                "subscription",
+                "cursor",
+                "transfer",
+                "plugin_defined"
+              ]
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        "resource": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "resource_type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "identity_schema": {
+              "type": "object"
+            },
+            "identity_fields": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "audit_identity": {
+              "type": "string",
+              "enum": [
+                "omitted",
+                "fingerprint"
+              ]
+            }
+          },
+          "required": [
+            "resource_type",
+            "identity_schema"
+          ]
+        },
+        "start_parameters_schema": {
+          "type": "object"
+        },
+        "event_schema": {
+          "type": "object"
+        },
+        "operations": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "events": {
+              "$ref": "#/$defs/qualifiedCapabilityId"
+            },
+            "input": {
+              "$ref": "#/$defs/qualifiedCapabilityId"
+            },
+            "resize": {
+              "$ref": "#/$defs/qualifiedCapabilityId"
+            },
+            "signal": {
+              "$ref": "#/$defs/qualifiedCapabilityId"
+            }
+          },
+          "required": [
+            "events"
+          ]
+        },
+        "buffer": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_events": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "overflow": {
+              "type": "string",
+              "enum": [
+                "drop_oldest",
+                "drop_newest",
+                "coalesce"
+              ]
+            }
+          },
+          "required": [
+            "max_events",
+            "max_bytes"
+          ]
+        },
+        "reconnect": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "never",
+                "transient",
+                "always"
+              ]
+            },
+            "max_attempts": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "initial_backoff_ms": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "max_backoff_ms": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "resume": {
+              "type": "string",
+              "enum": [
+                "unsupported",
+                "restart",
+                "best_effort_cursor",
+                "exact_cursor"
+              ]
+            },
+            "cursor_kind": {
+              "type": "string",
+              "enum": [
+                "byte_offset",
+                "event_id",
+                "resource_version",
+                "timestamp",
+                "opaque"
+              ]
+            }
+          }
+        },
+        "delivery": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "backpressure": {
+              "type": "string",
+              "enum": [
+                "bounded_buffer",
+                "source_paced"
+              ]
+            },
+            "cursor_scope": {
+              "type": "string",
+              "enum": [
+                "optional",
+                "required"
+              ]
+            },
+            "max_read_wait_ms": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "heartbeat": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "interval_ms": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "idle_timeout_ms": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          }
+        },
+        "control": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cancel": {
+              "type": "string",
+              "enum": [
+                "call_only",
+                "call_and_source"
+              ]
+            },
+            "close": {
+              "type": "string",
+              "enum": [
+                "stop_observation",
+                "detach_remote",
+                "terminate_remote"
+              ]
+            }
+          }
+        },
+        "start_risk": {
+          "$ref": "#/$defs/capabilityRiskLevel"
+        }
+      },
+      "required": [
+        "kind",
+        "resource",
+        "start_parameters_schema",
+        "event_schema",
+        "operations"
+      ]
     }
   }
 }

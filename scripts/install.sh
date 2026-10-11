@@ -129,10 +129,11 @@ main() {
         fi
 
         if [[ -z "$tag" ]]; then
-            tag="v0.3.0"
-            warn "Could not query latest release tag from GitHub API. Falling back to default: $tag"
+            error "Could not query the latest release. Set VOIDB_VERSION explicitly to retry."
         fi
     fi
+
+    [[ "$tag" == v* ]] || tag="v$tag"
 
     # Strip prefix 'v' for archive naming if present
     local clean_version="${tag#v}"
@@ -146,30 +147,21 @@ main() {
         error "Failed to download $archive_name from $download_url. Please verify network access or release availability."
     fi
 
-    # Attempt to download SHA256SUMS and verify
     local sums_url="https://github.com/${REPO}/releases/download/${tag}/SHA256SUMS"
-    if fetch_file "$sums_url" "$TMP_DIR/SHA256SUMS" 2>/dev/null; then
-        info "Verifying SHA256 checksum..."
-        local expected_sha
-        expected_sha="$(grep "$archive_name" "$TMP_DIR/SHA256SUMS" | awk '{print $1}' || true)"
-        if [[ -n "$expected_sha" ]]; then
-            local actual_sha
-            if command -v shasum >/dev/null 2>&1; then
-                actual_sha="$(shasum -a 256 "$TMP_DIR/$archive_name" | awk '{print $1}')"
-            elif command -v sha256sum >/dev/null 2>&1; then
-                actual_sha="$(sha256sum "$TMP_DIR/$archive_name" | awk '{print $1}')"
-            else
-                actual_sha=""
-            fi
-
-            if [[ -n "$actual_sha" ]]; then
-                if [[ "$actual_sha" != "$expected_sha" ]]; then
-                    error "Checksum verification failed! Expected: $expected_sha, got: $actual_sha"
-                fi
-                info "Checksum verified successfully (${actual_sha:0:16}...)"
-            fi
-        fi
+    fetch_file "$sums_url" "$TMP_DIR/SHA256SUMS" || error "Release checksum file is unavailable."
+    local expected_sha
+    expected_sha="$(awk -v name="$archive_name" '$2 == name || $2 == "*" name {print $1}' "$TMP_DIR/SHA256SUMS")"
+    [[ "$expected_sha" =~ ^[0-9a-fA-F]{64}$ ]] || error "Missing or ambiguous archive checksum."
+    local actual_sha
+    if command -v shasum >/dev/null 2>&1; then
+        actual_sha="$(shasum -a 256 "$TMP_DIR/$archive_name" | awk '{print $1}')"
+    elif command -v sha256sum >/dev/null 2>&1; then
+        actual_sha="$(sha256sum "$TMP_DIR/$archive_name" | awk '{print $1}')"
+    else
+        error "A SHA-256 checksum tool is required."
     fi
+    [[ "$actual_sha" == "$expected_sha" ]] || error "Archive checksum verification failed."
+    info "Checksum verified successfully."
 
     info "Extracting archive..."
     tar -xzf "$TMP_DIR/$archive_name" -C "$TMP_DIR"
@@ -198,7 +190,11 @@ main() {
         fi
         info "Installing bundled default database plugins to ${user_plugin_dir}..."
         mkdir -p "$user_plugin_dir"
-        cp -R "$TMP_DIR/plugins/"* "$user_plugin_dir/"
+        local plugin_result
+        plugin_result="$(VOIDB_BUNDLED_PLUGIN_ROOT="$TMP_DIR/plugins" "$dest_dir/voidb-cli" plugin install-default --from-bundled --install-root "$user_plugin_dir" --format json)" || error "Bundled plugin installation failed."
+        if printf '%s' "$plugin_result" | grep -q '"status": "failed"'; then
+            error "A bundled plugin failed validation or installation."
+        fi
     fi
 
     # Verify installation

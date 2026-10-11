@@ -35,20 +35,17 @@ jobs:
       - name: Cache Cargo Dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Checkout Standalone Plugin Repositories
-        run: |
-          mkdir -p ../plugins-cache
-          PLUGINS=("s3" "email" "docker" "kubernetes" "elasticsearch" "mongodb" "jenkins" "webdav")
-          for plugin in "${PLUGINS[@]}"; do
-            echo "Checking out voidb-plugin-${plugin}..."
-            git clone --depth 1 "https://github.com/limmytian/voidb-plugin-${plugin}.git" "../voidb-plugin-${plugin}" || true
-          done
-        shell: bash
+      - name: Download Verified Published Plugin Archives
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ inputs.version || github.event.client_payload.release || 'v0.3.3' }}
+        run: python3 scripts/download-release-plugins.py --all --version "$RELEASE_VERSION" --output target/registry-release
 
-      - name: Rebuild Registry Index
+      - name: Rebuild Registry From Published Archives
         run: |
-          chmod +x scripts/build-registry-index.sh
-          ./scripts/build-registry-index.sh registry/index.json
+          mapfile -t archives < <(find target/registry-release/.downloads -name '*.tar.gz' | sort)
+          test "${#archives[@]}" -eq 56
+          cargo run -p voidb-cli -- plugin registry-index "${archives[@]}" --output registry/index.json --registry-name 'VoidB Official Plugin Registry' --format json
         shell: bash
 
       - name: Validate Registry Manifest with CLI
@@ -64,7 +61,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No registry changes detected."
           else
-            git commit -m "chore(registry): update official plugin index manifest [skip ci]"
+            git commit -m "chore(registry): update official plugin index manifest"
             git push origin main
           fi
         shell: bash

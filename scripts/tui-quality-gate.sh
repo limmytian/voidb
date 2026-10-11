@@ -83,6 +83,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 cd "${REPO_ROOT}"
+# Standalone fixture plugins are discovered from sibling repositories.
+export VOIDB_PLUGIN_PATH="${VOIDB_PLUGIN_PATH:-${REPO_ROOT}/..}"
 
 if [[ "${BUILD}" -eq 1 ]]; then
   printf '\n==> cargo build -q -p voidb-cli -p voidb-tui\n'
@@ -130,7 +132,7 @@ plugins = [
     {
         "id": "ssh",
         "kind": "ssh_tui_fixture_evidence",
-        "fixture": "crates/plugins/voidb-plugin-ssh/fixtures/ssh_tui_terminal_core.json",
+        "fixture": "../voidb-plugin-ssh/fixtures/ssh_tui_terminal_core.json",
     },
 ]
 

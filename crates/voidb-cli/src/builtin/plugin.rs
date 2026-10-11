@@ -1030,7 +1030,9 @@ fn handle_registry_index(matches: &ArgMatches) -> Result<(), VoidbError> {
         .cloned()
         .collect::<Vec<_>>();
     let base_url = matches.get_one::<String>("base-url").map(String::as_str);
-    let registry_name = matches.get_one::<String>("registry-name").map(String::as_str);
+    let registry_name = matches
+        .get_one::<String>("registry-name")
+        .map(String::as_str);
 
     let output_path = if let Some(out) = matches.get_one::<PathBuf>("output") {
         out.clone()
@@ -1045,7 +1047,8 @@ fn handle_registry_index(matches: &ArgMatches) -> Result<(), VoidbError> {
             PluginRegistryIndex::new()
         }
     } else if output_path.exists() {
-        PluginRegistryIndex::load_from_file(&output_path).unwrap_or_else(|_| PluginRegistryIndex::new())
+        PluginRegistryIndex::load_from_file(&output_path)
+            .unwrap_or_else(|_| PluginRegistryIndex::new())
     } else {
         PluginRegistryIndex::new()
     };
@@ -1084,43 +1087,100 @@ fn handle_registry_index(matches: &ArgMatches) -> Result<(), VoidbError> {
             }
         };
 
-        let manifest = validation.candidate.manifest.as_ref().expect("validated manifest present");
+        let manifest = validation
+            .candidate
+            .manifest
+            .as_ref()
+            .expect("validated manifest present");
         let plugin_id = manifest.id.clone();
         let version_str = manifest.version.clone();
         let protocol_version_str = manifest.protocol_version.clone();
-        let platforms = manifest.requirements.as_ref()
+        let mut platforms = manifest
+            .requirements
+            .as_ref()
             .and_then(|r| r.platforms.clone())
             .unwrap_or_else(|| vec!["darwin".into(), "linux".into(), "windows".into()]);
-        let voidb_core_constraint = manifest.requirements.as_ref()
+        let voidb_core_constraint = manifest
+            .requirements
+            .as_ref()
             .and_then(|r| r.voidb_core.clone());
 
-        let (filename, format_str, target_triple, size_bytes, sha256_digest) = if input_path.is_file() {
-            let fname = input_path.file_name().unwrap_or_default().to_string_lossy().to_string();
-            let fmt = if fname.ends_with(".tar.zst") {
-                "tar.zst".to_string()
-            } else if fname.ends_with(".tar.gz") {
-                "tar.gz".to_string()
+        let (filename, format_str, target_triple, size_bytes, sha256_digest) =
+            if input_path.is_file() {
+                let fname = input_path
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string();
+                let fmt = if fname.ends_with(".tar.zst") {
+                    "tar.zst".to_string()
+                } else if fname.ends_with(".tar.gz") {
+                    "tar.gz".to_string()
+                } else {
+                    "tar".to_string()
+                };
+                let size = fs::metadata(input_path).map(|m| m.len()).unwrap_or(0);
+                let target = [
+                    "x86_64-unknown-linux-gnu",
+                    "aarch64-unknown-linux-gnu",
+                    "x86_64-apple-darwin",
+                    "aarch64-apple-darwin",
+                    "x86_64-pc-windows-msvc",
+                ]
+                .into_iter()
+                .find(|target| fname.ends_with(&format!("-{target}.{fmt}")))
+                .map(str::to_string);
+                if let Some(target) = &target {
+                    platforms = vec![
+                        if target.contains("apple-darwin") {
+                            "darwin"
+                        } else if target.contains("windows") {
+                            "windows"
+                        } else {
+                            "linux"
+                        }
+                        .into(),
+                    ];
+                }
+                (
+                    fname,
+                    fmt,
+                    target,
+                    Some(size),
+                    validation.package_digest.clone(),
+                )
             } else {
-                "tar".to_string()
+                let fname = format!("{}-{}.tar.gz", plugin_id, version_str);
+                (
+                    fname,
+                    "tar.gz".to_string(),
+                    None,
+                    None,
+                    validation.package_digest.clone(),
+                )
             };
-            let size = fs::metadata(input_path).map(|m| m.len()).unwrap_or(0);
-            (fname, fmt, None, Some(size), validation.package_digest.clone())
-        } else {
-            let fname = format!("{}-{}.tar.gz", plugin_id, version_str);
-            (fname, "tar.gz".to_string(), None, None, validation.package_digest.clone())
-        };
 
         let download_url = if let Some(b) = base_url {
             format!("{}/{}", b.trim_end_matches('/'), filename)
         } else if let Some(homepage) = &manifest.homepage {
-            format!("{}/releases/download/v{}/{}", homepage.trim_end_matches('/'), version_str, filename)
+            format!(
+                "{}/releases/download/v{}/{}",
+                homepage.trim_end_matches('/'),
+                version_str,
+                filename
+            )
         } else {
-            format!("https://github.com/limmytian/voidb-plugin-{}/releases/download/v{}/{}", plugin_id, version_str, filename)
+            format!(
+                "https://github.com/limmytian/voidb-plugin-{}/releases/download/v{}/{}",
+                plugin_id, version_str, filename
+            )
         };
 
         let sig_path = default_signature_path(input_path);
         let signature_str = if sig_path.is_file() {
-            fs::read_to_string(&sig_path).ok().map(|s| s.trim().to_string())
+            fs::read_to_string(&sig_path)
+                .ok()
+                .map(|s| s.trim().to_string())
         } else {
             None
         };
@@ -1139,31 +1199,55 @@ fn handle_registry_index(matches: &ArgMatches) -> Result<(), VoidbError> {
             "s3" | "webdav" => Some(PluginCategory::Storage),
             "docker" | "kubernetes" | "jenkins" | "ssh" => Some(PluginCategory::Infrastructure),
             "elasticsearch" => Some(PluginCategory::Search),
-            "mongodb" | "mysql" | "postgres" | "sqlite" | "redis" | "duckdb" => Some(PluginCategory::Database),
+            "mongodb" | "mysql" | "postgres" | "sqlite" | "redis" | "duckdb" => {
+                Some(PluginCategory::Database)
+            }
             "email" => Some(PluginCategory::Communication),
             _ => Some(PluginCategory::Other),
         };
 
-        let capabilities = manifest.capabilities.iter().map(|c| c.id.clone()).collect::<Vec<_>>();
+        let capabilities = manifest
+            .capabilities
+            .iter()
+            .map(|c| c.id.clone())
+            .collect::<Vec<_>>();
         let tags = vec![plugin_id.clone()];
 
-        let mut existing_entry = index.get_plugin(&plugin_id).cloned().unwrap_or_else(|| RegistryPluginEntry {
-            id: plugin_id.clone(),
-            name: manifest.name.clone(),
-            description: manifest.description.clone(),
-            homepage: manifest.homepage.clone(),
-            license: manifest.license.clone(),
-            category,
-            tags,
-            capabilities,
-            latest_version: version_str.clone(),
-            versions: Vec::new(),
-        });
+        let mut existing_entry =
+            index
+                .get_plugin(&plugin_id)
+                .cloned()
+                .unwrap_or_else(|| RegistryPluginEntry {
+                    id: plugin_id.clone(),
+                    name: manifest.name.clone(),
+                    description: manifest.description.clone(),
+                    homepage: manifest.homepage.clone(),
+                    license: manifest.license.clone(),
+                    category,
+                    tags,
+                    capabilities,
+                    latest_version: version_str.clone(),
+                    versions: Vec::new(),
+                });
 
         existing_entry.latest_version = version_str.clone();
-        if let Some(pos) = existing_entry.versions.iter().position(|v| v.version == version_str) {
+        if let Some(pos) = existing_entry
+            .versions
+            .iter()
+            .position(|v| v.version == version_str)
+        {
             let v = &mut existing_entry.versions[pos];
-            if let Some(pkg_idx) = v.packages.iter().position(|p| p.filename == artifact.filename) {
+            for platform in platforms {
+                if !v.platforms.contains(&platform) {
+                    v.platforms.push(platform);
+                }
+            }
+            v.platforms.sort();
+            if let Some(pkg_idx) = v
+                .packages
+                .iter()
+                .position(|p| p.filename == artifact.filename)
+            {
                 v.packages[pkg_idx] = artifact;
             } else {
                 v.packages.push(artifact);
