@@ -6,10 +6,10 @@ Final distribution acceptance: 2026-10-12 (Asia/Shanghai).
 
 The main and all fourteen plugin v0.3.3 releases are public. Published archives,
 Mac ARM64 clean installation, real old-version upgrades, Homebrew staging and
-Connection Manager/SSH PTY journeys passed. One released registry client issue
-remains: architecture names are not qualified to target triples. The fix is
-pushed and CI-validated; a forward patch release awaits the owner's version decision.
-Local verified archive installation and bundled defaults work in v0.3.3.
+Connection Manager/SSH PTY journeys passed. The released v0.3.3 registry client architecture/target-triple mismatch was
+subsequently fixed in the owner-approved core-only v0.3.4 release. All independent
+plugins remain at v0.3.3. See [final patch acceptance](release-v0.3.4-readiness.md).
+Local verified archive installation and bundled defaults also work in v0.3.3.
 
 Task Weaver requirement: `bc316195-9dde-40c9-bad4-568546bd7a3f`.
 
@@ -174,7 +174,7 @@ Exact-source [CI 38166534476](https://github.com/limmytian/voidb/actions/runs/38
 passed all jobs. Its [release run 38167488068](https://github.com/limmytian/voidb/actions/runs/38167488068)
 builds five native targets and verifies each CLI version and help before packaging.
 
-## Distribution acceptance and remaining patch
+## v0.3.3 distribution acceptance checkpoint
 
 All five public core archives passed their published SHA-256 checksums and
 archive layout checks. Unix archives contain exactly the six default plugin
@@ -214,5 +214,6 @@ The fixed native client passed public registry install, update and six-default
 initialization. Existing published v0.3.3 tags and binaries remain unchanged.
 Until a forward patch is released, use bundled defaults or checksum-verified
 local archives (`plugin install <archive>` / `plugin update <id> --from <archive>`).
-The owner's decision about a core-only v0.3.4 patch is pending; plugin releases
-remain at their validated v0.3.3 versions.
+The owner subsequently approved and published the core-only v0.3.4 patch;
+plugin releases remain at their validated v0.3.3 versions. Final patch source,
+artifact and acceptance evidence is in [v0.3.4 readiness](release-v0.3.4-readiness.md).
