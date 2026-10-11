@@ -49,9 +49,9 @@ jobs:
       - name: Build Binaries
         run: |
           if [ "${{ matrix.use_cross }}" = "true" ]; then
-            cross build --release --target ${{ matrix.target }} -p voidb-tui -p voidb-cli
+            cross build --locked --release --target ${{ matrix.target }} -p voidb-tui -p voidb-cli
           else
-            cargo build --release --target ${{ matrix.target }} -p voidb-tui -p voidb-cli
+            cargo build --locked --release --target ${{ matrix.target }} -p voidb-tui -p voidb-cli
           fi
         shell: bash
 
