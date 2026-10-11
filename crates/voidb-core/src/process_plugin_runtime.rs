@@ -264,6 +264,17 @@ impl ProcessPluginRuntimeHost {
             ));
         };
 
+        crate::process_plugin::verify_plugin_binary_integrity(&self.candidate).map_err(|_| {
+            runtime_error(
+                CapabilityErrorCategory::Policy,
+                "security.process_plugin_integrity_failed",
+                "Process-plugin integrity verification failed. Refusing execution.",
+                json!({ "plugin_id": self.candidate.id }),
+                false,
+                RedactionStatus::NotRequired,
+            )
+        })?;
+
         let mut command = Command::new(command_path);
         command
             .args(&manifest.runtime.args)
@@ -1411,6 +1422,47 @@ mod tests {
 
         assert_eq!(result.status, crate::InvocationStatus::Succeeded);
         assert_eq!(result.output["ok"], true);
+    }
+
+    #[tokio::test]
+    async fn integrity_gate_rejects_tampering_before_health_invocation_or_session_spawn() {
+        for tamper_manifest in [false, true] {
+            let fixture = RuntimeFixture::new("success");
+            let candidate = fixture.host.candidate();
+            let validation = crate::process_plugin::validate_process_plugin_package(
+                crate::process_plugin::ProcessPluginPackageSource::from_path(
+                    &candidate.source.plugin_dir,
+                ).expect("fixture package source"),
+                fixture.path(),
+            ).expect("validate intact fixture package");
+            crate::process_plugin::write_process_plugin_install_record(&validation.install_record)
+                .expect("write integrity record");
+            crate::process_plugin::cleanup_process_plugin_package_staging(&validation.staging_root)
+                .expect("remove fixture package staging");
+            fixture.host.initialize_and_health().await.expect("intact plugin health");
+
+            let marker = fixture.path().join("unexpected-process-start");
+            if tamper_manifest {
+                let mut content = fs::read_to_string(&candidate.manifest_path).unwrap();
+                content.push_str("\n# unauthorized replacement\n");
+                fs::write(&candidate.manifest_path, content).unwrap();
+            } else {
+                let binary = candidate.resolved_runtime_command.as_ref().unwrap();
+                fs::write(binary, format!("#!/bin/sh\ntouch '{}'\n", marker.display())).unwrap();
+            }
+            let health_error = fixture.host.initialize_and_health().await.unwrap_err();
+            let invoke_error = fixture.host.invoke(sample_invocation(Some(1_000)), &sample_grant())
+                .await.unwrap_err();
+            let session_error = match fixture.host.open_session_runtime().await {
+                Ok(_) => panic!("tampered plugin session started"),
+                Err(error) => error,
+            };
+            for error in [health_error, invoke_error, session_error] {
+                assert_eq!(error.category, CapabilityErrorCategory::Policy);
+                assert_eq!(error.code, "security.process_plugin_integrity_failed");
+            }
+            assert!(!marker.exists(), "tampered executable must never start");
+        }
     }
 
     #[tokio::test]

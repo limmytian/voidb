@@ -108,3 +108,18 @@ waits. Test-only discovery now validates immutable metadata once and clones the
 snapshot, removing repeated filesystem/TOML/schema work from concurrent broker
 calls. The complete 183-test full CLI suite passes in about two seconds locally;
 concurrency assertions and production discovery remain unchanged.
+
+## Runtime integrity closure
+
+The candidate CI gate reached 15/15 successful repositories. Acceptance
+preparation then found that CLI forwarding and connection tests checked binary
+integrity, while the shared JSON-RPC host did not. The host now checks the same
+installation record immediately before process creation, covering health,
+stateless invocation and persistent session launch. A regression test verifies
+intact startup and rejects both binary and manifest tampering before credentials
+can reach a child process. Final plugin SDK pins and CI must include this repair.
+
+A real published core 0.3.2 package and Docker 0.3.0 package were downloaded and
+SHA-256 verified for upgrade acceptance. A disposable old-version environment
+contains encrypted credentials and four configuration/profile/credential files
+whose hashes were saved for post-upgrade preservation checks.
