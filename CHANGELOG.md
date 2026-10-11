@@ -5,6 +5,12 @@ All notable changes to VoidB will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4] - 2026-10-12
+
+- Fix registry artifact selection when CLI callers supply architecture names instead of full target triples.
+- Keep platform and architecture matching strict; never choose another architecture as a fallback.
+- Bundle the independently released 0.3.3 default plugins with the 0.3.4 shell and CLI.
+
 ## [0.3.3] - 2026-10-09
 
 ### Security
