@@ -1,6 +1,15 @@
 # v0.3.3 Release Readiness
 
-Audit date: 2026-10-11 (Asia/Shanghai).
+Initial audit date: 2026-10-11 (Asia/Shanghai).
+
+Final distribution acceptance: 2026-10-12 (Asia/Shanghai).
+
+The main and all fourteen plugin v0.3.3 releases are public. Published archives,
+Mac ARM64 clean installation, real old-version upgrades, Homebrew staging and
+Connection Manager/SSH PTY journeys passed. One released registry client issue
+remains: architecture names are not qualified to target triples. The fix is
+pushed and CI-validated; a forward patch release awaits the owner's version decision.
+Local verified archive installation and bundled defaults work in v0.3.3.
 
 Task Weaver requirement: `bc316195-9dde-40c9-bad4-568546bd7a3f`.
 
@@ -123,3 +132,87 @@ A real published core 0.3.2 package and Docker 0.3.0 package were downloaded and
 SHA-256 verified for upgrade acceptance. A disposable old-version environment
 contains encrypted credentials and four configuration/profile/credential files
 whose hashes were saved for post-upgrade preservation checks.
+
+## Published source and artifact verification
+
+The final plugin SDK/core dependency is pinned to immutable source revision
+`31d22cd09c9b10f1d22f59d47e789a49c33a290d`, including the shared runtime integrity gate.
+All fourteen release source commits passed independent CI with tracked lockfiles
+and `--locked` builds. Every plugin requires core `>=0.3.3`.
+
+| Plugin | Immutable v0.3.3 source | Source CI | Successful release run |
+|---|---|---|---|
+| mysql | `d9638303cb22a180c0f1c079ffd71795367a6c93` | [38165152328](https://github.com/limmytian/voidb-plugin-mysql/actions/runs/38165152328) | [38166593410](https://github.com/limmytian/voidb-plugin-mysql/actions/runs/38166593410) |
+| postgres | `68f9198582ec4c5531b92ba2a701ceb9d86c5bfc` | [38165154485](https://github.com/limmytian/voidb-plugin-postgres/actions/runs/38165154485) | [38166812730](https://github.com/limmytian/voidb-plugin-postgres/actions/runs/38166812730) |
+| sqlite | `aa211f45609a12ad05ec10b1d2e83440de793090` | [38165156700](https://github.com/limmytian/voidb-plugin-sqlite/actions/runs/38165156700) | [38165515117](https://github.com/limmytian/voidb-plugin-sqlite/actions/runs/38165515117) |
+| redis | `47dec20696a358b035e96445d4ae906a91f9db86` | [38165158733](https://github.com/limmytian/voidb-plugin-redis/actions/runs/38165158733) | [38165517660](https://github.com/limmytian/voidb-plugin-redis/actions/runs/38165517660) |
+| ssh | `cf00c1f282f1ecffac287e6db49b458f69cbe4ea` | [38165160419](https://github.com/limmytian/voidb-plugin-ssh/actions/runs/38165160419) | [38165520205](https://github.com/limmytian/voidb-plugin-ssh/actions/runs/38165520205) |
+| duckdb | `550f2fce9e5b7f6ea2b8e1f323a9be394df63317` | [38165162650](https://github.com/limmytian/voidb-plugin-duckdb/actions/runs/38165162650) | [38165522226](https://github.com/limmytian/voidb-plugin-duckdb/actions/runs/38165522226) |
+| docker | `69aab2504582dd00f53ae8a04687b4e25702e898` | [38165164742](https://github.com/limmytian/voidb-plugin-docker/actions/runs/38165164742) | [38165524794](https://github.com/limmytian/voidb-plugin-docker/actions/runs/38165524794) |
+| kubernetes | `d319d4b1b5c3192d9803cd3f5a9e6318721c7e72` | [38165166813](https://github.com/limmytian/voidb-plugin-kubernetes/actions/runs/38165166813) | [38165527302](https://github.com/limmytian/voidb-plugin-kubernetes/actions/runs/38165527302) |
+| s3 | `2ba6edad0ef3de1855f80e2f25cd2764246d7150` | [38165169088](https://github.com/limmytian/voidb-plugin-s3/actions/runs/38165169088) | [38165529494](https://github.com/limmytian/voidb-plugin-s3/actions/runs/38165529494) |
+| elasticsearch | `8b9f4b8d4cee44e3133d03b9131f635fc161f2ea` | [38165172626](https://github.com/limmytian/voidb-plugin-elasticsearch/actions/runs/38165172626) | [38165531677](https://github.com/limmytian/voidb-plugin-elasticsearch/actions/runs/38165531677) |
+| mongodb | `c68a5e0eff9cb9862bd9e7409cf9e2b85ca5b749` | [38165175123](https://github.com/limmytian/voidb-plugin-mongodb/actions/runs/38165175123) | [38165534375](https://github.com/limmytian/voidb-plugin-mongodb/actions/runs/38165534375) |
+| jenkins | `ab142d27ffaba0242ba616dfe252967eabf31469` | [38165177411](https://github.com/limmytian/voidb-plugin-jenkins/actions/runs/38165177411) | [38165537340](https://github.com/limmytian/voidb-plugin-jenkins/actions/runs/38165537340) |
+| webdav | `2b3dfe278cf282e3494f1ac232f6c8ed6769ea4f` | [38165179538](https://github.com/limmytian/voidb-plugin-webdav/actions/runs/38165179538) | [38165540541](https://github.com/limmytian/voidb-plugin-webdav/actions/runs/38165540541) |
+| email | `792a23f4446a682b1fd3634ca297c08810844fe9` | [38165181712](https://github.com/limmytian/voidb-plugin-email/actions/runs/38165181712) | [38165542940](https://github.com/limmytian/voidb-plugin-email/actions/runs/38165542940) |
+
+The first MySQL and PostgreSQL release runs failed only for Linux ARM64 because
+the cross-compilation image lacked target OpenSSL. Recovery workflows checked
+the original run source SHA against the existing tag, reused its successful
+platform artifacts, and built the missing target on a native ARM64 runner.
+No published tag was moved. Future releases use native runners for all targets.
+
+All 56 published plugin `.tar.gz` archives were downloaded, verified against
+their published `SHA256SUMS`, and indexed. Each generated registry entry was
+checked against the actual filename, target, download URL, byte size and digest.
+The six published macOS ARM64 default packages were installed in a disposable
+home; installation record binary digests and CLI help dispatch passed.
+
+Main tag `v0.3.3` points to `8fa94d110bc0802d35cc7ce21545dd9b8b4b8d83`.
+Exact-source [CI 38166534476](https://github.com/limmytian/voidb/actions/runs/38166534476)
+passed all jobs. Its [release run 38167488068](https://github.com/limmytian/voidb/actions/runs/38167488068)
+builds five native targets and verifies each CLI version and help before packaging.
+
+## Distribution acceptance and remaining patch
+
+All five public core archives passed their published SHA-256 checksums and
+archive layout checks. Unix archives contain exactly the six default plugin
+packages at version 0.3.3; Windows contains the two shell/CLI executables.
+All 56 plugin binaries match their declared native architectures.
+
+The public core 0.3.2 upgrade baseline actually bundled plugin version 0.3.1.
+The published installer preserved all four saved configuration, credential and
+audit file hashes and kept those installed plugins. Explicit updates to 0.3.3
+retained previous-version directories and digest records. Docker upgraded from
+its real published 0.3.0 package to 0.3.3. No fixture passphrase appeared in
+command output. Modified installed SQLite binaries were rejected before dispatch.
+
+The published core and installed published SSH package passed the final real PTY
+gate at `target/tmp/v033-published-package-gate-final/report.md`. Its first run
+identified a stale test marker: the released invalid-choice prompt is
+`host key prompt:` rather than `host key prompt requires`. The journey now checks
+the actual prompt; all remaining actions and security checks are retained.
+
+Homebrew formula commit
+[`927d236`](https://github.com/limmytian/homebrew-tap/commit/927d236) publishes
+all four real core archive digests, including Intel Mac, and corrects the license
+to Apache-2.0. The actual formula install ran with Homebrew libraries against
+the downloaded Mac ARM64 archive in a temporary prefix. Native CLI version,
+share-directory discovery, six bundled installations and plugin help passed.
+This acceptance did not replace the owner's globally installed Homebrew package.
+
+Registry commit
+[`bc33f2d`](https://github.com/limmytian/voidb/commit/bc33f2d)
+indexes the 56 public plugin archives. Actual registry installation with the
+released CLI exposed an architecture/triple mismatch. Fix commit
+[`6a0287f`](https://github.com/limmytian/voidb/commit/6a0287f)
+qualifies architecture names by platform without allowing another architecture
+as a fallback. Workspace tests, Clippy and exact-source
+[CI 38168359477](https://github.com/limmytian/voidb/actions/runs/38168359477) passed.
+The fixed native client passed public registry install, update and six-default
+initialization. Existing published v0.3.3 tags and binaries remain unchanged.
+Until a forward patch is released, use bundled defaults or checksum-verified
+local archives (`plugin install <archive>` / `plugin update <id> --from <archive>`).
+The owner's decision about a core-only v0.3.4 patch is pending; plugin releases
+remain at their validated v0.3.3 versions.

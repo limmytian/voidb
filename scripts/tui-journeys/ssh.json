@@ -14,7 +14,7 @@
   "prepare_dirs": ["${REPO_ROOT}/target/tmp/tui-journey-runtime/${RUN_ID}/home/.config"],
   "actions": [
     {"type": "wait", "name": "first_frame", "marker": "SSH TUI -", "timeout_ms": 4000},
-    {"type": "input", "name": "invalid_host_key_choice", "data": "z", "marker": "host key prompt requires", "timeout_ms": 500},
+    {"type": "input", "name": "invalid_host_key_choice", "data": "z", "marker": "host key prompt:", "timeout_ms": 500},
     {"type": "input", "name": "accept_host_key", "data": "a", "marker": "host key accepted", "metric": "key_to_repaint_ms", "timeout_ms": 500},
     {"type": "input", "name": "raw_echo", "data": "Z", "expect_echo": true, "metric": "raw_echo_ms", "timeout_ms": 500},
     {"type": "resize", "name": "resize", "rows": 24, "cols": 80, "marker": "resized PTY", "metric": "resize_frame_ms", "timeout_ms": 500},
