@@ -3,7 +3,7 @@
   "schema_version": 1,
   "registry_name": "VoidB Official Plugin Registry",
   "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
-  "updated_at": "2026-10-08T11:18:14.329765Z",
+  "updated_at": "2026-10-11T19:20:04.316857Z",
   "plugins": [
     {
       "id": "docker",
@@ -35,25 +35,49 @@
         "attach_resize",
         "container_action"
       ],
-      "latest_version": "0.3.0",
+      "latest_version": "0.3.3",
       "versions": [
         {
-          "version": "0.3.0",
+          "version": "0.3.3",
           "protocol_version": "1",
-          "released_at": "2026-10-07T14:09:37.918337Z",
-          "voidb_core": ">=0.1.0",
+          "released_at": "2026-10-11T19:19:20.493994Z",
+          "voidb_core": ">=0.3.3",
           "platforms": [
             "darwin",
-            "linux",
-            "windows"
+            "linux"
           ],
           "packages": [
             {
-              "filename": "docker-0.3.0.tar.gz",
+              "filename": "docker-0.3.3-aarch64-apple-darwin.tar.gz",
               "format": "tar.gz",
-              "url": "https://github.com/limmytian/voidb-plugin-docker/releases/download/v0.3.0/docker-0.3.0.tar.gz",
-              "sha256": "sha256:7a6cee3cfade56b5b6dc6d8364a1707d4ae9480efb67d32944c3fc2b42356d87",
-              "size_bytes": 1679673
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-docker/releases/download/v0.3.3/docker-0.3.3-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:a790902bcc0e95ad804e29f51042412d2dfa5b3e0c08621d3c7f56096eab6d8e",
+              "size_bytes": 3070559
+            },
+            {
+              "filename": "docker-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-docker/releases/download/v0.3.3/docker-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:9f0b7119bdf5864b8a71332331e026f290ba32b38194a3174579dd6640ee6a04",
+              "size_bytes": 3339970
+            },
+            {
+              "filename": "docker-0.3.3-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-docker/releases/download/v0.3.3/docker-0.3.3-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:3972bbd41bad876eab7a7b3a468e66466a5a96cf559745c61afd34dffb21e554",
+              "size_bytes": 3189067
+            },
+            {
+              "filename": "docker-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-docker/releases/download/v0.3.3/docker-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:9c3220e61c0c7300e4680258a564ae7d62e9451d235a4eeae67f9cd62074eb3f",
+              "size_bytes": 3629254
             }
           ]
         }
@@ -80,24 +104,49 @@
         "import_plan",
         "import_apply"
       ],
-      "latest_version": "0.3.1",
+      "latest_version": "0.3.3",
       "versions": [
         {
-          "version": "0.3.1",
+          "version": "0.3.3",
           "protocol_version": "1",
-          "released_at": "2026-10-08T11:18:12.374303Z",
+          "released_at": "2026-10-11T19:19:24.950489Z",
+          "voidb_core": ">=0.3.3",
           "platforms": [
             "darwin",
-            "linux",
-            "windows"
+            "linux"
           ],
           "packages": [
             {
-              "filename": "duckdb-0.3.1.tar.gz",
+              "filename": "duckdb-0.3.3-aarch64-apple-darwin.tar.gz",
               "format": "tar.gz",
-              "url": "https://github.com/limmytian/voidb-plugin-duckdb/releases/download/v0.3.1/duckdb-0.3.1.tar.gz",
-              "sha256": "sha256:5b96a2fabb0fc6e7243470d192cae20e3064561a7f7011887553b7e9e0700d63",
-              "size_bytes": 26441726
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-duckdb/releases/download/v0.3.3/duckdb-0.3.3-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:d4961bca7bdf3dcbf7d72e3599cd47dda9d0721b5253e0fe49c1fdc4c47d8ecf",
+              "size_bytes": 13524414
+            },
+            {
+              "filename": "duckdb-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-duckdb/releases/download/v0.3.3/duckdb-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:51d287e779fe9e2985cfe62d9c63a93872ad0e4449c06426d08096652bd0185a",
+              "size_bytes": 15531279
+            },
+            {
+              "filename": "duckdb-0.3.3-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-duckdb/releases/download/v0.3.3/duckdb-0.3.3-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:da7366ddd699ba11f5af662dcb5e5c2a96a92b8b37ba11fa4e8a8b048e4fcdf1",
+              "size_bytes": 14566106
+            },
+            {
+              "filename": "duckdb-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-duckdb/releases/download/v0.3.3/duckdb-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:344ae990f12aab807c36bdd5e1d9da3c9c77a8c0ccac92894f919440b93df55a",
+              "size_bytes": 16751208
             }
           ]
         }
@@ -126,25 +175,49 @@
         "bulk",
         "raw_api"
       ],
-      "latest_version": "0.3.0",
+      "latest_version": "0.3.3",
       "versions": [
         {
-          "version": "0.3.0",
+          "version": "0.3.3",
           "protocol_version": "1",
-          "released_at": "2026-10-07T14:14:29.550488Z",
-          "voidb_core": ">=0.1.0",
+          "released_at": "2026-10-11T19:19:33.957949Z",
+          "voidb_core": ">=0.3.3",
           "platforms": [
             "darwin",
-            "linux",
-            "windows"
+            "linux"
           ],
           "packages": [
             {
-              "filename": "elasticsearch-0.3.0.tar.gz",
+              "filename": "elasticsearch-0.3.3-aarch64-apple-darwin.tar.gz",
               "format": "tar.gz",
-              "url": "https://github.com/limmytian/voidb-plugin-elasticsearch/releases/download/v0.3.0/elasticsearch-0.3.0.tar.gz",
-              "sha256": "sha256:82c8ca9acf9ad8800973ab704f1b0cfa0efdbab318b2baec1a92faebb359fd3e",
-              "size_bytes": 2004877
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-elasticsearch/releases/download/v0.3.3/elasticsearch-0.3.3-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:19ec9ea15d294980c9f83175f7aec3f463ca15da1762f7c5ddc862781065d1f5",
+              "size_bytes": 3164771
+            },
+            {
+              "filename": "elasticsearch-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-elasticsearch/releases/download/v0.3.3/elasticsearch-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:0efc4f4eb190f33b13918253eca3ff7f30598c358633b2d0bb07f34cbbc68295",
+              "size_bytes": 3463694
+            },
+            {
+              "filename": "elasticsearch-0.3.3-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-elasticsearch/releases/download/v0.3.3/elasticsearch-0.3.3-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:6f5d4df1795047b82e162cfd6f3f4dc68591aef4b8234f0e4c16fad66e198e41",
+              "size_bytes": 3298737
+            },
+            {
+              "filename": "elasticsearch-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-elasticsearch/releases/download/v0.3.3/elasticsearch-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:163ac6fdfbbc17169080c82256ae0b052ea74734e40edc3e0ff896e53d9590df",
+              "size_bytes": 3678179
             }
           ]
         }
@@ -175,25 +248,49 @@
         "download_attachment",
         "idle"
       ],
-      "latest_version": "0.3.0",
+      "latest_version": "0.3.3",
       "versions": [
         {
-          "version": "0.3.0",
+          "version": "0.3.3",
           "protocol_version": "1",
-          "released_at": "2026-10-07T14:07:27.097490Z",
-          "voidb_core": ">=0.1.0",
+          "released_at": "2026-10-11T19:19:36.143801Z",
+          "voidb_core": ">=0.3.3",
           "platforms": [
             "darwin",
-            "linux",
-            "windows"
+            "linux"
           ],
           "packages": [
             {
-              "filename": "email-0.3.0.tar.gz",
+              "filename": "email-0.3.3-aarch64-apple-darwin.tar.gz",
               "format": "tar.gz",
-              "url": "https://github.com/limmytian/voidb-plugin-email/releases/download/v0.3.0/email-0.3.0.tar.gz",
-              "sha256": "sha256:982b86debb0a5b9d2aeeb9c8f291cb8960626975108b605790b2cddceeaedc87",
-              "size_bytes": 1752454
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-email/releases/download/v0.3.3/email-0.3.3-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:b91b4441fdf935aaab7bf1bdfcc337f14feaeadbedfb8e3f476540d18b40c103",
+              "size_bytes": 2344897
+            },
+            {
+              "filename": "email-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-email/releases/download/v0.3.3/email-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:465a44180b7903a563463725374fcb42551d54546f5944a847cdea4db7545533",
+              "size_bytes": 2500777
+            },
+            {
+              "filename": "email-0.3.3-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-email/releases/download/v0.3.3/email-0.3.3-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:181ced9d1669da92a7bda25dbf961583a8a0c843d29a2468f2b63c5e4de6e907",
+              "size_bytes": 2447808
+            },
+            {
+              "filename": "email-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-email/releases/download/v0.3.3/email-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:03c1fee77d9bc4205384165d17789e13ff747a084f1bcef313c0bbed38db54ed",
+              "size_bytes": 2818085
             }
           ]
         }
@@ -215,30 +312,57 @@
         "job_detail",
         "activity",
         "console",
+        "console_follow",
+        "build_wait",
+        "queue_watch",
         "pipeline",
         "trigger_build",
         "abort_build",
         "cancel_queue_item"
       ],
-      "latest_version": "0.3.0",
+      "latest_version": "0.3.3",
       "versions": [
         {
-          "version": "0.3.0",
+          "version": "0.3.3",
           "protocol_version": "1",
-          "released_at": "2026-10-07T14:18:49.228107Z",
-          "voidb_core": ">=0.1.0",
+          "released_at": "2026-10-11T19:19:38.085257Z",
+          "voidb_core": ">=0.3.3",
           "platforms": [
             "darwin",
-            "linux",
-            "windows"
+            "linux"
           ],
           "packages": [
             {
-              "filename": "jenkins-0.3.0.tar.gz",
+              "filename": "jenkins-0.3.3-aarch64-apple-darwin.tar.gz",
               "format": "tar.gz",
-              "url": "https://github.com/limmytian/voidb-plugin-jenkins/releases/download/v0.3.0/jenkins-0.3.0.tar.gz",
-              "sha256": "sha256:108b53a5bf461c9aad468c6cf560cf72d7c17d42701b52fc146e697c520004b0",
-              "size_bytes": 1985180
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-jenkins/releases/download/v0.3.3/jenkins-0.3.3-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:801aac1ede09e5945359cf5ff9a695110fef7b134a48d88600c6dd213bab8565",
+              "size_bytes": 3650128
+            },
+            {
+              "filename": "jenkins-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-jenkins/releases/download/v0.3.3/jenkins-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:4e954999cb5219bb0afde6e220f110527fdf5d61e8a928522bef15056a35f4dd",
+              "size_bytes": 3998890
+            },
+            {
+              "filename": "jenkins-0.3.3-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-jenkins/releases/download/v0.3.3/jenkins-0.3.3-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:59831f014952738075b2686ce06e64c8e18109a7b254e4d681b9ffee9e188ccb",
+              "size_bytes": 3786187
+            },
+            {
+              "filename": "jenkins-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-jenkins/releases/download/v0.3.3/jenkins-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:daf88187498a26122e58dc878c3526412394e63296d473dc8e71b187ad4e503e",
+              "size_bytes": 4178487
             }
           ]
         }
@@ -272,25 +396,49 @@
         "restart",
         "apply"
       ],
-      "latest_version": "0.3.0",
+      "latest_version": "0.3.3",
       "versions": [
         {
-          "version": "0.3.0",
+          "version": "0.3.3",
           "protocol_version": "1",
-          "released_at": "2026-10-07T14:12:26.843726Z",
-          "voidb_core": ">=0.1.0",
+          "released_at": "2026-10-11T19:19:41.209124Z",
+          "voidb_core": ">=0.3.3",
           "platforms": [
             "darwin",
-            "linux",
-            "windows"
+            "linux"
           ],
           "packages": [
             {
-              "filename": "kubernetes-0.3.0.tar.gz",
+              "filename": "kubernetes-0.3.3-aarch64-apple-darwin.tar.gz",
               "format": "tar.gz",
-              "url": "https://github.com/limmytian/voidb-plugin-kubernetes/releases/download/v0.3.0/kubernetes-0.3.0.tar.gz",
-              "sha256": "sha256:463efab9b951323917f900df6aea341866c359cfc2186dad8863160c66f9200f",
-              "size_bytes": 4187767
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-kubernetes/releases/download/v0.3.3/kubernetes-0.3.3-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:bd49bb3b3c1e33c5a790ae0165d0519285671bc8c87f7b8da708a2ae2f3b624f",
+              "size_bytes": 5992462
+            },
+            {
+              "filename": "kubernetes-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-kubernetes/releases/download/v0.3.3/kubernetes-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:fcc6a8a2f934d7c6bbe91b2d94ecdbad78201a83f88d7aedb0df1b7376c327e9",
+              "size_bytes": 6644143
+            },
+            {
+              "filename": "kubernetes-0.3.3-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-kubernetes/releases/download/v0.3.3/kubernetes-0.3.3-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:8b38574ee71c3ba34d8bb6b0df3716005058dcdee9f54cca3acf98b25ef62218",
+              "size_bytes": 6178929
+            },
+            {
+              "filename": "kubernetes-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-kubernetes/releases/download/v0.3.3/kubernetes-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:0beaaef23d1df7fc2f18c85e3f35b962db688545a653e2e05f9d1892180f9f44",
+              "size_bytes": 6796652
             }
           ]
         }
@@ -323,25 +471,49 @@
         "create_index",
         "run_command"
       ],
-      "latest_version": "0.3.0",
+      "latest_version": "0.3.3",
       "versions": [
         {
-          "version": "0.3.0",
+          "version": "0.3.3",
           "protocol_version": "1",
-          "released_at": "2026-10-07T14:17:05.482675Z",
-          "voidb_core": ">=0.1.0",
+          "released_at": "2026-10-11T19:19:45.899923Z",
+          "voidb_core": ">=0.3.3",
           "platforms": [
             "darwin",
-            "linux",
-            "windows"
+            "linux"
           ],
           "packages": [
             {
-              "filename": "mongodb-0.3.0.tar.gz",
+              "filename": "mongodb-0.3.3-aarch64-apple-darwin.tar.gz",
               "format": "tar.gz",
-              "url": "https://github.com/limmytian/voidb-plugin-mongodb/releases/download/v0.3.0/mongodb-0.3.0.tar.gz",
-              "sha256": "sha256:a4b64a705b3df71957f93ff18ac26fc63d0796875574756f5017ea711d1afc61",
-              "size_bytes": 4885886
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-mongodb/releases/download/v0.3.3/mongodb-0.3.3-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:63f0170a70382e2b9cd19c28ab1223afaa42710afdbcbe0617307cb620b60f6a",
+              "size_bytes": 5519691
+            },
+            {
+              "filename": "mongodb-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-mongodb/releases/download/v0.3.3/mongodb-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:5bb3586a33a9b3bf2fc8e68936787e89efac4d2afe4d1b895285dde8fa90f3d1",
+              "size_bytes": 6033319
+            },
+            {
+              "filename": "mongodb-0.3.3-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-mongodb/releases/download/v0.3.3/mongodb-0.3.3-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:b17cbf65004ecec367483d4836aecf59b5549716028196a017105e1c9406bfc0",
+              "size_bytes": 5756773
+            },
+            {
+              "filename": "mongodb-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-mongodb/releases/download/v0.3.3/mongodb-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:247521977c62512adb15d73f8928e79a397318b78fdb1e0602953f600c4fbf8e",
+              "size_bytes": 6437222
             }
           ]
         }
@@ -368,24 +540,49 @@
         "import_plan",
         "import_apply"
       ],
-      "latest_version": "0.3.1",
+      "latest_version": "0.3.3",
       "versions": [
         {
-          "version": "0.3.1",
+          "version": "0.3.3",
           "protocol_version": "1",
-          "released_at": "2026-10-08T11:18:07.650071Z",
+          "released_at": "2026-10-11T19:19:49.580093Z",
+          "voidb_core": ">=0.3.3",
           "platforms": [
             "darwin",
-            "linux",
-            "windows"
+            "linux"
           ],
           "packages": [
             {
-              "filename": "mysql-0.3.1.tar.gz",
+              "filename": "mysql-0.3.3-aarch64-apple-darwin.tar.gz",
               "format": "tar.gz",
-              "url": "https://github.com/limmytian/voidb-plugin-mysql/releases/download/v0.3.1/mysql-0.3.1.tar.gz",
-              "sha256": "sha256:6e00345798bb38c90881d7dff3f3beab5c4cb458fe58591a64e6047e595491b4",
-              "size_bytes": 6907556
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-mysql/releases/download/v0.3.3/mysql-0.3.3-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:58377c6a9181c5476300d2e53bcb057a5580155382da0ae07650a2457ee78da4",
+              "size_bytes": 2734282
+            },
+            {
+              "filename": "mysql-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-mysql/releases/download/v0.3.3/mysql-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:61cb18a6cdc120e7772cd2044618a0b1edfdf1757d75a86883ebf02072a31993",
+              "size_bytes": 2964066
+            },
+            {
+              "filename": "mysql-0.3.3-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-mysql/releases/download/v0.3.3/mysql-0.3.3-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:5e8b7a6b220d2b5cf3db2acd08c74c3e76127e09297d30fbb2a28e65caf243c0",
+              "size_bytes": 2897885
+            },
+            {
+              "filename": "mysql-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-mysql/releases/download/v0.3.3/mysql-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:309a91780182db8ae7d93e2b4677ccd9281aa9da7409bc6c42dea62c0646b700",
+              "size_bytes": 3280633
             }
           ]
         }
@@ -412,24 +609,49 @@
         "import_plan",
         "import_apply"
       ],
-      "latest_version": "0.3.1",
+      "latest_version": "0.3.3",
       "versions": [
         {
-          "version": "0.3.1",
+          "version": "0.3.3",
           "protocol_version": "1",
-          "released_at": "2026-10-08T11:18:08.103029Z",
+          "released_at": "2026-10-11T19:19:51.562471Z",
+          "voidb_core": ">=0.3.3",
           "platforms": [
             "darwin",
-            "linux",
-            "windows"
+            "linux"
           ],
           "packages": [
             {
-              "filename": "postgres-0.3.1.tar.gz",
+              "filename": "postgres-0.3.3-aarch64-apple-darwin.tar.gz",
               "format": "tar.gz",
-              "url": "https://github.com/limmytian/voidb-plugin-postgres/releases/download/v0.3.1/postgres-0.3.1.tar.gz",
-              "sha256": "sha256:bd1f8d0d5b4d8e562a6aa4848dd97a71a56814e38fa257ddd48b9def0ab3d1b8",
-              "size_bytes": 4917928
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-postgres/releases/download/v0.3.3/postgres-0.3.3-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:2136170d6c0506666d64e6650839f35d35bbe6f31490e43cbb4ac3a06c46f71a",
+              "size_bytes": 1951877
+            },
+            {
+              "filename": "postgres-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-postgres/releases/download/v0.3.3/postgres-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:0c955de3f964bef66fedf13c93aeb5259fb955ce5d826a6780e5975b6a824408",
+              "size_bytes": 2081843
+            },
+            {
+              "filename": "postgres-0.3.3-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-postgres/releases/download/v0.3.3/postgres-0.3.3-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:c70315a30aa8cb832293b2bd6d9e559ca2191b65ece4fe97c3f93b4199f64995",
+              "size_bytes": 2065874
+            },
+            {
+              "filename": "postgres-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-postgres/releases/download/v0.3.3/postgres-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:df7195cda1d5094823105da4c5cd41814e1291ec4b15359745b66242da9ac925",
+              "size_bytes": 2415372
             }
           ]
         }
@@ -458,24 +680,49 @@
         "monitor_read",
         "stream_read"
       ],
-      "latest_version": "0.3.1",
+      "latest_version": "0.3.3",
       "versions": [
         {
-          "version": "0.3.1",
+          "version": "0.3.3",
           "protocol_version": "1",
-          "released_at": "2026-10-08T11:18:08.921004Z",
+          "released_at": "2026-10-11T19:19:53.014896Z",
+          "voidb_core": ">=0.3.3",
           "platforms": [
             "darwin",
-            "linux",
-            "windows"
+            "linux"
           ],
           "packages": [
             {
-              "filename": "redis-0.3.1.tar.gz",
+              "filename": "redis-0.3.3-aarch64-apple-darwin.tar.gz",
               "format": "tar.gz",
-              "url": "https://github.com/limmytian/voidb-plugin-redis/releases/download/v0.3.1/redis-0.3.1.tar.gz",
-              "sha256": "sha256:4bf2a2a06bf429b8f6cab4f575818e87d71369ba5c270671c2655964012ca08f",
-              "size_bytes": 4292199
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-redis/releases/download/v0.3.3/redis-0.3.3-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:b5633348282bf3f49214d3e8ce85f109e8fdc1189d1a32dfc7133ee8efd4d19a",
+              "size_bytes": 1654900
+            },
+            {
+              "filename": "redis-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-redis/releases/download/v0.3.3/redis-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:e62f09abb726bcfb04ef3c5a5745172dc28488b4c6521da1f618d8ae55986d8e",
+              "size_bytes": 1765430
+            },
+            {
+              "filename": "redis-0.3.3-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-redis/releases/download/v0.3.3/redis-0.3.3-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:a13b56e308fd0e451cf059826daf8c9e015702b8bbb4be34c57b3b4e63b64ee1",
+              "size_bytes": 1747853
+            },
+            {
+              "filename": "redis-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-redis/releases/download/v0.3.3/redis-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:42e817bb16a771b41da69f16841646c730141b430e433c1711d9ac5f53d7b4b3",
+              "size_bytes": 2110647
             }
           ]
         }
@@ -506,25 +753,49 @@
         "transfer",
         "transfer_status"
       ],
-      "latest_version": "0.3.0",
+      "latest_version": "0.3.3",
       "versions": [
         {
-          "version": "0.3.0",
+          "version": "0.3.3",
           "protocol_version": "1",
-          "released_at": "2026-10-07T14:05:08.958563Z",
-          "voidb_core": ">=0.1.0",
+          "released_at": "2026-10-11T19:19:54.640532Z",
+          "voidb_core": ">=0.3.3",
           "platforms": [
             "darwin",
-            "linux",
-            "windows"
+            "linux"
           ],
           "packages": [
             {
-              "filename": "s3-0.3.0.tar.gz",
+              "filename": "s3-0.3.3-aarch64-apple-darwin.tar.gz",
               "format": "tar.gz",
-              "url": "https://github.com/limmytian/voidb-plugin-s3/releases/download/v0.3.0/s3-0.3.0.tar.gz",
-              "sha256": "sha256:aa5b055b1773833af78fcee32ce5475d84a9903812a05a04d748d72eb5c1c2d4",
-              "size_bytes": 2114105
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-s3/releases/download/v0.3.3/s3-0.3.3-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:4aa9c4b9d03408af4376035120c0ae92e101cdf67d8e727b47f7b40158c88994",
+              "size_bytes": 3707812
+            },
+            {
+              "filename": "s3-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-s3/releases/download/v0.3.3/s3-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:e69f74980964fbaea867b0ee17ff192f415014c991c16fea34595d8eef6667cc",
+              "size_bytes": 4056578
+            },
+            {
+              "filename": "s3-0.3.3-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-s3/releases/download/v0.3.3/s3-0.3.3-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:da12807fc2c2c661cf8f37a568bc1bf1ac6e63548d8ec9c428a42b269f935a79",
+              "size_bytes": 3877356
+            },
+            {
+              "filename": "s3-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-s3/releases/download/v0.3.3/s3-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:38494e25883bdc38702b330a5626b6952e127c1126f979d2b50f278d9884d500",
+              "size_bytes": 4265558
             }
           ]
         }
@@ -551,24 +822,49 @@
         "import_plan",
         "import_apply"
       ],
-      "latest_version": "0.3.1",
+      "latest_version": "0.3.3",
       "versions": [
         {
-          "version": "0.3.1",
+          "version": "0.3.3",
           "protocol_version": "1",
-          "released_at": "2026-10-08T11:18:08.525433Z",
+          "released_at": "2026-10-11T19:19:57.091165Z",
+          "voidb_core": ">=0.3.3",
           "platforms": [
             "darwin",
-            "linux",
-            "windows"
+            "linux"
           ],
           "packages": [
             {
-              "filename": "sqlite-0.3.1.tar.gz",
+              "filename": "sqlite-0.3.3-aarch64-apple-darwin.tar.gz",
               "format": "tar.gz",
-              "url": "https://github.com/limmytian/voidb-plugin-sqlite/releases/download/v0.3.1/sqlite-0.3.1.tar.gz",
-              "sha256": "sha256:eb974c73ce058c791b5cedeb58b6ab7b5200d4c2e1f753873c144db69097cae4",
-              "size_bytes": 4618609
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-sqlite/releases/download/v0.3.3/sqlite-0.3.3-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:3e6586dd4d410ce3e3d3ba52680b427d36a3e9d3c56112e17860f83e0ca38bad",
+              "size_bytes": 2323771
+            },
+            {
+              "filename": "sqlite-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-sqlite/releases/download/v0.3.3/sqlite-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:5d75ab54b26a42b8ee4f7e1c1b00a7336c9ff759180b49c07619cf26a43b3dea",
+              "size_bytes": 2540143
+            },
+            {
+              "filename": "sqlite-0.3.3-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-sqlite/releases/download/v0.3.3/sqlite-0.3.3-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:03041ea4cdff1acdc66ced25cd2c98e5cefa11c7188ab7772c883072d76c13db",
+              "size_bytes": 2461596
+            },
+            {
+              "filename": "sqlite-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-sqlite/releases/download/v0.3.3/sqlite-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:06cb5797db933c0ed9d9a9de9d4d011aa14fc49ec4ab8836609cfad6261cc75c",
+              "size_bytes": 2859166
             }
           ]
         }
@@ -601,25 +897,49 @@
         "sftp_rm",
         "diagnostics"
       ],
-      "latest_version": "0.3.1",
+      "latest_version": "0.3.3",
       "versions": [
         {
-          "version": "0.3.1",
+          "version": "0.3.3",
           "protocol_version": "1",
-          "released_at": "2026-10-08T11:18:09.762237Z",
-          "voidb_core": ">=0.1.0",
+          "released_at": "2026-10-11T19:19:58.994012Z",
+          "voidb_core": ">=0.3.3",
           "platforms": [
             "darwin",
-            "linux",
-            "windows"
+            "linux"
           ],
           "packages": [
             {
-              "filename": "ssh-0.3.1.tar.gz",
+              "filename": "ssh-0.3.3-aarch64-apple-darwin.tar.gz",
               "format": "tar.gz",
-              "url": "https://github.com/limmytian/voidb-plugin-ssh/releases/download/v0.3.1/ssh-0.3.1.tar.gz",
-              "sha256": "sha256:bbaf0f008787f583ee6b29615f7611f35f11ef7b9b68c34bfac8e46b3bc1b08b",
-              "size_bytes": 9096547
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-ssh/releases/download/v0.3.3/ssh-0.3.3-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:43c82b79b3ad7709ec59d70761117b0d64020ec5bafd0396e852d0414f79e9b3",
+              "size_bytes": 3616530
+            },
+            {
+              "filename": "ssh-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-ssh/releases/download/v0.3.3/ssh-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:12f1efdb961ca65eebd94d01495dcbc49c1519fece3e4d01e33e561128bf22d8",
+              "size_bytes": 3956038
+            },
+            {
+              "filename": "ssh-0.3.3-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-ssh/releases/download/v0.3.3/ssh-0.3.3-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:ff1542e69c2e66090993c3f09bf97337d49ccb6e2734f9f840a55503f2108003",
+              "size_bytes": 3811494
+            },
+            {
+              "filename": "ssh-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-ssh/releases/download/v0.3.3/ssh-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:b58331310901eb5bc44233aab179aac0d9493e8a2da0a8ae2ee617bd85835d0a",
+              "size_bytes": 4238633
             }
           ]
         }
@@ -645,27 +965,55 @@
         "mkdir",
         "copy",
         "move",
-        "sync_plan"
+        "sync_plan",
+        "transfer",
+        "transfer_status",
+        "lock_acquire",
+        "lock_release"
       ],
-      "latest_version": "0.3.0",
+      "latest_version": "0.3.3",
       "versions": [
         {
-          "version": "0.3.0",
+          "version": "0.3.3",
           "protocol_version": "1",
-          "released_at": "2026-10-07T14:21:20.325812Z",
-          "voidb_core": ">=0.1.0",
+          "released_at": "2026-10-11T19:20:01.864016Z",
+          "voidb_core": ">=0.3.3",
           "platforms": [
             "darwin",
-            "linux",
-            "windows"
+            "linux"
           ],
           "packages": [
             {
-              "filename": "webdav-0.3.0.tar.gz",
+              "filename": "webdav-0.3.3-aarch64-apple-darwin.tar.gz",
               "format": "tar.gz",
-              "url": "https://github.com/limmytian/voidb-plugin-webdav/releases/download/v0.3.0/webdav-0.3.0.tar.gz",
-              "sha256": "sha256:2cdfb002676f77ca51cc76cfd8deb175784a353bfc0c0c67de60ad972606545c",
-              "size_bytes": 3654103
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-webdav/releases/download/v0.3.3/webdav-0.3.3-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:e13a3eeccaf6c6a76fbd75a2c639384bd7a4f2ca07469f4240a0367466a1d577",
+              "size_bytes": 4407623
+            },
+            {
+              "filename": "webdav-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-webdav/releases/download/v0.3.3/webdav-0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:15e76cdd102672be567e24102ee430347743ab05306745e0e80a0fd922eff522",
+              "size_bytes": 4717182
+            },
+            {
+              "filename": "webdav-0.3.3-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-webdav/releases/download/v0.3.3/webdav-0.3.3-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:f339ed122dc9db375defea899074c33159c6424c2f5af1ff2c9c183fc2faefd6",
+              "size_bytes": 4666874
+            },
+            {
+              "filename": "webdav-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-webdav/releases/download/v0.3.3/webdav-0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:c012228e492f8343ff9e39b2bd0e67c47da75d0b21076eee8a43feb16a9acabb",
+              "size_bytes": 5032347
             }
           ]
         }
