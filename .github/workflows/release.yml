@@ -55,6 +55,15 @@ jobs:
           fi
         shell: bash
 
+      - name: Verify Native CLI Version and Help
+        if: '!matrix.use_cross'
+        run: |
+          cli="target/${{ matrix.target }}/release/voidb-cli"
+          if [ "${{ runner.os }}" = "Windows" ]; then cli="${cli}.exe"; fi
+          test "$("$cli" --version)" = "voidb ${GITHUB_REF_NAME#v}"
+          "$cli" --help
+        shell: bash
+
       - name: Stage Verified Default Plugins (Unix)
         if: runner.os != 'Windows'
         env:
