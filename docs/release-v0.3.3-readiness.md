@@ -80,3 +80,25 @@ installation records, architecture selection, manifest schema roundtrips and
 unbounded live-session rejection. The isolated Connection Manager/SSH PTY
 quality gate passed before publication; final downloadable package acceptance
 remains a separate gate.
+
+## Resumed validation checkpoint
+
+All fourteen plugins passed contract/schema checks, all-target tests and strict
+Clippy against published core/SDK revision
+`0d565c4a7227f218c2b9c118aa2694d87243aa8f`. Explicit-target packagers now reject
+missing release binaries rather than relabeling native/debug binaries.
+
+The full aggregate gate passed at
+`target/tmp/v033-resumed-full-gate/report.md`, including independent plugin
+paths, external-agent boundaries, Sync client/server tests, real PTY journeys,
+workspace tests and Clippy. The standalone Sync server remains at its existing
+0.3.2 version and is not included in the main 0.3.3 archive. Its lockfile now
+reflects that existing manifest version.
+
+Six default plugin release builds and the native macOS arm64 staging package
+passed checksums, artifact manifest and command smoke. All six installed through
+CLI package validation in a disposable home. Remote CI run 38161164957 passed
+workspace and three platform jobs but exposed a one-second concurrent-test
+fixture startup timeout; fixture-only waits were extended to ten seconds. The
+full CLI suite and strict Clippy pass after this change. Final candidate CI
+must still be verified before tags.

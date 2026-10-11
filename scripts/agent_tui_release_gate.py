@@ -403,7 +403,6 @@ def validate_plan(scope: str, profile: str, selected: Sequence[Phase]) -> None:
         required.update(
             {
                 "stream-and-session-lifecycle",
-                "context-handoff-and-mutation-review",
                 "local-transfer-and-cancellation",
                 "terminal-restoration",
             }

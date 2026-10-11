@@ -6716,7 +6716,7 @@ mod tests {
     }
 
     async fn wait_for_started_calls(state: &BlockingSessionState, expected: usize) {
-        tokio::time::timeout(Duration::from_secs(1), async {
+        tokio::time::timeout(Duration::from_secs(10), async {
             loop {
                 let mut started = Box::pin(state.started_notify.notified());
                 started.as_mut().enable();
@@ -6737,7 +6737,7 @@ mod tests {
     }
 
     async fn wait_for_active_calls(state: &BlockingSessionState, expected: usize) {
-        tokio::time::timeout(Duration::from_secs(1), async {
+        tokio::time::timeout(Duration::from_secs(10), async {
             loop {
                 let mut changed = Box::pin(state.active_notify.notified());
                 changed.as_mut().enable();

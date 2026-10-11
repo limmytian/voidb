@@ -60,9 +60,9 @@ run() {
 }
 
 smoke_ssh() {
-  run cargo test -p voidb-plugin-ssh capabilities --quiet
-  run cargo test -p voidb-plugin-ssh service --quiet
-  run cargo test -p voidb-plugin-ssh --quiet
+  run cargo test --manifest-path "${REPO_ROOT}/../voidb-plugin-ssh/Cargo.toml" capabilities --quiet
+  run cargo test --manifest-path "${REPO_ROOT}/../voidb-plugin-ssh/Cargo.toml" service --quiet
+  run cargo test --manifest-path "${REPO_ROOT}/../voidb-plugin-ssh/Cargo.toml" --quiet
   run cargo test -p voidb-core profile_adapter --quiet
   run cargo test -p voidb-core profile_store --quiet
   INVOKE_SMOKE=1

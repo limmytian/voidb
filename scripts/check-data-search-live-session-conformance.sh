@@ -17,8 +17,8 @@ fi
 cargo test -p voidb-core live_session --quiet -- --test-threads=1
 cargo test -p voidb-cli data_search_live_session --quiet -- --test-threads=1
 
-cargo test -p voidb-plugin-redis --quiet -- --test-threads=1
-cargo check -p voidb-plugin-redis --example fixture_smoke --quiet
+cargo test --manifest-path "${ROOT}/../voidb-plugin-redis/Cargo.toml" --quiet -- --test-threads=1
+cargo check --manifest-path "${ROOT}/../voidb-plugin-redis/Cargo.toml" --example fixture_smoke --quiet
 
 bash -n \
   scripts/local-fixture-smoke.sh \

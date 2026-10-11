@@ -22,7 +22,8 @@ capability_only_plugins=(
 )
 
 for plugin in "${capability_only_plugins[@]}"; do
-  source_dir="crates/plugins/voidb-plugin-${plugin}/src"
+  source_dir="${ROOT}/../voidb-plugin-${plugin}/src"
+  [[ -d "$source_dir" ]] || { fail "${plugin} source checkout is missing"; continue; }
   if [[ -e "${source_dir}/assist.rs" ]]; then
     fail "${plugin} still has an assist module"
   fi
@@ -78,7 +79,7 @@ for document in "${historical_evidence[@]}"; do
   fi
 done
 
-ssh_source='crates/plugins/voidb-plugin-ssh/src/tui.rs'
+ssh_source="${ROOT}/../voidb-plugin-ssh/src/tui.rs"
 rg -Fq '"external_agent_interaction"' "$ssh_source" \
   || fail 'SSH lacks external-agent session-share evidence'
 rg -Fq '.title("Agent Operation Request")' "$ssh_source" \

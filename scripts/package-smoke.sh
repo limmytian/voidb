@@ -64,16 +64,14 @@ file_size() {
 }
 
 find_binary() {
-  local first="$1"
-  local second="$2"
-
-  if [[ -e "${first}" ]]; then
-    printf '%s\n' "${first}"
-  elif [[ -e "${second}" ]]; then
-    printf '%s\n' "${second}"
-  else
-    return 1
-  fi
+  local candidate
+  for candidate in "$@"; do
+    if [[ -e "${candidate}" ]]; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+  done
+  return 1
 }
 
 check_executable() {
@@ -224,7 +222,9 @@ fi
 if [[ "${CLI}" -eq 1 ]]; then
   cli_bin="$(find_binary \
     "${ARTIFACT_ROOT}/cli/voidb-cli" \
-    "${ARTIFACT_ROOT}/cli/voidb-cli.exe")" || die "missing voidb-cli artifact"
+    "${ARTIFACT_ROOT}/cli/voidb-cli.exe" \
+    "${ARTIFACT_ROOT}/voidb-cli" \
+    "${ARTIFACT_ROOT}/voidb-cli.exe")" || die "missing voidb-cli artifact"
   check_executable "voidb-cli" "${cli_bin}"
   run "${cli_bin}" --version >/dev/null
   run "${cli_bin}" --help >/dev/null
@@ -246,7 +246,9 @@ fi
 if [[ "${TUI}" -eq 1 ]]; then
   default_tui="$(find_binary \
     "${ARTIFACT_ROOT}/voidb-default/voidb" \
-    "${ARTIFACT_ROOT}/voidb-default/voidb.exe")" || die "missing default TUI artifact"
+    "${ARTIFACT_ROOT}/voidb-default/voidb.exe" \
+    "${ARTIFACT_ROOT}/voidb" \
+    "${ARTIFACT_ROOT}/voidb.exe")" || die "missing default TUI artifact"
 
   check_executable "default TUI" "${default_tui}"
 
