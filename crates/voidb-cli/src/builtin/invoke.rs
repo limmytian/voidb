@@ -350,68 +350,71 @@ fn authorization_discovery() -> ProcessPluginDiscovery {
     use std::path::PathBuf;
     use voidb_core::{ProcessPluginManifest, ProcessPluginRootKind, ProcessPluginSource};
 
-    // Policy tests use metadata snapshots, never the user's plugin installation.
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/authorization");
-    let candidates = [
-        "mysql",
-        "postgres",
-        "sqlite",
-        "redis",
-        "ssh",
-        "duckdb",
-        "mongodb",
-        "elasticsearch",
-    ]
-    .into_iter()
-    .map(|id| {
-        let plugin_dir = root.join(id);
-        let manifest_path = plugin_dir.join("plugin.toml");
-        let content = std::fs::read_to_string(&manifest_path).expect("read catalog fixture");
-        let decoded: toml::Value = toml::from_str(&content).expect("decode catalog fixture");
-        voidb_core::process_plugin::validate_process_plugin_manifest_json(
-            &serde_json::to_value(decoded).expect("encode manifest JSON"),
-        ).expect("catalog fixture must satisfy discovery schema");
-        let manifest: ProcessPluginManifest = toml::from_str(&content).expect("decode catalog contract");
-        let mut resolved_schema_paths = BTreeMap::new();
-        for capability in &manifest.capabilities {
-            for (kind, path) in [
-                ("input_schema", &capability.input_schema),
-                ("output_schema", &capability.output_schema),
-            ] {
-                resolved_schema_paths.insert(
-                    format!("capabilities.{}.{kind}", capability.id),
-                    plugin_dir.join(path),
-                );
+    static FIXTURE: std::sync::LazyLock<ProcessPluginDiscovery> = std::sync::LazyLock::new(|| {
+        // Policy tests use metadata snapshots, never the user's plugin installation.
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/authorization");
+        let candidates = [
+            "mysql",
+            "postgres",
+            "sqlite",
+            "redis",
+            "ssh",
+            "duckdb",
+            "mongodb",
+            "elasticsearch",
+        ]
+        .into_iter()
+        .map(|id| {
+            let plugin_dir = root.join(id);
+            let manifest_path = plugin_dir.join("plugin.toml");
+            let content = std::fs::read_to_string(&manifest_path).expect("read catalog fixture");
+            let decoded: toml::Value = toml::from_str(&content).expect("decode catalog fixture");
+            voidb_core::process_plugin::validate_process_plugin_manifest_json(
+                &serde_json::to_value(decoded).expect("encode manifest JSON"),
+            ).expect("catalog fixture must satisfy discovery schema");
+            let manifest: ProcessPluginManifest = toml::from_str(&content).expect("decode catalog contract");
+            let mut resolved_schema_paths = BTreeMap::new();
+            for capability in &manifest.capabilities {
+                for (kind, path) in [
+                    ("input_schema", &capability.input_schema),
+                    ("output_schema", &capability.output_schema),
+                ] {
+                    resolved_schema_paths.insert(
+                        format!("capabilities.{}.{kind}", capability.id),
+                        plugin_dir.join(path),
+                    );
+                }
             }
+            ProcessPluginCandidate {
+                id: manifest.id.clone(),
+                name: Some(manifest.name.clone()),
+                version: Some(manifest.version.clone()),
+                protocol_version: Some(manifest.protocol_version.clone()),
+                manifest_path,
+                source: ProcessPluginSource {
+                    root: root.clone(),
+                    plugin_dir,
+                    kind: ProcessPluginRootKind::EnvPath,
+                    trust_level: ProcessPluginRootKind::EnvPath.trust_level(),
+                    precedence: 0,
+                },
+                state: ProcessPluginCandidateState::Available,
+                transport: Some(manifest.runtime.transport.clone()),
+                capability_count: manifest.capabilities.len(),
+                tui: false,
+                diagnostics: Vec::new(),
+                manifest: Some(manifest),
+                resolved_runtime_command: None,
+                resolved_schema_paths,
+            }
+        })
+        .collect();
+        ProcessPluginDiscovery {
+            roots: Vec::new(),
+            candidates,
         }
-        ProcessPluginCandidate {
-            id: manifest.id.clone(),
-            name: Some(manifest.name.clone()),
-            version: Some(manifest.version.clone()),
-            protocol_version: Some(manifest.protocol_version.clone()),
-            manifest_path,
-            source: ProcessPluginSource {
-                root: root.clone(),
-                plugin_dir,
-                kind: ProcessPluginRootKind::EnvPath,
-                trust_level: ProcessPluginRootKind::EnvPath.trust_level(),
-                precedence: 0,
-            },
-            state: ProcessPluginCandidateState::Available,
-            transport: Some(manifest.runtime.transport.clone()),
-            capability_count: manifest.capabilities.len(),
-            tui: false,
-            diagnostics: Vec::new(),
-            manifest: Some(manifest),
-            resolved_runtime_command: None,
-            resolved_schema_paths,
-        }
-    })
-    .collect();
-    ProcessPluginDiscovery {
-        roots: Vec::new(),
-        candidates,
-    }
+    });
+    FIXTURE.clone()
 }
 
 pub(crate) fn resolved_capability_risk(

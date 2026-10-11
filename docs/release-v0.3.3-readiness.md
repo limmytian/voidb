@@ -102,3 +102,9 @@ workspace and three platform jobs but exposed a one-second concurrent-test
 fixture startup timeout; fixture-only waits were extended to ten seconds. The
 full CLI suite and strict Clippy pass after this change. Final candidate CI
 must still be verified before tags.
+
+The Linux full-feature broker race remained reproducible with longer fixture
+waits. Test-only discovery now validates immutable metadata once and clones the
+snapshot, removing repeated filesystem/TOML/schema work from concurrent broker
+calls. The complete 183-test full CLI suite passes in about two seconds locally;
+concurrency assertions and production discovery remain unchanged.
