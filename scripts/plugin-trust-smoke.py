@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise real signed native candidates through the production CLI and HTTP registry."""
+"""Exercise real signed native packages through the production CLI and HTTP registry."""
 import argparse
 import functools
 import hashlib
@@ -28,44 +28,58 @@ def main():
     parser.add_argument('--artifacts', type=Path, required=True)
     parser.add_argument('--target', default='aarch64-apple-darwin')
     parser.add_argument('--legacy-plugin-directory', type=Path)
+    parser.add_argument('--registry-url', help='Use an actual HTTPS registry and its public package URLs instead of loopback candidates')
     parser.add_argument('--report', type=Path, required=True)
     args = parser.parse_args()
     cli, artifacts = args.cli.resolve(), args.artifacts.resolve()
-    handler = functools.partial(QuietHandler, directory=str(artifacts))
-    server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), handler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    base = f'http://127.0.0.1:{server.server_address[1]}'
-    source_index = Path(__file__).parents[1] / 'registry/index.json'
-    index = json.loads(source_index.read_text())
-    index['registry_name'] = 'VoidB local native signed candidate registry'
-    index['registry_url'] = base + '/registry-candidate.json'
-    for entry in index['plugins']:
-        if entry['id'] not in PLUGINS:
-            continue
-        old = entry['versions'][0]
-        filename = f"{entry['id']}-0.3.4-{args.target}.tar.gz"
-        archive = artifacts / filename
-        version = dict(old, version='0.3.4', platforms=['darwin' if 'apple-darwin' in args.target else 'linux'],
-                       signature_scheme='ed25519', packages=[{
-                           'filename': filename, 'format': 'tar.gz', 'target': args.target,
-                           'url': base + '/' + filename,
-                           'sha256': 'sha256:' + hashlib.sha256(archive.read_bytes()).hexdigest(),
-                           'size_bytes': archive.stat().st_size,
-                           'signature': Path(str(archive) + '.sig').read_text().strip(),
-                       }])
-        entry['latest_version'] = '0.3.4'
-        entry['versions'] = [version]
-    (artifacts / 'registry-candidate.json').write_text(json.dumps(index, indent=2) + '\n')
+    server = None
+    if args.registry_url:
+        if not args.registry_url.startswith('https://'):
+            parser.error('Public registry acceptance requires an HTTPS URL')
+        downloaded = subprocess.check_output(['curl', '-fsSL', '--connect-timeout', '10', '--max-time', '90',
+                                              '--retry', '3', args.registry_url], text=True)
+        index = json.loads(downloaded)
+        assert {entry['id'] for entry in index['plugins']} == set(PLUGINS)
+        assert all(entry['latest_version'] == '0.3.4' for entry in index['plugins'])
+        registry_url = args.registry_url
+    else:
+        handler = functools.partial(QuietHandler, directory=str(artifacts))
+        server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base = f'http://127.0.0.1:{server.server_address[1]}'
+        source_index = Path(__file__).parents[1] / 'registry/index.json'
+        index = json.loads(source_index.read_text())
+        index['registry_name'] = 'VoidB local native signed candidate registry'
+        index['registry_url'] = base + '/registry-candidate.json'
+        for entry in index['plugins']:
+            if entry['id'] not in PLUGINS:
+                continue
+            old = entry['versions'][0]
+            filename = f"{entry['id']}-0.3.4-{args.target}.tar.gz"
+            archive = artifacts / filename
+            version = dict(old, version='0.3.4', platforms=['darwin' if 'apple-darwin' in args.target else 'linux'],
+                           signature_scheme='ed25519', packages=[{
+                               'filename': filename, 'format': 'tar.gz', 'target': args.target,
+                               'url': base + '/' + filename,
+                               'sha256': 'sha256:' + hashlib.sha256(archive.read_bytes()).hexdigest(),
+                               'size_bytes': archive.stat().st_size,
+                               'signature': Path(str(archive) + '.sig').read_text().strip(),
+                           }])
+            entry['latest_version'] = '0.3.4'
+            entry['versions'] = [version]
+        (artifacts / 'registry-candidate.json').write_text(json.dumps(index, indent=2) + '\n')
+        registry_url = index['registry_url']
     report = {'core_version': subprocess.check_output([str(cli), '--version'], text=True).strip(),
-              'target': args.target, 'registry_transport': 'real loopback HTTP', 'checks': []}
+              'target': args.target, 'registry_transport': 'public HTTPS registry and GitHub release assets' if args.registry_url else 'real loopback HTTP',
+              'registry_url': registry_url, 'checks': []}
     try:
         with tempfile.TemporaryDirectory(prefix='voidb-trust-smoke-') as temporary:
             root = Path(temporary).resolve()
             home = root / 'home'
             home.mkdir()
             env = dict(os.environ, HOME=str(home), XDG_CONFIG_HOME=str(home / '.config'),
-                       XDG_DATA_HOME=str(home / '.local/share'), VOIDB_PLUGIN_REGISTRY_URL=index['registry_url'])
+                       XDG_DATA_HOME=str(home / '.local/share'), VOIDB_PLUGIN_REGISTRY_URL=registry_url)
             for name in ['VOIDB_PLUGIN_PATH', 'VOIDB_BUNDLED_PLUGIN_ROOT', 'VOIDB_ALLOW_UNSIGNED_PLUGINS',
                          'VOIDB_MASTER_PASSWORD', 'VOIDB_CLI_BIN']:
                 env.pop(name, None)
@@ -168,8 +182,9 @@ def main():
             assert hashlib.sha256(sentinel.read_bytes()).hexdigest() == sentinel_digest
             report['checks'].append('isolated user-data sentinel preserved; actual user installation and backup unchanged')
     finally:
-        server.shutdown()
-        server.server_close()
+        if server is not None:
+            server.shutdown()
+            server.server_close()
     report['status'] = 'passed'
     args.report.write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report, indent=2))

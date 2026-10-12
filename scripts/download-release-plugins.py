@@ -8,18 +8,45 @@ import subprocess
 import tarfile
 import tempfile
 import shutil
+import time
 
 DEFAULT = ('mysql', 'postgres', 'sqlite', 'redis', 'ssh', 'duckdb')
 ALL = DEFAULT + ('docker', 'kubernetes', 's3', 'elasticsearch', 'mongodb', 'jenkins', 'webdav', 'email')
 TARGETS = ('x86_64-unknown-linux-gnu', 'aarch64-unknown-linux-gnu', 'x86_64-apple-darwin', 'aarch64-apple-darwin')
 
 
+def verify_archive_signature(archive, signature, public_key, openssl):
+    raw_signature = bytes.fromhex(signature.read_text().strip())
+    if len(raw_signature) != 64:
+        raise ValueError('Invalid detached signature length')
+    with tempfile.TemporaryDirectory(prefix='voidb-archive-signature-') as temporary:
+        root = pathlib.Path(temporary)
+        key = root / 'public.der'
+        key.write_bytes(bytes.fromhex('302a300506032b6570032100' + public_key))
+        raw = root / 'signature'
+        raw.write_bytes(raw_signature)
+        subprocess.run([openssl, 'pkeyutl', '-verify', '-rawin', '-pubin', '-keyform', 'DER',
+                        '-inkey', str(key), '-in', str(archive), '-sigfile', str(raw)],
+                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
 def stage(version, target, plugin, output, allow_legacy_unsigned=False, openssl="openssl"):
     filename = f'{plugin}-{version}-{target}.tar.gz'
     download = output / '.downloads' / plugin / target
     download.mkdir(parents=True, exist_ok=True)
-    subprocess.run(['gh', 'release', 'download', f'v{version}', '--repo', f'limmytian/voidb-plugin-{plugin}',
-                    '--pattern', filename, '--pattern', 'SHA256SUMS', '--dir', str(download), '--clobber'], check=True)
+    signed_release = tuple(map(int, version.split('.'))) >= (0, 3, 4)
+    command = ['gh', 'release', 'download', f'v{version}', '--repo', f'limmytian/voidb-plugin-{plugin}',
+               '--pattern', filename, '--pattern', 'SHA256SUMS', '--dir', str(download), '--clobber']
+    if signed_release:
+        command.extend(['--pattern', filename + '.sig'])
+    for attempt in range(3):
+        try:
+            subprocess.run(command, check=True, capture_output=True, text=True, timeout=180)
+            break
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            if attempt == 2:
+                raise RuntimeError(f'Published asset download failed: {filename}') from None
+            time.sleep(2)
     checksums = [line.split()[0] for line in (download / 'SHA256SUMS').read_text().splitlines()
                  if len(line.split()) == 2 and line.split()[1].lstrip('*') == filename]
     if len(checksums) != 1:
@@ -49,6 +76,13 @@ def stage(version, target, plugin, output, allow_legacy_unsigned=False, openssl=
             verifier = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(verifier)
             verifier.verify(staged, target, plugin, version, openssl)
+            if signed_release:
+                signature = pathlib.Path(str(archive) + '.sig')
+                signature_checksums = [line.split()[0] for line in (download / 'SHA256SUMS').read_text().splitlines()
+                                       if len(line.split()) == 2 and line.split()[1].lstrip('*') == signature.name]
+                if len(signature_checksums) != 1 or hashlib.sha256(signature.read_bytes()).hexdigest() != signature_checksums[0]:
+                    raise ValueError(f'Missing or invalid signature checksum: {signature.name}')
+                verify_archive_signature(archive, signature, verifier.PUBLIC_KEY, openssl)
         elif not allow_legacy_unsigned or tuple(map(int, version.split('.'))) >= (0, 3, 4):
             raise ValueError('Missing authenticated release provenance; unsigned legacy staging requires explicit opt-in')
         if destination.exists():
