@@ -1,160 +1,165 @@
-# v0.3.5 local release candidate readiness
+# v0.3.5 release candidate readiness
 
-Status: remote candidate validation in progress; **not approved for public release**.
-The public baseline remains core v0.3.4 and official plugins v0.3.3. No new tags or public releases were created. The owner subsequently approved
-candidate branch pushes, protected signing CI provisioning and non-publishing
-cross-platform validation. All 16 branches were pushed; 14 signing environments
-require owner review and restrict access to the candidate branch and version tags.
-All 14 plugin candidate runs and the core candidate run are recorded in
-[remote evidence](release-v0.3.5-remote-evidence.json). Draft pull requests trigger
-CI and provide reviewable changes. Public release remains separately gated.
+Status: candidate implementation and validation passed; **public release requires owner approval**.
+The public baseline remains core v0.3.4 and all 14 official plugins v0.3.3.
+No new tags or public releases were created or replaced. The installed Homebrew
+CLI remains v0.3.4, its plugin list is empty, and actual profiles, credentials,
+installation history and uninstalled-plugin backups were preserved.
 
-The owner authorized implementation, verification and local commits on
-2026-10-12. The existing Task Weaver requirement is
-`5de6cf6c-d4a7-466e-815b-736683ed6132` under project
-`02710c97-c2c3-4047-812d-58f03060e75f`. No requirement or task was recreated.
+The owner authorized implementation, verification, local commits and creation of
+a local release key, then approved candidate branch pushes, protected signing CI
+and non-publishing cross-platform runs. All 16 candidate branches were pushed and
+have draft pull requests. No requirement or task was recreated. Task Weaver:
+project `02710c97-c2c3-4047-812d-58f03060e75f`, requirement
+`5de6cf6c-d4a7-466e-815b-736683ed6132`.
 
 ## Candidate version matrix
 
-| Component | Candidate | Local evidence |
+| Component | Candidate | Verified scope |
 | --- | --- | --- |
-| Core shell, CLI and core library | 0.3.5 | Workspace tests, Clippy and native release build |
-| Process plugin SDK | 0.3.5 | Workspace SDK tests; proof types exported |
-| All 14 official plugins | 0.3.4 | Native release builds, tests, strict Clippy, contract exports and signed packages |
-| Plugin SDK/core dependency pin | Existing validated `31d22cd09c9b10f1d22f59d47e789a49c33a290d` | No driver or transport API change; native initialize/health succeeded |
-| Homebrew public artifact version | 0.3.4 until full candidate assets exist | Core-only install logic prepared; old URLs/hashes retained |
+| Core shell, CLI, core library and SDK | 0.3.5 | Workspace tests/Clippy, five native CI platforms, five core-only archives |
+| All 14 official plugins | 0.3.4 | PR CI, four native builds, 168 signed archives and detached signatures |
+| Plugin SDK/core dependency pin | `31d22cd09c9b10f1d22f59d47e789a49c33a290d` | Existing driver/transport ABI; actual initialize/health acceptance |
+| Homebrew published formula | 0.3.4 until final public assets exist | Core-only logic prepared; candidate four-platform hashes staged separately |
 
-The plugins are mysql, postgres, sqlite, redis, ssh, duckdb, docker, kubernetes,
-s3, elasticsearch, mongodb, jenkins, webdav and email. Existing protocol 1
-manifests remain supported. Published v0.3.3 plugin artifacts remain immutable.
+Official plugins: mysql, postgres, sqlite, redis, ssh, duckdb, docker, kubernetes,
+s3, elasticsearch, mongodb, jenkins, webdav and email. Protocol 1 remains supported.
+New signed plugin assets use v0.3.4; published v0.3.3 assets remain immutable.
+Windows has a core package only; no official Windows plugin support is claimed.
 
-## Changes reviewed and implemented
+## Implementation reviewed
 
-The earlier worktree changes were preserved and reviewed: core-only release
-packaging and local staging, no automatic installer/Homebrew plugin installation,
-no implicit prefix/system/bundled discovery, registry-first install-default,
-optional onboarding, and contextual missing-plugin installation.
+The previous uncommitted core-only packaging, installer, discovery, onboarding and
+contextual installation work was preserved, reviewed and committed.
 
-New enforcement requires valid managed installation records and authenticated
-`provenance.json` before every new child launch. There is no legacy digest
-backfill. Strict Ed25519 checks bind identity, version, protocol, host target,
-executable path and all payload files to a compiled official public key. Managed
-symlinks and unverified payload changes are rejected. Explicit unsigned development
-requires both a development root and `VOIDB_ALLOW_UNSIGNED_PLUGINS=1` outside
-standard managed user directories.
+Managed plugins require a valid installation record and strict Ed25519 provenance
+before child launch. The compiled root binds plugin ID, version, protocol, target,
+executable path and every payload file. Missing records, omitted digests, rewritten
+binary/digest pairs, forged proofs, changed schemas, extra files and managed symlinks
+fail closed. Existing binaries are never silently trusted or used to backfill old
+records. Explicit unsigned development requires a development root outside managed
+user directories and `VOIDB_ALLOW_UNSIGNED_PLUGINS=1`.
 
-Installation/update verify proofs before activation, serialize mutation with an
-OS file lock, atomically replace synced records and preserve old packages/records.
-Metadata activation failures restore the previous package. Updates preserve disabled
-state. `install-default --force` uses verified update instead of deleting first.
-Registry selection checks signed ID/version, and the registry builder authenticates
-target-qualified archives before publishing entries. Distribution validation can
-inspect foreign targets, while runtime verification fixes the compiled host target.
+Install/update verify before activation, serialize writers with an OS file lock,
+atomically sync/replace records and restore matching previous packages on activation
+failure. Disabled state is preserved. Verified reinstall handles legacy missing
+records; verified rollback retains matching proofs. Registry selection checks signed
+identity/version, and registry indexing authenticates target-qualified archives.
+Runtime uses the compiled host target; distribution tooling may inspect foreign targets.
 
-Onboarding and contextual installer children close stdin and remove the master
-password environment variable. Partial onboarding remains retryable. Existing
-invalid, disabled or incompatible installations are not overwritten by contextual
-installation. Normal and minimum-size PTY scenarios used the real CLI and signed
-HTTP assets.
+Core packages contain only `voidb` and `voidb-cli`. Default discovery does not scan
+system/prefix bundled locations. Registry-first `install-default` is explicit;
+`--from-bundled` preserves deliberate offline roots. First interactive startup offers
+install or skip, remembers skip and retries partial failure. Noninteractive startup
+never prompts or downloads. Connection Manager contextual installation installs only
+the selected missing official plugin, handles cancellation/error/retry and refreshes
+state. Disabled/invalid/incompatible installations are not overwritten. Installer
+children close stdin and remove the master-password environment variable.
 
-See [the trust contract](plugin-trust-v0.3.5.md) for the exact format, key lifecycle,
-immutable package/data policy and residual filesystem execution race. Trusted core,
-OS, invocation environment, signing-key confidentiality and approved publisher CI
-remain assumptions. Existing authenticated live sessions are not retroactively
-terminated by deleting disk metadata.
+The [trust contract](plugin-trust-v0.3.5.md) states the exact envelope, immutable
+payload policy, key lifecycle and residual hash-to-execution race. Core executable,
+embedded trust roots, OS, invocation environment and approved publisher CI remain
+trusted. Replacing the main executable/trust roots or compromising the signer is
+outside the guarantee. Existing authenticated live sessions are not retroactively
+terminated when disk metadata is deleted.
 
-## Local validation evidence
+## Signing ownership and protected CI
 
-The committed [evidence JSON](release-v0.3.5-local-evidence.json) records hashes and
-results. Local candidate files are under `target/v0.3.5-candidate/` (Git-ignored).
-
-- `cargo test --workspace --no-fail-fast`: passed.
-- `cargo clippy --workspace --all-targets --no-deps`: passed, zero warnings.
-- `cargo test -p voidb-cli --features full`: passed.
-- All 14 repositories: `cargo build --offline --release`, locked all-target tests,
-  strict Clippy (`-D warnings`) and `export_contract --check`: passed.
-- Shared Python signing/staging/installer tests use independent test keys: passed.
-- Shell/Ruby syntax, all edited workflow YAML and `git diff --check`: passed.
-- Changed Rust files were formatted. The full repository formatting check still
-  reports pre-existing unrelated formatting differences; no broad formatting churn
-  was introduced.
-
-The production CLI authenticated 14 actual native archives when generating an
-index. Real loopback HTTP acceptance covered install-default and repeat installation,
-all 14 individual installations and initialize/health responses, verified update,
-signed previous-package rollback, full uninstall and no implicit bundled fallback.
-
-Five attacks (record deletion, omitted digest, malformed record, binary/record
-co-modification and forged proof) failed before domain, TUI, serve and test dispatch.
-No child marker or synthetic secret output appeared and records were not backfilled.
-Core runtime tests additionally cover wrong signer/key/ID/version/target/protocol/path,
-schema substitution, extra files and symlinks across health/invoke/session launches.
-
-A copied immutable v0.3.3 MySQL backup with a missing record was refused, then
-migrated to signed v0.3.4 through the real candidate registry. The original backup
-and user installation were not changed. Native PTY checks proved noninteractive
-no-download behavior, six-plugin installation, partial five-plugin failure and
-next-launch retry, persistent skipping, contextual cancellation, and minimum-size
-failure/retry installing only MySQL. Profile and credential files remained unchanged.
-
-The native core tar contains exactly `voidb` and `voidb-cli`. The local Homebrew
-updater refuses to render v0.3.5 when any of the four Unix core archives is missing.
-The installed Homebrew CLI remains v0.3.4 and its plugin list remains empty.
-
-## Remaining gates and approval boundary
-
-The exact-source core candidate run passed on all five native platforms: Linux
-x86_64, Linux ARM64, macOS Intel, macOS ARM64 and Windows. Plugin builds and
-signed foreign-target artifacts are still being validated. Public registry
-acceptance and actual new Homebrew distribution remain pending. Windows has a
-core package only; no official Windows plugin support is claimed.
-
-The prepared release workflows support exact-source candidate dry runs, defaulting
-to `publish_release=false`. They upload candidate artifacts without creating tags
-or releases. Publishing requires a pre-existing tag matching the built source and
-uses `gh release create`, which cannot replace an old release. Recovery reuses only
-artifacts from the same source commit.
-
-The new key ID is `official-2026-10`; its public key is
+Key ID: `official-2026-10`. Public key:
 `2d00e2e461719c94b77cf0e9d1d49a9cf1c8dbe8f802696b801b432bfcc95ea2`.
-Its private key remains outside repositories, mode 0600 under a mode 0700 directory.
-Signing tools reject private keys within payloads or hard-linked private key files.
-No production private key was used in synthetic regression tests.
+The owner holds the private key outside repositories in a mode 0700 directory with
+a mode 0600, single-link key file. Tools reject payload-local or hard-linked keys.
+Synthetic signing regression tests use independent test keys.
 
-All 14 `plugin-release-signing` environments now require the repository owner
-(`limmytian`) as reviewer, with exact candidate branch and version-tag policies.
-The `VOIDB_PLUGIN_SIGNING_KEY_PEM` environment secret is provisioned and verified.
-The key is available only to the protected signing step, never PR/build jobs.
-Self-review remains available because the repository owner is the sole reviewer;
-actual candidate approvals are recorded through the normal review API.
+All 14 `plugin-release-signing` environments require `limmytian` review and permit
+only `codex/v0.3.5-trust-hardening` or version tags. The environment secret
+`VOIDB_PLUGIN_SIGNING_KEY_PEM` is available only in the protected signing step,
+never PR/build jobs. Self-review is available because the owner is the sole reviewer.
+Candidate reviews used the normal approval API after checking workflow-dispatch
+identity and exact source commit; they did not bypass environment protection.
 
-The owner approved candidate pushes, protected signing setup and non-publishing
-exact-source validation. After all target artifacts are verified, complete the
-remaining Task Weaver gates and update registry/formula hashes from real artifacts.
-Run `scripts/update-homebrew-formula.py` only with all four verified Unix archives.
-Tags and public publication require another explicit review/confirmation. Publish
-new signed plugin assets before advancing the public registry and core/Homebrew
-release, preserving every old immutable asset.
+## Validation evidence
 
-## Task Weaver scheduling
+The committed [local evidence](release-v0.3.5-local-evidence.json) records original
+native preparation. The [remote evidence](release-v0.3.5-remote-evidence.json) is the
+current acceptance record, including exact CI runs, commits and archive hashes.
 
-Threat model and runtime/migration slices are complete. Signing work is in
-progress for foreign-target artifact acceptance; downstream
-regression and distribution tasks must not be forced past that gate.
+- All 14 plugin PR CI and four-target release candidate runs passed.
+- All 168 plugin archives (14 plugins × 4 targets × 3 formats), detached signatures,
+  payload proofs/file maps and declared ELF/Mach-O architecture were independently verified.
+- The CI-built production CLI authenticated all 56 gzip platform packages into a
+  14-plugin index.
+- Core candidate run [38218876435](https://github.com/limmytian/voidb/actions/runs/38218876435)
+  passed five native platforms. All archives contain exactly two regular core binaries.
+- Core CI [38226398631](https://github.com/limmytian/voidb/actions/runs/38226398631)
+  passed at `9295d28396f2de06b064a687b79e83d0c9b80d23`: fast/full tests, Clippy,
+  capability drift and five native platform gates.
+- Local full workspace tests/Clippy and 188 full-feature CLI tests passed after fixes.
+  Shared Python signing/staging tests, shell/Ruby syntax and diff checks passed.
+- Actual CI core/plugin binaries over real HTTP passed default and all-14 installs,
+  initialize/health, verified update/rollback, uninstall with no fallback and migration
+  of a copied actual immutable v0.3.3 MySQL backup.
+- Five attack classes failed before domain/TUI/serve/test dispatch, with no child
+  marker, secret output or digest backfill. Core tests cover additional signer,
+  identity, target, schema, extra-file and symlink attacks.
+- Real normal/minimum-size PTYs passed six-plugin onboarding, partial failure and
+  next-launch retry, persistent skipping, noninteractive no-download, contextual
+  cancellation and selected-only failure/retry. Profile/credential bytes were unchanged.
+- The unchanged shell installer fetched actual CI core archives and checksums using
+  real curl/HTTP with candidate GitHub URLs routed to loopback. Clean install,
+  actual v0.3.4 binary upgrade and checksum refusal before overwrite passed.
+- Actual Homebrew Formula DSL installed a verified candidate in an isolated prefix,
+  with only two core binaries. The candidate four-platform formula was rendered from
+  actual archive hashes and staged at `target/v0.3.5-remote-candidate/homebrew/voidb.rb`.
 
-The existing core-only distribution task `37321655-4d3e-47d0-a18b-cd1395e2fa20`
-was moved from sequential slice 2 to slice 4 and made dependent on signed regression,
-because its real signed registry acceptance requires slice 3 artifacts. Its original
-acceptance criteria were retained. Terminal task transitions auto-release claims;
-there was no duplicate requirement creation or acceptance waiver.
+CI found unsigned transport fixtures without explicit development opt-in; they now
+use isolated test subprocesses. CI also exposed a pre-existing 200 ms broker test
+watchdog sensitive to scheduler load; it now allows 2 s while retaining the blocked
+fixture, 100 ms request deadline, abort-state and exactly-once cleanup assertions.
+Production trust/runtime behavior was not relaxed. The final CI passed both fixes.
+The full repository formatting check still reports pre-existing unrelated differences;
+changed code was formatted without broad unrelated churn.
 
-## Local repository commits
+## Explicit limits and publication sequence
 
-All candidate branches are `codex/v0.3.5-trust-hardening`. The core implementation
-and this evidence are committed together; use the current core branch HEAD as its
-exact review identity. No branch has been pushed.
+Full installer/registry/CLI/TUI/rollback E2E ran natively on macOS ARM64. Other targets
+have native build/CI gate and authenticated artifact evidence, not full live-database
+E2E. Public GitHub Release and raw-registry transport cannot be accepted before the
+new assets are published. Candidate artifact receipts do not claim public availability.
 
-| Repository | Local commit |
+The release workflows default to `publish_release=false`; every candidate publication
+job was skipped. Public workflows require a pre-existing tag matching the source and
+create a new Release instead of replacing one. Recovery accepts only exact-source artifacts.
+
+After separate owner approval:
+
+1. Review/merge the 14 plugin candidates, create/push new v0.3.4 tags and publish signed
+   assets through the protected environments. Preserve every previous tag/asset.
+2. Download and authenticate the actual public plugin assets, rebuild the registry
+   with actual signatures/hashes and perform public-transport installation acceptance.
+   Only then advance the main public registry to v0.3.4.
+3. Review/merge core changes, create/push a new v0.3.5 tag at the approved source,
+   publish core-only packages and reverify the actual public packages.
+4. Regenerate both Homebrew formulas from the four actual public Unix core archives,
+   then review/merge the tap update and verify the public install/upgrade path.
+
+Release rebuilds/repacking can change archive timestamps and hashes. Staged candidate
+hashes must not be blindly copied to final public registry/formula metadata. The public
+formula URLs/hashes remain v0.3.4 until actual v0.3.5 assets are available.
+
+## Task Weaver and review identities
+
+Slices 1–3 and the core-only/distribution implementation acceptance are complete.
+The final documentation/readiness task is prepared for owner review; requirement and
+slice 4 remain in review until that review is accepted. Public publication is a separate
+explicit authorization, not implied by Task Weaver status.
+
+All 16 repositories use branch `codex/v0.3.5-trust-hardening` and have draft PRs.
+Core runtime implementation is `885ab03a8f2e993359881757a0bc39d9be231439`; test-only
+CI fixes culminate in `9295d28396f2de06b064a687b79e83d0c9b80d23`. Use current branch
+HEAD to review final evidence, release notes and distribution smoke script.
+
+| Repository | Candidate commit |
 | --- | --- |
 | voidb-plugin-mysql | `9c93917eb91be953b4b9b40f91118c09e685ba4c` |
 | voidb-plugin-postgres | `8a4d3355b0a54c310ecd18cd02465726ce4d0306` |
@@ -171,27 +176,3 @@ exact review identity. No branch has been pushed.
 | voidb-plugin-webdav | `779fa13401df3c4ce5958677d16d874005f58938` |
 | voidb-plugin-email | `321ce7bf689b563218888d38b6227a99a859ba42` |
 | homebrew-tap | `0c5c49e5c670bce935d64e79e2705a6d12fd5814` |
-
-## Remote validation findings
-
-The first Linux full-feature CLI test job exposed two unsigned transport fixtures
-without explicit development opt-in. They now run in isolated test subprocesses
-with deliberate opt-in, as does the connection credential transport fixture.
-No process-global environment mutation is needed, and production trust gates are
-unchanged. With the opt-in absent from the parent, all 188 full-feature CLI tests
-and the relevant all-target Clippy check passed locally; remote revalidation is
-required after the fix.
-
-All 14 plugin PR CI runs passed at their exact candidate commits. All four native
-build targets passed for every plugin. Protected candidate signing was approved
-only after matching each run's event and source commit. The MySQL candidate proof
-was independently verified for all four targets; the remaining signed packages
-are being downloaded and authenticated. All publication jobs remain skipped.
-
-The refreshed core CI passed fast checks, capability drift and all five native
-platform gates. One pre-existing broker close race test exceeded its 200 ms outer
-watchdog on shared Linux CI. Its blocked fixture gate, 100 ms close request
-deadline, aborted lifecycle and exactly-once cleanup assertions are retained;
-the outer watchdog now permits 2 s of scheduler latency. The focused regression
-and full workspace tests passed locally. The full remote workspace gate must
-pass after this adjustment.
