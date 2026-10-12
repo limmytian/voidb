@@ -28,6 +28,7 @@ def main():
     parser.add_argument('--artifacts', type=Path, required=True)
     parser.add_argument('--target', default='aarch64-apple-darwin')
     parser.add_argument('--legacy-plugin-directory', type=Path)
+    parser.add_argument('--seed-legacy-registry-cache', type=Path, help='Verify upgrade ignores a fresh old-format registry cache without deleting it')
     parser.add_argument('--registry-url', help='Use an actual HTTPS registry and its public package URLs instead of loopback candidates')
     parser.add_argument('--report', type=Path, required=True)
     args = parser.parse_args()
@@ -97,11 +98,27 @@ def main():
                     raise AssertionError(f"CLI error envelope: {command}: {value}")
                 return value
 
+            legacy_caches = []
+            if args.seed_legacy_registry_cache:
+                cache_bytes = args.seed_legacy_registry_cache.read_bytes()
+                old_index = json.loads(cache_bytes)
+                assert all(entry['latest_version'] == '0.3.3' for entry in old_index['plugins'])
+                name = 'registry-cache-' + re.sub(r'[^a-zA-Z0-9]', '_', registry_url).strip('_') + '.json'
+                for directory in [home / '.config/voidb/plugins', home / '.local/share/voidb/plugins',
+                                  home / 'Library/Application Support/voidb/plugins']:
+                    directory.mkdir(parents=True, exist_ok=True)
+                    cache = directory / name
+                    cache.write_bytes(cache_bytes)
+                    legacy_caches.append(cache)
+
             defaults = run('plugin', 'install-default', '--format', 'json')
             initial_list = run('plugin', 'list', '--format', 'json')['data']['plugins']
             assert all(Path(row['manifest_path']).resolve().is_relative_to(home) for row in initial_list), 'CLI must use isolated HOME'
             assert len(defaults['data']['results']) == 6
             assert all(row['status'] == 'installed' for row in defaults['data']['results']), defaults
+            if legacy_caches:
+                assert all(cache.read_bytes() == cache_bytes for cache in legacy_caches)
+                report['checks'].append('fresh legacy unsigned registry caches are ignored after upgrade and preserved unchanged')
             report['checks'].append('install-default downloaded and verified six actual signed plugins')
             repeated = run('plugin', 'install-default', '--format', 'json')
             assert all(row['status'] == 'already_installed' for row in repeated['data']['results'])

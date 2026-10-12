@@ -1399,7 +1399,13 @@ fn local_registry_cache_path(url: &str) -> PathBuf {
         .chars()
         .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
         .collect();
-    let cache_filename = format!("registry-cache-{}.json", sanitized.trim_matches('_'));
+    // Legacy caches can still select unsigned releases after a core upgrade.
+    // Keep them intact while fetching metadata for the authenticated trust policy.
+    let cache_filename = format!(
+        "registry-cache-{}-proof-v1-{}.json",
+        voidb_core::plugin_provenance::OFFICIAL_KEY_ID,
+        sanitized.trim_matches('_')
+    );
 
     if let Some(user_root) = default_user_process_plugin_install_root() {
         user_root.join(cache_filename)
