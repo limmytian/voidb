@@ -3848,6 +3848,11 @@ mod tests {
     #[cfg(unix)]
     #[tokio::test]
     async fn invokes_process_plugin_from_discovery_fixture() {
+        if crate::run_development_fixture_in_child(
+            "builtin::invoke::tests::invokes_process_plugin_from_discovery_fixture",
+        ) {
+            return;
+        }
         let fixture = ProcessFixture::new("success");
         let ctx = CliContext::new(AppConfig {
             connections: vec![process_connection()],
@@ -3899,6 +3904,11 @@ mod tests {
     #[cfg(unix)]
     #[tokio::test]
     async fn process_plugin_target_failure_is_structured_and_redacted() {
+        if crate::run_development_fixture_in_child(
+            "builtin::invoke::tests::process_plugin_target_failure_is_structured_and_redacted",
+        ) {
+            return;
+        }
         let fixture = ProcessFixture::new("target_failure");
         let ctx = CliContext::new(AppConfig {
             connections: vec![process_connection()],

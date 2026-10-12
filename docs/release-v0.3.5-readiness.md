@@ -1,8 +1,13 @@
 # v0.3.5 local release candidate readiness
 
-Status: local candidate prepared; **not approved for public release**.
-The public baseline remains core v0.3.4 and official plugins v0.3.3. No new tags,
-pushes, releases, or signing-secret uploads were performed in this session.
+Status: remote candidate validation in progress; **not approved for public release**.
+The public baseline remains core v0.3.4 and official plugins v0.3.3. No new tags or public releases were created. The owner subsequently approved
+candidate branch pushes, protected signing CI provisioning and non-publishing
+cross-platform validation. All 16 branches were pushed; 14 signing environments
+require owner review and restrict access to the candidate branch and version tags.
+All 14 plugin candidate runs and the core candidate run are recorded in
+[remote evidence](release-v0.3.5-remote-evidence.json). Draft pull requests trigger
+CI and provide reviewable changes. Public release remains separately gated.
 
 The owner authorized implementation, verification and local commits on
 2026-10-12. The existing Task Weaver requirement is
@@ -98,10 +103,11 @@ The installed Homebrew CLI remains v0.3.4 and its plugin list remains empty.
 
 ## Remaining gates and approval boundary
 
-**Only macOS ARM64 was exercised natively in this session.** Linux x86_64,
-Linux ARM64 and macOS Intel signed artifacts, exact-source native CI, public
-registry acceptance and actual new Homebrew distribution remain pending. Windows
-has a core package only; no official Windows plugin support is claimed.
+The exact-source core candidate run passed on all five native platforms: Linux
+x86_64, Linux ARM64, macOS Intel, macOS ARM64 and Windows. Plugin builds and
+signed foreign-target artifacts are still being validated. Public registry
+acceptance and actual new Homebrew distribution remain pending. Windows has a
+core package only; no official Windows plugin support is claimed.
 
 The prepared release workflows support exact-source candidate dry runs, defaulting
 to `publish_release=false`. They upload candidate artifacts without creating tags
@@ -115,25 +121,25 @@ Its private key remains outside repositories, mode 0600 under a mode 0700 direct
 Signing tools reject private keys within payloads or hard-linked private key files.
 No production private key was used in synthetic regression tests.
 
-Before remote candidate runs, review and configure `plugin-release-signing` in all
-14 plugin repositories with an appropriate required reviewer/tag policy and the
-`VOIDB_PLUGIN_SIGNING_KEY_PEM` environment secret. The sampled MySQL environment
-returned 404; this session did not provision remote environments or secrets.
+All 14 `plugin-release-signing` environments now require the repository owner
+(`limmytian`) as reviewer, with exact candidate branch and version-tag policies.
+The `VOIDB_PLUGIN_SIGNING_KEY_PEM` environment secret is provisioned and verified.
 The key is available only to the protected signing step, never PR/build jobs.
+Self-review remains available because the repository owner is the sole reviewer;
+actual candidate approvals are recorded through the normal review API.
 
-Next authorized phase requires owner approval to push candidate branches, configure
-protected signing environments/secrets and dispatch **non-publishing** exact-source
-candidate CI. After all target artifacts are verified, complete the remaining
-Task Weaver gates and update registry/formula hashes from real artifacts. Run
-`scripts/update-homebrew-formula.py` only with all four verified Unix core archives.
+The owner approved candidate pushes, protected signing setup and non-publishing
+exact-source validation. After all target artifacts are verified, complete the
+remaining Task Weaver gates and update registry/formula hashes from real artifacts.
+Run `scripts/update-homebrew-formula.py` only with all four verified Unix archives.
 Tags and public publication require another explicit review/confirmation. Publish
 new signed plugin assets before advancing the public registry and core/Homebrew
 release, preserving every old immutable asset.
 
 ## Task Weaver scheduling
 
-Threat model and runtime/migration slices are complete. Signing work remains in
-review for remote provisioning and foreign-target artifact acceptance; downstream
+Threat model and runtime/migration slices are complete. Signing work is in
+progress for foreign-target artifact acceptance; downstream
 regression and distribution tasks must not be forced past that gate.
 
 The existing core-only distribution task `37321655-4d3e-47d0-a18b-cd1395e2fa20`
@@ -165,3 +171,13 @@ exact review identity. No branch has been pushed.
 | voidb-plugin-webdav | `779fa13401df3c4ce5958677d16d874005f58938` |
 | voidb-plugin-email | `321ce7bf689b563218888d38b6227a99a859ba42` |
 | homebrew-tap | `0c5c49e5c670bce935d64e79e2705a6d12fd5814` |
+
+## Remote validation findings
+
+The first Linux full-feature CLI test job exposed two unsigned transport fixtures
+without explicit development opt-in. They now run in isolated test subprocesses
+with deliberate opt-in, as does the connection credential transport fixture.
+No process-global environment mutation is needed, and production trust gates are
+unchanged. With the opt-in absent from the parent, all 188 full-feature CLI tests
+and the relevant all-target Clippy check passed locally; remote revalidation is
+required after the fix.

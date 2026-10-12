@@ -1,0 +1,518 @@
+{
+  "phase": "candidate-validation-in-progress",
+  "authorized_actions": [
+    "candidate branch pushes",
+    "protected signing environments and secrets",
+    "non-publishing candidate workflow dispatch",
+    "draft pull requests for validation"
+  ],
+  "unauthorized_actions": [
+    "new tags",
+    "public releases"
+  ],
+  "branch": "codex/v0.3.5-trust-hardening",
+  "source_commits": [
+    {
+      "repository": "voidb-plugin-mysql",
+      "commit": "9c93917eb91be953b4b9b40f91118c09e685ba4c",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-postgres",
+      "commit": "8a4d3355b0a54c310ecd18cd02465726ce4d0306",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-sqlite",
+      "commit": "376c3877fd2a827015a3ae8154689aa6ec9bb567",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-redis",
+      "commit": "4be2bb39070d571023718f2019f3a35b8eafa004",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-ssh",
+      "commit": "fda5e0a6d13a0f44ec98751df2dc5500ae959753",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-duckdb",
+      "commit": "bd4624f7cedc387d882da63ab0464045a06776c2",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-docker",
+      "commit": "51961489967c4ac2db849c3f809bb332d566a373",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-kubernetes",
+      "commit": "701f14816e7fbca14bdbebf2ac2c10427c80b4a3",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-s3",
+      "commit": "84dd62d15a4cfee7fd3aa81edd5b2bae1d7fe9dd",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-elasticsearch",
+      "commit": "ef4935a2d3b378b659b594fed50b5709a68e91f6",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-mongodb",
+      "commit": "894018fdcee29a8b67b49e9678e194af5393fbd7",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-jenkins",
+      "commit": "bf95f9fdeccb216d4a16be97236d4be98c10cb15",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-webdav",
+      "commit": "779fa13401df3c4ce5958677d16d874005f58938",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-email",
+      "commit": "321ce7bf689b563218888d38b6227a99a859ba42",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "homebrew-tap",
+      "commit": "0c5c49e5c670bce935d64e79e2705a6d12fd5814",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb",
+      "commit": "885ab03a8f2e993359881757a0bc39d9be231439",
+      "branch": "codex/v0.3.5-trust-hardening"
+    }
+  ],
+  "signing_environments": [
+    {
+      "repository": "limmytian/voidb-plugin-mysql",
+      "environment_id": 24058779691,
+      "reviewer": "limmytian",
+      "branch_policies": [
+        {
+          "id": 62758803,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1ODgwMw==",
+          "name": "codex/v0.3.5-trust-hardening",
+          "type": "branch"
+        },
+        {
+          "id": 62758804,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1ODgwNA==",
+          "name": "v*",
+          "type": "tag"
+        }
+      ],
+      "secret_name": "VOIDB_PLUGIN_SIGNING_KEY_PEM"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-postgres",
+      "environment_id": 24058830165,
+      "reviewer": "limmytian",
+      "branch_policies": [
+        {
+          "id": 62758826,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1ODgyNg==",
+          "name": "codex/v0.3.5-trust-hardening",
+          "type": "branch"
+        },
+        {
+          "id": 62758833,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1ODgzMw==",
+          "name": "v*",
+          "type": "tag"
+        }
+      ],
+      "secret_name": "VOIDB_PLUGIN_SIGNING_KEY_PEM"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-sqlite",
+      "environment_id": 24058845610,
+      "reviewer": "limmytian",
+      "branch_policies": [
+        {
+          "id": 62758839,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1ODgzOQ==",
+          "name": "codex/v0.3.5-trust-hardening",
+          "type": "branch"
+        },
+        {
+          "id": 62758842,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1ODg0Mg==",
+          "name": "v*",
+          "type": "tag"
+        }
+      ],
+      "secret_name": "VOIDB_PLUGIN_SIGNING_KEY_PEM"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-redis",
+      "environment_id": 24058860028,
+      "reviewer": "limmytian",
+      "branch_policies": [
+        {
+          "id": 62758874,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1ODg3NA==",
+          "name": "codex/v0.3.5-trust-hardening",
+          "type": "branch"
+        },
+        {
+          "id": 62758877,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1ODg3Nw==",
+          "name": "v*",
+          "type": "tag"
+        }
+      ],
+      "secret_name": "VOIDB_PLUGIN_SIGNING_KEY_PEM"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-ssh",
+      "environment_id": 24058923822,
+      "reviewer": "limmytian",
+      "branch_policies": [
+        {
+          "id": 62758959,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1ODk1OQ==",
+          "name": "codex/v0.3.5-trust-hardening",
+          "type": "branch"
+        },
+        {
+          "id": 62758960,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1ODk2MA==",
+          "name": "v*",
+          "type": "tag"
+        }
+      ],
+      "secret_name": "VOIDB_PLUGIN_SIGNING_KEY_PEM"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-duckdb",
+      "environment_id": 24058950686,
+      "reviewer": "limmytian",
+      "branch_policies": [
+        {
+          "id": 62758998,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1ODk5OA==",
+          "name": "codex/v0.3.5-trust-hardening",
+          "type": "branch"
+        },
+        {
+          "id": 62759000,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1OTAwMA==",
+          "name": "v*",
+          "type": "tag"
+        }
+      ],
+      "secret_name": "VOIDB_PLUGIN_SIGNING_KEY_PEM"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-docker",
+      "environment_id": 24058969940,
+      "reviewer": "limmytian",
+      "branch_policies": [
+        {
+          "id": 62759021,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1OTAyMQ==",
+          "name": "codex/v0.3.5-trust-hardening",
+          "type": "branch"
+        },
+        {
+          "id": 62759024,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1OTAyNA==",
+          "name": "v*",
+          "type": "tag"
+        }
+      ],
+      "secret_name": "VOIDB_PLUGIN_SIGNING_KEY_PEM"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-kubernetes",
+      "environment_id": 24058987830,
+      "reviewer": "limmytian",
+      "branch_policies": [
+        {
+          "id": 62759045,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1OTA0NQ==",
+          "name": "codex/v0.3.5-trust-hardening",
+          "type": "branch"
+        },
+        {
+          "id": 62759053,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1OTA1Mw==",
+          "name": "v*",
+          "type": "tag"
+        }
+      ],
+      "secret_name": "VOIDB_PLUGIN_SIGNING_KEY_PEM"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-s3",
+      "environment_id": 24059016470,
+      "reviewer": "limmytian",
+      "branch_policies": [
+        {
+          "id": 62759079,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1OTA3OQ==",
+          "name": "codex/v0.3.5-trust-hardening",
+          "type": "branch"
+        },
+        {
+          "id": 62759080,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1OTA4MA==",
+          "name": "v*",
+          "type": "tag"
+        }
+      ],
+      "secret_name": "VOIDB_PLUGIN_SIGNING_KEY_PEM"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-elasticsearch",
+      "environment_id": 24059030073,
+      "reviewer": "limmytian",
+      "branch_policies": [
+        {
+          "id": 62759102,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1OTEwMg==",
+          "name": "codex/v0.3.5-trust-hardening",
+          "type": "branch"
+        },
+        {
+          "id": 62759103,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1OTEwMw==",
+          "name": "v*",
+          "type": "tag"
+        }
+      ],
+      "secret_name": "VOIDB_PLUGIN_SIGNING_KEY_PEM"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-mongodb",
+      "environment_id": 24059041807,
+      "reviewer": "limmytian",
+      "branch_policies": [
+        {
+          "id": 62759135,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1OTEzNQ==",
+          "name": "codex/v0.3.5-trust-hardening",
+          "type": "branch"
+        },
+        {
+          "id": 62759137,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1OTEzNw==",
+          "name": "v*",
+          "type": "tag"
+        }
+      ],
+      "secret_name": "VOIDB_PLUGIN_SIGNING_KEY_PEM"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-jenkins",
+      "environment_id": 24059087880,
+      "reviewer": "limmytian",
+      "branch_policies": [
+        {
+          "id": 62759197,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1OTE5Nw==",
+          "name": "codex/v0.3.5-trust-hardening",
+          "type": "branch"
+        },
+        {
+          "id": 62759198,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1OTE5OA==",
+          "name": "v*",
+          "type": "tag"
+        }
+      ],
+      "secret_name": "VOIDB_PLUGIN_SIGNING_KEY_PEM"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-webdav",
+      "environment_id": 24059102083,
+      "reviewer": "limmytian",
+      "branch_policies": [
+        {
+          "id": 62759212,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1OTIxMg==",
+          "name": "codex/v0.3.5-trust-hardening",
+          "type": "branch"
+        },
+        {
+          "id": 62759233,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1OTIzMw==",
+          "name": "v*",
+          "type": "tag"
+        }
+      ],
+      "secret_name": "VOIDB_PLUGIN_SIGNING_KEY_PEM"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-email",
+      "environment_id": 24059121611,
+      "reviewer": "limmytian",
+      "branch_policies": [
+        {
+          "id": 62759251,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1OTI1MQ==",
+          "name": "codex/v0.3.5-trust-hardening",
+          "type": "branch"
+        },
+        {
+          "id": 62759253,
+          "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Mjc1OTI1Mw==",
+          "name": "v*",
+          "type": "tag"
+        }
+      ],
+      "secret_name": "VOIDB_PLUGIN_SIGNING_KEY_PEM"
+    }
+  ],
+  "plugin_candidate_runs": [
+    {
+      "repository": "voidb-plugin-mysql",
+      "commit": "9c93917eb91be953b4b9b40f91118c09e685ba4c",
+      "dispatch_output": "https://github.com/limmytian/voidb-plugin-mysql/actions/runs/38218984751"
+    },
+    {
+      "repository": "voidb-plugin-postgres",
+      "commit": "8a4d3355b0a54c310ecd18cd02465726ce4d0306",
+      "dispatch_output": "https://github.com/limmytian/voidb-plugin-postgres/actions/runs/38218988602"
+    },
+    {
+      "repository": "voidb-plugin-sqlite",
+      "commit": "376c3877fd2a827015a3ae8154689aa6ec9bb567",
+      "dispatch_output": "https://github.com/limmytian/voidb-plugin-sqlite/actions/runs/38218992285"
+    },
+    {
+      "repository": "voidb-plugin-redis",
+      "commit": "4be2bb39070d571023718f2019f3a35b8eafa004",
+      "dispatch_output": "https://github.com/limmytian/voidb-plugin-redis/actions/runs/38218995413"
+    },
+    {
+      "repository": "voidb-plugin-ssh",
+      "commit": "fda5e0a6d13a0f44ec98751df2dc5500ae959753",
+      "dispatch_output": "https://github.com/limmytian/voidb-plugin-ssh/actions/runs/38219000030"
+    },
+    {
+      "repository": "voidb-plugin-duckdb",
+      "commit": "bd4624f7cedc387d882da63ab0464045a06776c2",
+      "dispatch_output": "https://github.com/limmytian/voidb-plugin-duckdb/actions/runs/38219002982"
+    },
+    {
+      "repository": "voidb-plugin-kubernetes",
+      "commit": "701f14816e7fbca14bdbebf2ac2c10427c80b4a3",
+      "dispatch_output": "https://github.com/limmytian/voidb-plugin-kubernetes/actions/runs/38219012905"
+    },
+    {
+      "repository": "voidb-plugin-s3",
+      "commit": "84dd62d15a4cfee7fd3aa81edd5b2bae1d7fe9dd",
+      "dispatch_output": "https://github.com/limmytian/voidb-plugin-s3/actions/runs/38219015955"
+    },
+    {
+      "repository": "voidb-plugin-mongodb",
+      "commit": "894018fdcee29a8b67b49e9678e194af5393fbd7",
+      "dispatch_output": "https://github.com/limmytian/voidb-plugin-mongodb/actions/runs/38219025582"
+    },
+    {
+      "repository": "voidb-plugin-jenkins",
+      "commit": "bf95f9fdeccb216d4a16be97236d4be98c10cb15",
+      "dispatch_output": "https://github.com/limmytian/voidb-plugin-jenkins/actions/runs/38219030726"
+    },
+    {
+      "repository": "voidb-plugin-webdav",
+      "commit": "779fa13401df3c4ce5958677d16d874005f58938",
+      "dispatch_output": "https://github.com/limmytian/voidb-plugin-webdav/actions/runs/38219033562"
+    },
+    {
+      "repository": "voidb-plugin-docker",
+      "commit": "51961489967c4ac2db849c3f809bb332d566a373",
+      "dispatch_output": "https://github.com/limmytian/voidb-plugin-docker/actions/runs/38219076654"
+    },
+    {
+      "repository": "voidb-plugin-email",
+      "commit": "321ce7bf689b563218888d38b6227a99a859ba42",
+      "dispatch_output": "https://github.com/limmytian/voidb-plugin-email/actions/runs/38219090496"
+    },
+    {
+      "repository": "voidb-plugin-elasticsearch",
+      "commit": "ef4935a2d3b378b659b594fed50b5709a68e91f6",
+      "dispatch_output": "https://github.com/limmytian/voidb-plugin-elasticsearch/actions/runs/38219212927"
+    }
+  ],
+  "core_candidate_run": "https://github.com/limmytian/voidb/actions/runs/38218876435",
+  "core_ci_run": "https://github.com/limmytian/voidb/actions/runs/38219006119",
+  "draft_pull_requests": [
+    {
+      "repository": "limmytian/voidb",
+      "url": "https://github.com/limmytian/voidb/pull/1"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-mysql",
+      "url": "https://github.com/limmytian/voidb-plugin-mysql/pull/1"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-postgres",
+      "url": "https://github.com/limmytian/voidb-plugin-postgres/pull/1"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-sqlite",
+      "url": "https://github.com/limmytian/voidb-plugin-sqlite/pull/1"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-redis",
+      "url": "https://github.com/limmytian/voidb-plugin-redis/pull/1"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-ssh",
+      "url": "https://github.com/limmytian/voidb-plugin-ssh/pull/1"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-duckdb",
+      "url": "https://github.com/limmytian/voidb-plugin-duckdb/pull/1"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-docker",
+      "url": "https://github.com/limmytian/voidb-plugin-docker/pull/1"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-kubernetes",
+      "url": "https://github.com/limmytian/voidb-plugin-kubernetes/pull/1"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-s3",
+      "url": "https://github.com/limmytian/voidb-plugin-s3/pull/1"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-elasticsearch",
+      "url": "https://github.com/limmytian/voidb-plugin-elasticsearch/pull/1"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-mongodb",
+      "url": "https://github.com/limmytian/voidb-plugin-mongodb/pull/1"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-jenkins",
+      "url": "https://github.com/limmytian/voidb-plugin-jenkins/pull/1"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-webdav",
+      "url": "https://github.com/limmytian/voidb-plugin-webdav/pull/1"
+    },
+    {
+      "repository": "limmytian/voidb-plugin-email",
+      "url": "https://github.com/limmytian/voidb-plugin-email/pull/1"
+    },
+    {
+      "repository": "limmytian/homebrew-tap",
+      "url": "https://github.com/limmytian/homebrew-tap/pull/1"
+    }
+  ]
+}

@@ -386,6 +386,11 @@ mod tests {
     #[cfg(unix)]
     #[tokio::test]
     async fn subprocess_receives_credentials_only_through_stdin() {
+        if crate::run_development_fixture_in_child(
+            "builtin::connections::tests::subprocess_receives_credentials_only_through_stdin",
+        ) {
+            return;
+        }
         use std::os::unix::fs::PermissionsExt;
         use voidb_core::{
             ProcessPluginRoot, ProcessPluginRootKind, discover_process_plugins_from_roots,
@@ -446,23 +451,6 @@ streaming = false
                 .is_some_and(|c| c.resolved_runtime_command.is_some()),
             "{discovery:?}"
         );
-        // This synthetic transport fixture deliberately uses an unsigned development root.
-        // Restore the opt-in even if an assertion panics; managed roots still fail closed.
-        struct DevelopmentOptIn(Option<std::ffi::OsString>);
-        impl Drop for DevelopmentOptIn {
-            fn drop(&mut self) {
-                unsafe {
-                    match &self.0 {
-                        Some(value) => std::env::set_var("VOIDB_ALLOW_UNSIGNED_PLUGINS", value),
-                        None => std::env::remove_var("VOIDB_ALLOW_UNSIGNED_PLUGINS"),
-                    }
-                }
-            }
-        }
-        let _opt_in = DevelopmentOptIn(std::env::var_os("VOIDB_ALLOW_UNSIGNED_PLUGINS"));
-        unsafe {
-            std::env::set_var("VOIDB_ALLOW_UNSIGNED_PLUGINS", "1");
-        }
         let result = test_connection_with_discovery("fixture", &connection(), &discovery).await;
         let payload = std::fs::read(&received);
         std::fs::remove_dir_all(&root).unwrap();

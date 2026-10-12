@@ -3,6 +3,28 @@ mod agent_session_host;
 mod builtin;
 mod jit_authorization;
 
+#[cfg(all(test, unix))]
+fn run_development_fixture_in_child(test_name: &str) -> bool {
+    const MARKER: &str = "VOIDB_TEST_DEVELOPMENT_FIXTURE";
+    if std::env::var(MARKER).as_deref() == Ok(test_name) {
+        assert_eq!(
+            std::env::var("VOIDB_ALLOW_UNSIGNED_PLUGINS").as_deref(),
+            Ok("1")
+        );
+        return false;
+    }
+    // Keep deliberate unsigned fixture opt-in isolated from concurrent tests.
+    let status = std::process::Command::new(std::env::current_exe().expect("test executable"))
+        .args(["--exact", test_name, "--nocapture"])
+        .env(MARKER, test_name)
+        .env("VOIDB_ALLOW_UNSIGNED_PLUGINS", "1")
+        .status()
+        .expect("run isolated development fixture");
+    assert!(status.success(), "development fixture failed: {test_name}");
+    true
+}
+
+
 use clap::{ArgMatches, Command};
 use voidb_core::config::AppConfig;
 use voidb_core::plugin::cli::{CliContext, CliPluginManager};
