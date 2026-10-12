@@ -1,6 +1,6 @@
-# VoidB v0.3.5 candidate release notes
+# VoidB v0.3.5 release notes
 
-Unreleased candidate. Core v0.3.5 uses separately distributed official plugin v0.3.4
+Core v0.3.5 uses separately distributed official plugin v0.3.4
 packages. Existing public releases remain immutable.
 
 ## Security
@@ -12,6 +12,8 @@ packages. Existing public releases remain immutable.
   to the compiled official trust root. Managed symlinks and changed payloads fail closed.
 - Legacy unsigned installations require verified update/reinstall. Update/rollback
   preserve matching authenticated packages and profiles/credentials.
+- Legacy registry caches remain intact; a new trust-policy cache namespace fetches
+  signed release metadata immediately after upgrade.
 - Explicit development roots retain unsigned execution only with deliberate opt-in.
 - The guarantee assumes a trusted main executable, embedded roots and signing owner;
   it does not defeat replacement of those roots or remove every filesystem execution race.
@@ -35,4 +37,6 @@ All 14 official plugins prepare new signed v0.3.4 assets for Linux x86_64/ARM64 
 macOS Intel/ARM64. Windows includes the core package only. Protocol 1 remains supported.
 Native CI, authenticated packages, adversarial lifecycle and real HTTP/PTY acceptance
 passed within the scopes stated in [release readiness](release-v0.3.5-readiness.md).
-Public transport checks follow separately authorized publication.
+The owner approved publication. All 14 plugin releases and all 56 public platform
+packages are authenticated; final core and Homebrew public checks are recorded in
+[publication evidence](release-v0.3.5-publication-evidence.json).

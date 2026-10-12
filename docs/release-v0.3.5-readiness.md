@@ -1,6 +1,7 @@
 # v0.3.5 release candidate readiness
 
-Status: candidate implementation and validation passed; **public release requires owner approval**.
+Status: owner approved publication; all 14 official plugins v0.3.4 are public.
+Core v0.3.5 and final Homebrew/public installation acceptance are in preparation.
 The public baseline remains core v0.3.4 and all 14 official plugins v0.3.3.
 No new tags or public releases were created or replaced. The installed Homebrew
 CLI remains v0.3.4, its plugin list is empty, and actual profiles, credentials,
@@ -176,3 +177,23 @@ HEAD to review final evidence, release notes and distribution smoke script.
 | voidb-plugin-webdav | `779fa13401df3c4ce5958677d16d874005f58938` |
 | voidb-plugin-email | `321ce7bf689b563218888d38b6227a99a859ba42` |
 | homebrew-tap | `0c5c49e5c670bce935d64e79e2705a6d12fd5814` |
+
+## Authorized publication progress
+
+The owner accepted the release review and explicitly approved merges, new tags,
+public Releases and registry/Homebrew validation. All 14 plugin PRs were merged;
+v0.3.4 tags point to the reviewed exact-source signing commits. The authenticated
+candidate artifacts were promoted into new draft Releases, verified against server
+asset digests and then published. All 350 new assets match the reviewed bits.
+Duplicate tag-triggered rebuilds were cancelled to avoid duplicate publication.
+No old tag or published asset was replaced. Old v0.3.3 tag objects and asset
+metadata were independently checked and remain unchanged.
+
+All 56 actual public gzip archives, retained detached signatures and payload
+proofs were downloaded and authenticated before generating the registry.
+The old v0.3.3 registry version history remains intact. Registry downloads now
+retain and verify detached signatures, and the update workflow defaults to v0.3.4.
+Fresh legacy metadata caches are preserved but are not used by the new trust-policy
+cache namespace. An isolated production-CLI test seeded fresh v0.3.3 caches and
+proved signed installation, user-state preservation and all lifecycle/attack checks.
+See [publication evidence](release-v0.3.5-publication-evidence.json).
