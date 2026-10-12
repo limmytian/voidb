@@ -1,5 +1,5 @@
 {
-  "status": "official-plugins-published-core-in-preparation",
+  "status": "published-public-distribution-acceptance-passed",
   "owner_approval": "Merge candidate PRs, create/push new plugin v0.3.4 and core v0.3.5 tags, publish releases, update registry/Homebrew and validate actual public distribution",
   "plugin_releases": [
     {
@@ -3417,5 +3417,211 @@
     "Registry download retains and cryptographically verifies archive signatures",
     "Registry workflow defaults to v0.3.4",
     "Authenticated registry cache namespace avoids fresh unsigned legacy metadata without deleting old cache files"
+  ],
+  "core_release": {
+    "source_commit": "a2cc72b6b730c56aefedbd218ad0c9f6612bf8e5",
+    "candidate_run_id": 38243526017,
+    "ci_run_id": 38243282331,
+    "release_id": 410551941,
+    "release_url": "https://github.com/limmytian/voidb/releases/tag/v0.3.5",
+    "phase": "published",
+    "assets": [
+      {
+        "id": 633652382,
+        "name": "SHA256SUMS",
+        "size": 480,
+        "digest": "sha256:fb5591442df5c483d5548481de5db8fc65b38182deb1531afe97378c0f02d067",
+        "url": "https://github.com/limmytian/voidb/releases/download/untagged-7567980451257443b9f3/SHA256SUMS"
+      },
+      {
+        "id": 633652111,
+        "name": "voidb-0.3.5-darwin-arm64.tar.gz",
+        "size": 6442369,
+        "digest": "sha256:49de4ceaeeb02920f728eb71eaf55ddc82c4773b7234dc2db93dc5240e478938",
+        "url": "https://github.com/limmytian/voidb/releases/download/untagged-7567980451257443b9f3/voidb-0.3.5-darwin-arm64.tar.gz"
+      },
+      {
+        "id": 633652101,
+        "name": "voidb-0.3.5-darwin-x64.tar.gz",
+        "size": 6748600,
+        "digest": "sha256:ae67690269cda8e1ba9ef95c2cef8a94c7f41130bb4b0bc18d21e8c005706f13",
+        "url": "https://github.com/limmytian/voidb/releases/download/untagged-7567980451257443b9f3/voidb-0.3.5-darwin-x64.tar.gz"
+      },
+      {
+        "id": 633652284,
+        "name": "voidb-0.3.5-linux-arm64.tar.gz",
+        "size": 6963858,
+        "digest": "sha256:f7caf9baec2cc6d3a606f007d28db3b073deedad8f3e6b030edce1226f2e7fb7",
+        "url": "https://github.com/limmytian/voidb/releases/download/untagged-7567980451257443b9f3/voidb-0.3.5-linux-arm64.tar.gz"
+      },
+      {
+        "id": 633652100,
+        "name": "voidb-0.3.5-linux-x64.tar.gz",
+        "size": 7206159,
+        "digest": "sha256:db251a70d382d3c1799afec2cda7510bc8fe8977ad04ef8221bad76eeb1198ea",
+        "url": "https://github.com/limmytian/voidb/releases/download/untagged-7567980451257443b9f3/voidb-0.3.5-linux-x64.tar.gz"
+      },
+      {
+        "id": 633652417,
+        "name": "voidb-0.3.5-windows-x64.zip",
+        "size": 6830080,
+        "digest": "sha256:7654b73ceaaaa40cdc43a94e4fb11b7d5053f398fbe6c41ec34fd9404a3d4e85",
+        "url": "https://github.com/limmytian/voidb/releases/download/untagged-7567980451257443b9f3/voidb-0.3.5-windows-x64.zip"
+      }
+    ],
+    "merge_commit": "d14bcd2b3073cae19043ce2924698e622082f19e",
+    "tag": "v0.3.5",
+    "draft_tag_rebinding": "Bound existing draft release ID to v0.3.5 after tag creation before publishing; assets unchanged"
+  },
+  "core_candidate_verification": {
+    "source_commit": "a2cc72b6b730c56aefedbd218ad0c9f6612bf8e5",
+    "ci_run_id": 38243526017,
+    "archives": [
+      {
+        "filename": "voidb-0.3.5-darwin-arm64.tar.gz",
+        "sha256": "49de4ceaeeb02920f728eb71eaf55ddc82c4773b7234dc2db93dc5240e478938",
+        "size_bytes": 6442369,
+        "core_only": true
+      },
+      {
+        "filename": "voidb-0.3.5-linux-arm64.tar.gz",
+        "sha256": "f7caf9baec2cc6d3a606f007d28db3b073deedad8f3e6b030edce1226f2e7fb7",
+        "size_bytes": 6963858,
+        "core_only": true
+      },
+      {
+        "filename": "voidb-0.3.5-darwin-x64.tar.gz",
+        "sha256": "ae67690269cda8e1ba9ef95c2cef8a94c7f41130bb4b0bc18d21e8c005706f13",
+        "size_bytes": 6748600,
+        "core_only": true
+      },
+      {
+        "filename": "voidb-0.3.5-windows-x64.zip",
+        "sha256": "7654b73ceaaaa40cdc43a94e4fb11b7d5053f398fbe6c41ec34fd9404a3d4e85",
+        "size_bytes": 6830080,
+        "core_only": true
+      },
+      {
+        "filename": "voidb-0.3.5-linux-x64.tar.gz",
+        "sha256": "db251a70d382d3c1799afec2cda7510bc8fe8977ad04ef8221bad76eeb1198ea",
+        "size_bytes": 7206159,
+        "core_only": true
+      }
+    ]
+  },
+  "actual_public_core_verification": [
+    {
+      "filename": "voidb-0.3.5-darwin-arm64.tar.gz",
+      "sha256": "49de4ceaeeb02920f728eb71eaf55ddc82c4773b7234dc2db93dc5240e478938",
+      "size_bytes": 6442369,
+      "core_only": true,
+      "source": "actual public GitHub Release download"
+    },
+    {
+      "filename": "voidb-0.3.5-darwin-x64.tar.gz",
+      "sha256": "ae67690269cda8e1ba9ef95c2cef8a94c7f41130bb4b0bc18d21e8c005706f13",
+      "size_bytes": 6748600,
+      "core_only": true,
+      "source": "actual public GitHub Release download"
+    },
+    {
+      "filename": "voidb-0.3.5-linux-arm64.tar.gz",
+      "sha256": "f7caf9baec2cc6d3a606f007d28db3b073deedad8f3e6b030edce1226f2e7fb7",
+      "size_bytes": 6963858,
+      "core_only": true,
+      "source": "actual public GitHub Release download"
+    },
+    {
+      "filename": "voidb-0.3.5-linux-x64.tar.gz",
+      "sha256": "db251a70d382d3c1799afec2cda7510bc8fe8977ad04ef8221bad76eeb1198ea",
+      "size_bytes": 7206159,
+      "core_only": true,
+      "source": "actual public GitHub Release download"
+    },
+    {
+      "filename": "voidb-0.3.5-windows-x64.zip",
+      "sha256": "7654b73ceaaaa40cdc43a94e4fb11b7d5053f398fbe6c41ec34fd9404a3d4e85",
+      "size_bytes": 6830080,
+      "core_only": true,
+      "source": "actual public GitHub Release download"
+    }
+  ],
+  "public_main_https_acceptance": {
+    "core_version": "voidb 0.3.5",
+    "target": "aarch64-apple-darwin",
+    "registry_transport": "public HTTPS registry and GitHub release assets",
+    "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
+    "checks": [
+      "fresh legacy unsigned registry caches are ignored after upgrade and preserved unchanged",
+      "install-default downloaded and verified six actual signed plugins",
+      "all 14 actual plugins passed production dispatch, initialize and health",
+      "verified registry update and signed previous-package rollback",
+      "five attacks rejected before domain, TUI, serve and test dispatch; no child marker, secret output or backfill",
+      "uninstall all 14 leaves no implicit bundled fallback",
+      "actual immutable v0.3.3 backup with no record migrated through authenticated registry update",
+      "isolated user-data sentinel preserved; actual user installation and backup unchanged"
+    ],
+    "status": "passed"
+  },
+  "public_shell_installer_acceptance": {
+    "transport": "actual public GitHub Release and checksum HTTPS download",
+    "installer": "/Users/mini/workspace/voidb/scripts/install.sh",
+    "checks": [
+      "clean: real candidate binaries installed, no plugins or bundled fallback, user sentinel preserved",
+      "upgrade: real candidate binaries installed, no plugins or bundled fallback, user sentinel preserved"
+    ],
+    "status": "passed"
+  },
+  "homebrew_public_upgrade": {
+    "status": "passed",
+    "homebrew_version": "0.3.5",
+    "installed_core_binaries": [
+      "voidb",
+      "voidb-cli"
+    ],
+    "plugin_list_empty": true,
+    "bundled_plugin_directories": false,
+    "existing_user_state_files_preserved": 680,
+    "profiles_credentials_installation_history_and_backups_unchanged": true,
+    "old_keg_retained": true
+  },
+  "homebrew_public_onboarding": {
+    "status": "passed",
+    "transport": "actual public Homebrew TUI/CLI, default official HTTPS main registry, public GitHub plugin assets",
+    "recommended_plugins_installed": 6,
+    "acknowledgment_persisted": true,
+    "scope": "isolated HOME; global user plugins untouched",
+    "attempts": [
+      {
+        "attempt": 1,
+        "installed_signed_packages": 6,
+        "acknowledgment": true
+      }
+    ]
+  },
+  "homebrew_tap": {
+    "candidate_commit": "bcee67c356a9cca3a09d66912e987e0d0211ed63",
+    "merge_commit": "1143807e9046806b0ff864702ea3503fc61c6eb9",
+    "pull_request": "https://github.com/limmytian/homebrew-tap/pull/1",
+    "version": "0.3.5",
+    "formula_hash_source": "actual public core release archives"
+  },
+  "final_code_ci": {
+    "head_sha": "a2cc72b6b730c56aefedbd218ad0c9f6612bf8e5",
+    "run_id": 38243282331,
+    "conclusion": "success"
+  },
+  "old_core_asset_metadata_unchanged": true,
+  "notes": [
+    "Plugin releases promoted exact-source protected CI-signed bits; duplicate tag workflows cancelled",
+    "Core released exact all-green final candidate bits after draft digest checks; duplicate tag workflow cancelled",
+    "No old published assets or tags rewritten",
+    "One initial public onboarding attempt reported incomplete installation; repeated public Homebrew onboarding passed. Controlled failure/partial/retry matrix also passed."
+  ],
+  "validation_limits": [
+    "Full public install/upgrade/CLI/PTY/rollback acceptance on macOS ARM64",
+    "Foreign targets have native CI/build and authenticated artifact checks; no live-database E2E claim",
+    "Windows core only, no official Windows plugins",
+    "Trusted core/root/OS/publisher assumptions and portable hash-to-spawn race limits remain documented"
   ]
 }

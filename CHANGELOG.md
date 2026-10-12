@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Distribute only the core shell and dispatcher. Install plugins explicitly through the registry, optional first-launch onboarding or selected-connection installation with `i`.
 - Keep authenticated registry metadata in a trust-policy cache namespace so fresh legacy caches do not delay verified upgrade.
 - Preserve skip and failure retry behavior, avoid downloads during noninteractive startup, and keep installation children free of the main password.
-- Validate four plugin targets, five core targets and real signed HTTP/PTY lifecycle; official plugins are published and the core release is in preparation.
+- Validate four plugin targets, five core targets and real signed HTTP/PTY lifecycle; public core, plugin, registry and Homebrew installation acceptance passed.
 
 ## [0.3.4] - 2026-10-12
 

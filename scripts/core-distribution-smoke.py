@@ -24,12 +24,13 @@ def main():
     parser.add_argument('--legacy-cli', type=Path, required=True)
     parser.add_argument('--legacy-tui', type=Path, required=True)
     parser.add_argument('--report', type=Path, required=True)
+    parser.add_argument('--public-release', action='store_true', help='Fetch actual public GitHub core assets without transport routing')
     args = parser.parse_args()
     artifacts = args.artifacts.resolve()
     legacy_cli, legacy_tui = args.legacy_cli.resolve(), args.legacy_tui.resolve()
     assert subprocess.check_output([str(legacy_cli), '--version'], text=True).strip() == 'voidb 0.3.4'
     installer = Path(__file__).with_name('install.sh').resolve()
-    report = {'transport': 'actual curl and HTTP; only candidate GitHub download URLs routed to loopback',
+    report = {'transport': 'actual public GitHub Release and checksum HTTPS download' if args.public_release else 'actual curl and HTTP; only candidate GitHub download URLs routed to loopback',
               'installer': str(installer), 'checks': []}
     with tempfile.TemporaryDirectory(prefix='voidb-core-distribution-') as temporary:
         root = Path(temporary)
@@ -77,7 +78,7 @@ def main():
                     (dest / 'voidb').chmod(0o755)
                 env = dict(os.environ, HOME=str(home), XDG_DATA_HOME=str(home / '.local/share'),
                            XDG_CONFIG_HOME=str(home / '.config'), INSTALL_DIR=str(dest), VOIDB_VERSION='0.3.5',
-                           PATH=str(shim) + os.pathsep + os.environ['PATH'])
+                           PATH=os.environ['PATH'] if args.public_release else str(shim) + os.pathsep + os.environ['PATH'])
                 for key in ['VOIDB_PLUGIN_PATH', 'VOIDB_BUNDLED_PLUGIN_ROOT', 'VOIDB_ALLOW_UNSIGNED_PLUGINS',
                             'VOIDB_MASTER_PASSWORD', 'VOIDB_PLUGIN_REGISTRY_URL']:
                     env.pop(key, None)
@@ -89,7 +90,7 @@ def main():
                 assert json.loads(plugins)['data']['plugins'] == []
                 assert sentinel.read_bytes() == b'synthetic preserved user state'
                 report['checks'].append(f'{mode}: real candidate binaries installed, no plugins or bundled fallback, user sentinel preserved')
-                if mode == 'upgrade':
+                if mode == 'upgrade' and not args.public_release:
                     before = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in dest.iterdir()}
                     (served / 'SHA256SUMS').write_text('\n'.join('0' * 64 + '  ' + p.name for p in archives) + '\n')
                     rejected = subprocess.run(['bash', str(installer)], env=env, capture_output=True, text=True, timeout=60)
@@ -101,7 +102,7 @@ def main():
             server.server_close()
     report['status'] = 'passed'
     args.report.write_text(json.dumps(report, indent=2) + '\n')
-    print('Core clean install, v0.3.4 upgrade and checksum rejection passed with actual CI assets')
+    print('Core public clean install and v0.3.4 upgrade passed' if args.public_release else 'Core clean install, v0.3.4 upgrade and checksum rejection passed with actual CI assets')
 
 
 if __name__ == '__main__':
