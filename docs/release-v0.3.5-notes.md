@@ -37,6 +37,7 @@ All 14 official plugins prepare new signed v0.3.4 assets for Linux x86_64/ARM64 
 macOS Intel/ARM64. Windows includes the core package only. Protocol 1 remains supported.
 Native CI, authenticated packages, adversarial lifecycle and real HTTP/PTY acceptance
 passed within the scopes stated in [release readiness](release-v0.3.5-readiness.md).
-The owner approved publication. All 14 plugin releases and all 56 public platform
-packages are authenticated; final core and Homebrew public checks are recorded in
+Core v0.3.5, all 14 plugin v0.3.4 releases, the main registry and Homebrew are public.
+Public package authentication, shell installation/upgrade, Homebrew upgrade and
+first-launch onboarding passed. Exact evidence and platform limits are recorded in
 [publication evidence](release-v0.3.5-publication-evidence.json).
