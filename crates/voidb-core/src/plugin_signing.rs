@@ -3,12 +3,12 @@
 //! Provides detached signature generation and verification for VoidB plugin
 //! distribution archives and package manifests using Ed25519 public-key cryptography.
 
-use std::fs;
-use std::path::Path;
-use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
+use crate::error::VoidbError;
+use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
-use crate::error::VoidbError;
+use std::fs;
+use std::path::Path;
 
 pub const SIGNATURE_SCHEME_ED25519: &str = "ed25519";
 pub const SIGNATURE_FILE_EXTENSION: &str = "sig";
@@ -42,7 +42,10 @@ pub fn default_signature_path<P: AsRef<Path>>(path: P) -> std::path::PathBuf {
 }
 
 /// Sign a file and write detached signature to `<file>.sig`.
-pub fn sign_file_detached<P: AsRef<Path>>(path: P, signing_key: &SigningKey) -> Result<String, VoidbError> {
+pub fn sign_file_detached<P: AsRef<Path>>(
+    path: P,
+    signing_key: &SigningKey,
+) -> Result<String, VoidbError> {
     let path = path.as_ref();
     let sig_hex = sign_file(path, signing_key)?;
     let sig_path = default_signature_path(path);
@@ -77,7 +80,7 @@ pub fn verify_bytes_signature(
     sig_arr.copy_from_slice(&sig_bytes);
     let signature = Signature::from_bytes(&sig_arr);
 
-    match verifying_key.verify(data, &signature) {
+    match verifying_key.verify_strict(data, &signature) {
         Ok(()) => Ok(SignatureVerificationResult {
             valid: true,
             scheme: SIGNATURE_SCHEME_ED25519.into(),

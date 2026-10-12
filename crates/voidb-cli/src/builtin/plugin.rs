@@ -13,28 +13,25 @@ use serde_json::{Value, json};
 use voidb_core::capability::{CapabilityErrorCategory, RedactionStatus};
 use voidb_core::plugin::cli::{CliContext, CliPlugin};
 use voidb_core::{
-    PluginCategory, PluginRegistryIndex, RegistryPackageArtifact, RegistryPluginEntry,
-    RegistryPluginVersion, DEFAULT_OFFICIAL_REGISTRY_URL,
-    default_signature_path, generate_signing_keypair, sign_file, verify_file_signature, SignatureVerificationResult,
-    SIGNATURE_SCHEME_ED25519,
-    ProcessPluginCandidate, ProcessPluginCandidateState, ProcessPluginDiagnostic,
-    ProcessPluginDiscovery, ProcessPluginInstallRecord, ProcessPluginManifest,
-    ProcessPluginPackageFormat, ProcessPluginPackageResult, ProcessPluginPackageSource,
-    ProcessPluginPackageValidation, ProcessPluginPackageValidationError,
-    ProcessPluginPreviousVersionRecord, ProcessPluginRoot, ProcessPluginRootKind, VoidbError,
-    cleanup_process_plugin_package_staging, default_bundled_plugin_roots,
+    DEFAULT_OFFICIAL_REGISTRY_URL, PluginCategory, PluginRegistryIndex, ProcessPluginCandidate,
+    ProcessPluginCandidateState, ProcessPluginDiagnostic, ProcessPluginDiscovery,
+    ProcessPluginInstallRecord, ProcessPluginManifest, ProcessPluginPackageFormat,
+    ProcessPluginPackageResult, ProcessPluginPackageSource, ProcessPluginPackageValidation,
+    ProcessPluginPackageValidationError, ProcessPluginPreviousVersionRecord, ProcessPluginRoot,
+    ProcessPluginRootKind, RegistryPackageArtifact, RegistryPluginEntry, RegistryPluginVersion,
+    SIGNATURE_SCHEME_ED25519, SignatureVerificationResult, VoidbError,
+    cleanup_process_plugin_package_staging, default_bundled_plugin_roots, default_signature_path,
     default_user_process_plugin_install_root, discover_process_plugins,
-    discover_process_plugins_from_roots, package_process_plugin,
-    process_plugin_install_record_path, read_process_plugin_install_record,
-    validate_process_plugin_package, write_process_plugin_install_record,
+    discover_process_plugins_from_roots, generate_signing_keypair, package_process_plugin,
+    process_plugin_install_record_path, read_process_plugin_install_record, sign_file,
+    validate_process_plugin_package, verify_file_signature, write_process_plugin_install_record,
 };
 
 const PLUGIN_CLI_SCHEMA_VERSION: u32 = 1;
 
-/// Default official core database and protocol plugins bundled or recommended by VoidB.
-pub const DEFAULT_OFFICIAL_CORE_PLUGINS: &[&str] = &[
-    "mysql", "postgres", "sqlite", "redis", "ssh", "duckdb",
-];
+/// Recommended official database and protocol plugins installed on user request.
+pub const DEFAULT_OFFICIAL_CORE_PLUGINS: &[&str] =
+    &["mysql", "postgres", "sqlite", "redis", "ssh", "duckdb"];
 
 pub struct PluginCliPlugin;
 
@@ -540,12 +537,20 @@ async fn handle_install(matches: &ArgMatches) -> Result<(), VoidbError> {
         .get_one::<String>("source")
         .expect("required by clap")
         .trim();
-    let registry_url_opt = matches.get_one::<String>("registry-url").map(String::as_str);
+    let registry_url_opt = matches
+        .get_one::<String>("registry-url")
+        .map(String::as_str);
     let version_opt = matches.get_one::<String>("version").map(String::as_str);
     let verify_key = matches.get_one::<String>("verify-key").map(String::as_str);
     let require_signature = matches.get_flag("require-signature");
 
     let source_path = PathBuf::from(source_arg);
+    let mut requested_registry_version = None;
+    let requested_registry_id = if source_path.exists() {
+        None
+    } else {
+        Some(source_arg)
+    };
     let (effective_path, _download_temp_dir) = if source_path.exists() {
         (source_path, None)
     } else {
@@ -566,6 +571,8 @@ async fn handle_install(matches: &ArgMatches) -> Result<(), VoidbError> {
             ))
         })?;
 
+        requested_registry_version = Some(version_entry.version.clone());
+
         let current_plat = voidb_core::process_plugin::current_platform();
         let current_target = std::env::consts::ARCH; // architecture or target
         let artifact = version_entry
@@ -577,14 +584,18 @@ async fn handle_install(matches: &ArgMatches) -> Result<(), VoidbError> {
                 ))
             })?;
 
-        let download_dir = std::env::temp_dir().join(format!("voidb-download-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0)));
+        let download_dir = std::env::temp_dir().join(format!(
+            "voidb-download-{}",
+            Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        ));
         let dest_file = download_dir.join(&artifact.filename);
 
         PluginRegistryIndex::download_artifact(artifact, &dest_file).await?;
         (dest_file, Some(download_dir))
     };
 
-    if let Err(error) = check_package_signature_gate(&effective_path, verify_key, require_signature) {
+    if let Err(error) = check_package_signature_gate(&effective_path, verify_key, require_signature)
+    {
         return print_plugin_error(error);
     }
 
@@ -593,7 +604,12 @@ async fn handle_install(matches: &ArgMatches) -> Result<(), VoidbError> {
         Err(error) => return print_plugin_error(package_validation_error_to_plugin_error(error)),
     };
 
-    match install_plugin_package(source, install_root) {
+    match install_plugin_package_expected(
+        source,
+        install_root,
+        requested_registry_id,
+        requested_registry_version.as_deref(),
+    ) {
         Ok(result) => print_operation_result(format, result),
         Err(error) => print_plugin_error(*error),
     }
@@ -602,11 +618,14 @@ async fn handle_install(matches: &ArgMatches) -> Result<(), VoidbError> {
 async fn handle_install_default(matches: &ArgMatches) -> Result<(), VoidbError> {
     let format = output_format(matches)?;
     let install_root = install_root_from_matches(matches)?;
-    let registry_url_opt = matches.get_one::<String>("registry-url").map(String::as_str);
+    let registry_url_opt = matches
+        .get_one::<String>("registry-url")
+        .map(String::as_str);
     let force = matches.get_flag("force");
     let from_bundled = matches.get_flag("from-bundled");
 
-    let plugins_to_install: Vec<String> = if let Some(custom) = matches.get_one::<String>("plugins") {
+    let plugins_to_install: Vec<String> = if let Some(custom) = matches.get_one::<String>("plugins")
+    {
         custom
             .split(',')
             .map(|s| s.trim().to_string())
@@ -619,17 +638,24 @@ async fn handle_install_default(matches: &ArgMatches) -> Result<(), VoidbError> 
             .collect()
     };
 
-    let bundled_roots = default_bundled_plugin_roots();
+    let bundled_roots = if from_bundled {
+        default_bundled_plugin_roots()
+    } else {
+        Vec::new()
+    };
     let mut results = Vec::new();
     let mut registry_index: Option<PluginRegistryIndex> = None;
 
     for plugin_id in &plugins_to_install {
         let active_dir = install_root.join(plugin_id);
         if active_dir.join("plugin.toml").exists() && !force {
+            let trusted = installed_candidate(&install_root, plugin_id).is_some_and(|candidate| {
+                voidb_core::process_plugin::verify_plugin_binary_integrity(&candidate).is_ok()
+            });
             results.push(json!({
                 "plugin": plugin_id,
-                "status": "already_installed",
-                "message": "Plugin is already installed in user install root",
+                "status": if trusted { "already_installed" } else { "failed" },
+                "message": if trusted { "Verified plugin already installed" } else { "Existing plugin is untrusted or unavailable; explicitly update it from a signed source" },
             }));
             continue;
         }
@@ -639,12 +665,15 @@ async fn handle_install_default(matches: &ArgMatches) -> Result<(), VoidbError> 
         for bundled_root in &bundled_roots {
             let candidate_dir = bundled_root.join(plugin_id);
             if candidate_dir.join("plugin.toml").is_file() {
-                if active_dir.exists() && force {
-                    let _ = fs::remove_dir_all(&active_dir);
-                }
                 match ProcessPluginPackageSource::from_path(&candidate_dir) {
                     Ok(source) => {
-                        match install_plugin_package(source, install_root.clone()) {
+                        match install_default_package(
+                            plugin_id,
+                            source,
+                            install_root.clone(),
+                            force,
+                            None,
+                        ) {
                             Ok(res) => {
                                 results.push(json!({
                                     "plugin": plugin_id,
@@ -771,10 +800,6 @@ async fn handle_install_default(matches: &ArgMatches) -> Result<(), VoidbError> 
             continue;
         }
 
-        if active_dir.exists() && force {
-            let _ = fs::remove_dir_all(&active_dir);
-        }
-
         let source = match ProcessPluginPackageSource::from_path(&dest_file) {
             Ok(s) => s,
             Err(e) => {
@@ -789,7 +814,13 @@ async fn handle_install_default(matches: &ArgMatches) -> Result<(), VoidbError> 
             }
         };
 
-        match install_plugin_package(source, install_root.clone()) {
+        match install_default_package(
+            plugin_id,
+            source,
+            install_root.clone(),
+            force,
+            Some(&version_entry.version),
+        ) {
             Ok(res) => {
                 results.push(json!({
                     "plugin": plugin_id,
@@ -843,12 +874,15 @@ async fn handle_update(matches: &ArgMatches) -> Result<(), VoidbError> {
         .expect("required by clap")
         .clone();
     let from_path_opt = matches.get_one::<PathBuf>("from").cloned();
-    let registry_url_opt = matches.get_one::<String>("registry-url").map(String::as_str);
+    let registry_url_opt = matches
+        .get_one::<String>("registry-url")
+        .map(String::as_str);
     let version_opt = matches.get_one::<String>("version").map(String::as_str);
     let verify_key = matches.get_one::<String>("verify-key").map(String::as_str);
     let require_signature = matches.get_flag("require-signature");
     let allow_downgrade = matches.get_flag("allow-downgrade");
 
+    let mut requested_registry_version = None;
     let (effective_path, _download_temp_dir) = if let Some(from_path) = from_path_opt {
         (from_path, None)
     } else {
@@ -868,6 +902,8 @@ async fn handle_update(matches: &ArgMatches) -> Result<(), VoidbError> {
             ))
         })?;
 
+        requested_registry_version = Some(version_entry.version.clone());
+
         let current_plat = voidb_core::process_plugin::current_platform();
         let current_target = std::env::consts::ARCH;
         let artifact = version_entry
@@ -879,14 +915,18 @@ async fn handle_update(matches: &ArgMatches) -> Result<(), VoidbError> {
                 ))
             })?;
 
-        let download_dir = std::env::temp_dir().join(format!("voidb-download-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0)));
+        let download_dir = std::env::temp_dir().join(format!(
+            "voidb-download-{}",
+            Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        ));
         let dest_file = download_dir.join(&artifact.filename);
 
         PluginRegistryIndex::download_artifact(artifact, &dest_file).await?;
         (dest_file, Some(download_dir))
     };
 
-    if let Err(error) = check_package_signature_gate(&effective_path, verify_key, require_signature) {
+    if let Err(error) = check_package_signature_gate(&effective_path, verify_key, require_signature)
+    {
         return print_plugin_error(error);
     }
 
@@ -899,7 +939,10 @@ async fn handle_update(matches: &ArgMatches) -> Result<(), VoidbError> {
         &plugin_id,
         source,
         install_root,
-        UpdateOptions { allow_downgrade },
+        UpdateOptions {
+            allow_downgrade,
+            expected_version: requested_registry_version,
+        },
     ) {
         Ok(result) => print_operation_result(format, result),
         Err(error) => print_plugin_error(*error),
@@ -912,7 +955,9 @@ async fn handle_search(matches: &ArgMatches) -> Result<(), VoidbError> {
         .get_one::<String>("query")
         .expect("required by clap")
         .to_lowercase();
-    let url_opt = matches.get_one::<String>("registry-url").map(String::as_str);
+    let url_opt = matches
+        .get_one::<String>("registry-url")
+        .map(String::as_str);
 
     let (index, source_url) = resolve_registry_index(url_opt).await?;
     let mut matches_list = Vec::new();
@@ -920,9 +965,20 @@ async fn handle_search(matches: &ArgMatches) -> Result<(), VoidbError> {
     for plugin in &index.plugins {
         let id_match = plugin.id.to_lowercase().contains(&query);
         let name_match = plugin.name.to_lowercase().contains(&query);
-        let desc_match = plugin.description.as_deref().unwrap_or("").to_lowercase().contains(&query);
-        let tag_match = plugin.tags.iter().any(|t| t.to_lowercase().contains(&query));
-        let cat_match = plugin.category.map(|c| c.as_str().contains(&query)).unwrap_or(false);
+        let desc_match = plugin
+            .description
+            .as_deref()
+            .unwrap_or("")
+            .to_lowercase()
+            .contains(&query);
+        let tag_match = plugin
+            .tags
+            .iter()
+            .any(|t| t.to_lowercase().contains(&query));
+        let cat_match = plugin
+            .category
+            .map(|c| c.as_str().contains(&query))
+            .unwrap_or(false);
 
         if id_match || name_match || desc_match || tag_match || cat_match {
             matches_list.push(plugin.clone());
@@ -1160,6 +1216,47 @@ fn handle_registry_index(matches: &ArgMatches) -> Result<(), VoidbError> {
                 )
             };
 
+        let Some(signed_target) = target_triple.as_deref().filter(|_| input_path.is_file()) else {
+            cleanup_validated_staging(&validation);
+            return print_plugin_error(plugin_error(
+                CapabilityErrorCategory::Validation,
+                "validation.registry_target_required",
+                "Registry inputs must be signed archives with a declared target in their filename",
+                json!({ "input": input_path }),
+                false,
+            ));
+        };
+        #[cfg(not(test))]
+        let proof = voidb_core::plugin_provenance::verify_plugin_provenance_for_target(
+            &validation.candidate,
+            signed_target,
+        );
+        #[cfg(test)]
+        let proof = voidb_core::plugin_provenance::verify_plugin_provenance_with_roots_for_target(
+            &validation.candidate,
+            &[
+                (
+                    "test-only",
+                    "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+                ),
+                (
+                    voidb_core::plugin_provenance::OFFICIAL_KEY_ID,
+                    voidb_core::plugin_provenance::OFFICIAL_PUBLIC_KEY,
+                ),
+            ],
+            signed_target,
+        );
+        if let Err(error) = proof {
+            cleanup_validated_staging(&validation);
+            return print_plugin_error(plugin_error(
+                CapabilityErrorCategory::Policy,
+                "security.registry_provenance_invalid",
+                error.to_string(),
+                json!({ "input": input_path }),
+                false,
+            ));
+        }
+
         let download_url = if let Some(b) = base_url {
             format!("{}/{}", b.trim_end_matches('/'), filename)
         } else if let Some(homepage) = &manifest.homepage {
@@ -1243,6 +1340,9 @@ fn handle_registry_index(matches: &ArgMatches) -> Result<(), VoidbError> {
                 }
             }
             v.platforms.sort();
+            if artifact.signature.is_some() {
+                v.signature_scheme = Some(SIGNATURE_SCHEME_ED25519.into());
+            }
             if let Some(pkg_idx) = v
                 .packages
                 .iter()
@@ -1259,7 +1359,10 @@ fn handle_registry_index(matches: &ArgMatches) -> Result<(), VoidbError> {
                 released_at: Some(Utc::now()),
                 voidb_core: voidb_core_constraint,
                 platforms,
-                signature_scheme: None,
+                signature_scheme: artifact
+                    .signature
+                    .as_ref()
+                    .map(|_| SIGNATURE_SCHEME_ED25519.into()),
                 packages: vec![artifact],
             });
         }
@@ -1305,8 +1408,13 @@ fn local_registry_cache_path(url: &str) -> PathBuf {
     }
 }
 
-async fn resolve_registry_index(url_opt: Option<&str>) -> Result<(PluginRegistryIndex, String), VoidbError> {
-    let url = url_opt.unwrap_or(DEFAULT_OFFICIAL_REGISTRY_URL);
+async fn resolve_registry_index(
+    url_opt: Option<&str>,
+) -> Result<(PluginRegistryIndex, String), VoidbError> {
+    let registry_override = std::env::var("VOIDB_PLUGIN_REGISTRY_URL").ok();
+    let url = url_opt
+        .or(registry_override.as_deref())
+        .unwrap_or(DEFAULT_OFFICIAL_REGISTRY_URL);
 
     // If it's a file:// URL or local path, fetch directly without cache
     if url.starts_with("file://") || std::path::Path::new(url).is_file() {
@@ -1329,7 +1437,9 @@ async fn handle_registry(matches: &ArgMatches) -> Result<(), VoidbError> {
         "list" => {
             let format = output_format(sub_matches)?;
             let url_opt = sub_matches.get_one::<String>("url").map(String::as_str);
-            let category_filter = sub_matches.get_one::<String>("category").map(String::as_str);
+            let category_filter = sub_matches
+                .get_one::<String>("category")
+                .map(String::as_str);
 
             let (index, source_url) = resolve_registry_index(url_opt).await?;
             let mut plugins = index.plugins;
@@ -1402,7 +1512,9 @@ async fn handle_registry(matches: &ArgMatches) -> Result<(), VoidbError> {
 
             let (index, source_url) = resolve_registry_index(url_opt).await?;
             let entry = index.get_plugin(plugin_id).ok_or_else(|| {
-                VoidbError::Plugin(format!("Plugin '{plugin_id}' not found in registry ({source_url})"))
+                VoidbError::Plugin(format!(
+                    "Plugin '{plugin_id}' not found in registry ({source_url})"
+                ))
             })?;
 
             match format {
@@ -1416,8 +1528,14 @@ async fn handle_registry(matches: &ArgMatches) -> Result<(), VoidbError> {
                     println!("id\t{}", entry.id);
                     println!("name\t{}", entry.name);
                     println!("latest_version\t{}", entry.latest_version);
-                    println!("category\t{}", entry.category.map(|c| c.as_str()).unwrap_or("-"));
-                    println!("description\t{}", entry.description.as_deref().unwrap_or("-"));
+                    println!(
+                        "category\t{}",
+                        entry.category.map(|c| c.as_str()).unwrap_or("-")
+                    );
+                    println!(
+                        "description\t{}",
+                        entry.description.as_deref().unwrap_or("-")
+                    );
                     println!("homepage\t{}", entry.homepage.as_deref().unwrap_or("-"));
                     println!("license\t{}", entry.license.as_deref().unwrap_or("-"));
                     println!("versions_count\t{}", entry.versions.len());
@@ -1425,7 +1543,9 @@ async fn handle_registry(matches: &ArgMatches) -> Result<(), VoidbError> {
                 }
             }
         }
-        _ => Err(VoidbError::Plugin(format!("Unknown registry subcommand: {subcmd}"))),
+        _ => Err(VoidbError::Plugin(format!(
+            "Unknown registry subcommand: {subcmd}"
+        ))),
     }
 }
 
@@ -1455,9 +1575,8 @@ fn handle_sign(matches: &ArgMatches) -> Result<(), VoidbError> {
         } else {
             key_str.trim().to_string()
         };
-        let key_bytes = hex::decode(&key_hex).map_err(|e| {
-            VoidbError::Crypto(format!("Invalid private key hex encoding: {e}"))
-        })?;
+        let key_bytes = hex::decode(&key_hex)
+            .map_err(|e| VoidbError::Crypto(format!("Invalid private key hex encoding: {e}")))?;
         if key_bytes.len() != 32 {
             return print_plugin_error(plugin_error(
                 CapabilityErrorCategory::Validation,
@@ -1555,7 +1674,10 @@ fn handle_verify(matches: &ArgMatches) -> Result<(), VoidbError> {
             return print_plugin_error(plugin_error(
                 CapabilityErrorCategory::Validation,
                 "validation.signature_missing",
-                format!("Detached signature file not found: {}", default_sig_path.display()),
+                format!(
+                    "Detached signature file not found: {}",
+                    default_sig_path.display()
+                ),
                 json!({ "expected_path": default_sig_path }),
                 false,
             ));
@@ -1626,16 +1748,30 @@ fn check_package_signature_gate(
             return Err(plugin_error(
                 CapabilityErrorCategory::Validation,
                 "validation.signature_file_missing",
-                format!("Detached signature file missing: {}", default_sig_path.display()),
+                format!(
+                    "Detached signature file missing: {}",
+                    default_sig_path.display()
+                ),
                 json!({ "expected_signature": default_sig_path }),
                 false,
             ));
         }
         let sig_hex = fs::read_to_string(&default_sig_path).map_err(|e| {
-            filesystem_plugin_error("filesystem.read_signature_failed", "Failed to read signature file", &default_sig_path, e)
+            filesystem_plugin_error(
+                "filesystem.read_signature_failed",
+                "Failed to read signature file",
+                &default_sig_path,
+                e,
+            )
         })?;
         let res = verify_file_signature(source_path, sig_hex.trim(), pubkey).map_err(|e| {
-            plugin_error(CapabilityErrorCategory::Validation, "crypto.verification_error", e.to_string(), json!({}), false)
+            plugin_error(
+                CapabilityErrorCategory::Validation,
+                "crypto.verification_error",
+                e.to_string(),
+                json!({}),
+                false,
+            )
         })?;
         if !res.valid {
             return Err(plugin_error(
@@ -1673,7 +1809,11 @@ fn output_format(matches: &ArgMatches) -> Result<PluginOutputFormat, VoidbError>
 
 fn install_root_from_matches(matches: &ArgMatches) -> Result<PathBuf, VoidbError> {
     if let Some(path) = matches.get_one::<PathBuf>("install-root") {
-        return Ok(path.clone());
+        return Ok(if path.is_absolute() {
+            path.clone()
+        } else {
+            std::env::current_dir()?.join(path)
+        });
     }
 
     default_user_process_plugin_install_root().ok_or_else(|| {
@@ -1688,6 +1828,7 @@ fn apply_lifecycle_operation(
     install_root: PathBuf,
     operation: PluginLifecycleOperation,
 ) -> Result<PluginLifecycleOperationResult, Box<PluginError>> {
+    let _operation_lock = lock_plugin_operations(&install_root)?;
     let mut record = load_lifecycle_record(&install_root, plugin_id)?;
     let active_dir = install_root.join(plugin_id);
     let record_path = process_plugin_install_record_path(&install_root, plugin_id);
@@ -1774,12 +1915,149 @@ fn load_lifecycle_record(
     }
 }
 
+fn lock_plugin_operations(install_root: &Path) -> Result<fs::File, Box<PluginError>> {
+    let directory =
+        install_root.join(voidb_core::process_plugin::PROCESS_PLUGIN_INSTALL_METADATA_DIR);
+    voidb_core::plugin_provenance::reject_plugin_path_symlinks(&directory.join("operation.lock"))
+        .map_err(|error| {
+        Box::new(plugin_error(
+            CapabilityErrorCategory::Policy,
+            "security.plugin_lock_path_untrusted",
+            error.to_string(),
+            json!({}),
+            false,
+        ))
+    })?;
+    fs::create_dir_all(&directory).map_err(|error| {
+        Box::new(filesystem_plugin_error(
+            "filesystem.plugin_lock_directory_failed",
+            "Cannot create plugin operation lock directory",
+            &directory,
+            error,
+        ))
+    })?;
+    let path = directory.join("operation.lock");
+    let mut options = fs::OpenOptions::new();
+    options.read(true).write(true).create(true).truncate(false);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let file = options.open(&path).map_err(|error| {
+        Box::new(filesystem_plugin_error(
+            "filesystem.plugin_lock_failed",
+            "Cannot open plugin operation lock",
+            &path,
+            error,
+        ))
+    })?;
+    file.try_lock().map_err(|error| {
+        Box::new(plugin_error(
+            CapabilityErrorCategory::Conflict,
+            "conflict.plugin_operation_locked",
+            "Another plugin operation is active; retry after it finishes",
+            json!({ "message": error.to_string() }),
+            true,
+        ))
+    })?;
+    Ok(file)
+}
+
+fn validate_authenticated_package(
+    source: ProcessPluginPackageSource,
+    install_root: impl AsRef<Path>,
+) -> Result<ProcessPluginPackageValidation, Box<PluginError>> {
+    let validation = validate_process_plugin_package(source, install_root)
+        .map_err(|error| Box::new(package_validation_error_to_plugin_error(error)))?;
+    #[cfg(not(test))]
+    let verification =
+        voidb_core::plugin_provenance::verify_plugin_provenance(&validation.candidate);
+    #[cfg(test)]
+    let verification = voidb_core::plugin_provenance::verify_plugin_provenance_with_roots(
+        &validation.candidate,
+        &[
+            (
+                "test-only",
+                "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c",
+            ),
+            (
+                voidb_core::plugin_provenance::OFFICIAL_KEY_ID,
+                voidb_core::plugin_provenance::OFFICIAL_PUBLIC_KEY,
+            ),
+        ],
+    );
+    if let Err(error) = verification {
+        cleanup_validated_staging(&validation);
+        return Err(Box::new(plugin_error(
+            CapabilityErrorCategory::Policy,
+            "security.plugin_provenance_invalid",
+            error.to_string(),
+            json!({ "plugin_id": validation.plugin_id }),
+            false,
+        )));
+    }
+    Ok(validation)
+}
+
+fn install_default_package(
+    plugin_id: &str,
+    source: ProcessPluginPackageSource,
+    install_root: PathBuf,
+    force: bool,
+    expected_version: Option<&str>,
+) -> Result<PluginPackageOperationResult, Box<PluginError>> {
+    if force && install_root.join(plugin_id).exists() {
+        update_plugin_package(
+            plugin_id,
+            source,
+            install_root,
+            UpdateOptions {
+                allow_downgrade: false,
+                expected_version: expected_version.map(str::to_owned),
+            },
+        )
+    } else {
+        install_plugin_package_expected(source, install_root, Some(plugin_id), expected_version)
+    }
+}
+
+#[cfg(test)]
 fn install_plugin_package(
     source: ProcessPluginPackageSource,
     install_root: PathBuf,
 ) -> Result<PluginPackageOperationResult, Box<PluginError>> {
-    let validation = validate_process_plugin_package(source, install_root)
-        .map_err(|error| Box::new(package_validation_error_to_plugin_error(error)))?;
+    install_plugin_package_expected(source, install_root, None, None)
+}
+
+fn install_plugin_package_expected(
+    source: ProcessPluginPackageSource,
+    install_root: PathBuf,
+    expected_id: Option<&str>,
+    expected_version: Option<&str>,
+) -> Result<PluginPackageOperationResult, Box<PluginError>> {
+    let _operation_lock = lock_plugin_operations(&install_root)?;
+    let validation = validate_authenticated_package(source, &install_root)?;
+    if expected_id.is_some_and(|id| id != validation.plugin_id) {
+        cleanup_validated_staging(&validation);
+        return Err(Box::new(plugin_error(
+            CapabilityErrorCategory::Validation,
+            "validation.plugin_id_mismatch",
+            "Signed package does not match the requested registry plugin",
+            json!({ "expected_id": expected_id, "package_id": validation.plugin_id }),
+            false,
+        )));
+    }
+    if expected_version.is_some_and(|version| version != validation.version) {
+        cleanup_validated_staging(&validation);
+        return Err(Box::new(plugin_error(
+            CapabilityErrorCategory::Validation,
+            "validation.plugin_version_mismatch",
+            "Signed package does not match the requested registry version",
+            json!({ "expected_version": expected_version, "package_version": validation.version }),
+            false,
+        )));
+    }
     let active_dir = validation.install_root.join(&validation.plugin_id);
 
     if active_dir.exists() {
@@ -1811,8 +2089,23 @@ fn update_plugin_package(
     install_root: PathBuf,
     options: UpdateOptions,
 ) -> Result<PluginPackageOperationResult, Box<PluginError>> {
-    let validation = validate_process_plugin_package(source, &install_root)
-        .map_err(|error| Box::new(package_validation_error_to_plugin_error(error)))?;
+    let _operation_lock = lock_plugin_operations(&install_root)?;
+    let validation = validate_authenticated_package(source, &install_root)?;
+
+    if options
+        .expected_version
+        .as_ref()
+        .is_some_and(|version| version != &validation.version)
+    {
+        cleanup_validated_staging(&validation);
+        return Err(Box::new(plugin_error(
+            CapabilityErrorCategory::Validation,
+            "validation.plugin_version_mismatch",
+            "Signed package does not match the requested registry version",
+            json!({ "expected_version": options.expected_version, "package_version": validation.version }),
+            false,
+        )));
+    }
 
     if validation.plugin_id != plugin_id {
         cleanup_validated_staging(&validation);
@@ -1887,6 +2180,9 @@ fn update_plugin_package(
         recorded_at: Utc::now(),
     };
     let mut record = validation.install_record.clone();
+    record.enabled = previous_record
+        .as_ref()
+        .is_none_or(|previous| previous.enabled);
     record.previous_version = Some(previous_version_record);
 
     let update_warnings = update_review_warnings(previous_candidate.as_ref(), &validation);
@@ -1916,7 +2212,17 @@ fn activate_validated_package(
         ))
     })?;
 
-    finish_package_operation(operation, validation, record, active_dir, extra_warnings)
+    let result = finish_package_operation(
+        operation,
+        validation,
+        record,
+        active_dir.clone(),
+        extra_warnings,
+    );
+    if result.is_err() {
+        let _ = fs::remove_dir_all(&active_dir);
+    }
+    result
 }
 
 fn replace_active_package_with_rollback(
@@ -1933,6 +2239,20 @@ fn replace_active_package_with_rollback(
                 "filesystem.previous_directory_create_failed",
                 "Previous-version metadata directory could not be created.",
                 parent,
+                error,
+            ))
+        })?;
+    }
+
+    let record_path =
+        process_plugin_install_record_path(&validation.install_root, &validation.plugin_id);
+    if let Ok(previous_bytes) = fs::read(&record_path) {
+        let backup = previous_dir.with_extension("install.toml");
+        fs::write(&backup, previous_bytes).map_err(|error| {
+            Box::new(filesystem_plugin_error(
+                "filesystem.previous_record_preserve_failed",
+                "Cannot preserve previous installation record",
+                &backup,
                 error,
             ))
         })?;
@@ -1967,13 +2287,27 @@ fn replace_active_package_with_rollback(
         )));
     }
 
-    finish_package_operation(
+    let result = finish_package_operation(
         PluginPackageOperation::Update,
         validation,
         record,
-        active_dir,
+        active_dir.clone(),
         extra_warnings,
-    )
+    );
+    if result.is_err() {
+        let restore =
+            fs::remove_dir_all(&active_dir).and_then(|()| fs::rename(&previous_dir, &active_dir));
+        if let Err(error) = restore {
+            return Err(Box::new(plugin_error(
+                CapabilityErrorCategory::Internal,
+                "filesystem.plugin_update_restore_failed",
+                "Update record write failed and automatic package restoration failed; recover from the preserved previous package",
+                json!({ "previous_version_dir": previous_dir, "message": error.to_string() }),
+                true,
+            )));
+        }
+    }
+    result
 }
 
 fn finish_package_operation(
@@ -2001,7 +2335,11 @@ fn finish_package_operation(
             plugin: PluginPackageItem {
                 id: record.plugin_id,
                 installed_version: record.installed_version,
-                candidate_state: record.compatibility.state,
+                candidate_state: if record.enabled {
+                    record.compatibility.state
+                } else {
+                    ProcessPluginCandidateState::Disabled
+                },
                 manifest_path: active_dir
                     .join("plugin.toml")
                     .to_string_lossy()
@@ -2431,9 +2769,10 @@ enum PluginOutputFormat {
     Table,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct UpdateOptions {
     allow_downgrade: bool,
+    expected_version: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
@@ -3030,6 +3369,7 @@ mod tests {
             install_root.path().to_path_buf(),
             UpdateOptions {
                 allow_downgrade: false,
+                expected_version: None,
             },
         )
         .expect("update package");
@@ -3087,6 +3427,7 @@ mod tests {
             install_root.path().to_path_buf(),
             UpdateOptions {
                 allow_downgrade: false,
+                expected_version: None,
             },
         )
         .expect_err("reject downgrade");
@@ -3310,6 +3651,7 @@ mod tests {
                 .as_nanos();
             let path = std::env::temp_dir().join(format!("voidb-cli-plugin-{label}-{nonce}"));
             fs::create_dir_all(&path).expect("create temp dir");
+            let path = fs::canonicalize(path).expect("canonical temp dir");
             Self { path }
         }
 
@@ -3322,6 +3664,216 @@ mod tests {
         fn drop(&mut self) {
             let _ = fs::remove_dir_all(&self.path);
         }
+    }
+
+    #[test]
+    fn legacy_record_deletion_recovers_only_by_verified_update_and_signed_rollback() {
+        let old = TempDir::new("legacy-old");
+        let new = TempDir::new("legacy-new");
+        let root = TempDir::new("legacy-root");
+        write_valid_plugin(old.path(), "redis", "redis", "0.3.3", "connection.read");
+        write_valid_plugin(new.path(), "redis", "redis", "0.3.4", "connection.read");
+        install_plugin_package(
+            ProcessPluginPackageSource::local_directory(old.path()),
+            root.path().into(),
+        )
+        .unwrap();
+        let profile = root.path().join("preserved-profile");
+        fs::write(&profile, "synthetic-profile-and-encrypted-credential-data").unwrap();
+        let record_path = process_plugin_install_record_path(root.path(), "redis");
+        fs::remove_file(&record_path).unwrap();
+        fs::remove_file(root.path().join("redis/provenance.json")).unwrap();
+        let recovered = update_plugin_package(
+            "redis",
+            ProcessPluginPackageSource::local_directory(new.path()),
+            root.path().into(),
+            UpdateOptions {
+                allow_downgrade: false,
+                expected_version: None,
+            },
+        )
+        .unwrap();
+        assert!(root.path().join("redis/provenance.json").is_file());
+        assert_eq!(recovered.data.plugin.installed_version, "0.3.4");
+        assert_eq!(
+            fs::read_to_string(&profile).unwrap(),
+            "synthetic-profile-and-encrypted-credential-data"
+        );
+        // Legacy previous bytes remain unsigned and cannot be used as a rollback authority.
+        let previous = recovered.data.plugin.previous_version.unwrap().path;
+        assert!(
+            update_plugin_package(
+                "redis",
+                ProcessPluginPackageSource::local_directory(&previous),
+                root.path().into(),
+                UpdateOptions {
+                    allow_downgrade: true,
+                    expected_version: None
+                }
+            )
+            .is_err()
+        );
+        update_plugin_package(
+            "redis",
+            ProcessPluginPackageSource::local_directory(old.path()),
+            root.path().into(),
+            UpdateOptions {
+                allow_downgrade: true,
+                expected_version: None,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            read_process_plugin_install_record(&record_path)
+                .unwrap()
+                .installed_version,
+            "0.3.3"
+        );
+    }
+
+    #[test]
+    fn failed_verification_and_record_activation_preserve_recoverable_packages() {
+        let old = TempDir::new("atomic-old");
+        let new = TempDir::new("atomic-new");
+        let root = TempDir::new("atomic-root");
+        write_valid_plugin(old.path(), "redis", "redis", "0.3.3", "connection.read");
+        write_valid_plugin(new.path(), "redis", "redis", "0.3.4", "connection.read");
+        install_plugin_package(
+            ProcessPluginPackageSource::local_directory(old.path()),
+            root.path().into(),
+        )
+        .unwrap();
+        let old_manifest = fs::read(root.path().join("redis/plugin.toml")).unwrap();
+        let proof = new.path().join("redis/provenance.json");
+        let saved_proof = fs::read(&proof).unwrap();
+        fs::write(&proof, "{}").unwrap();
+        assert!(
+            update_plugin_package(
+                "redis",
+                ProcessPluginPackageSource::local_directory(new.path()),
+                root.path().into(),
+                UpdateOptions {
+                    allow_downgrade: false,
+                    expected_version: None
+                }
+            )
+            .is_err()
+        );
+        assert_eq!(
+            fs::read(root.path().join("redis/plugin.toml")).unwrap(),
+            old_manifest
+        );
+        fs::write(&proof, saved_proof).unwrap();
+        let record_path = process_plugin_install_record_path(root.path(), "redis");
+        fs::remove_file(&record_path).unwrap();
+        fs::create_dir(&record_path).unwrap();
+        assert!(
+            update_plugin_package(
+                "redis",
+                ProcessPluginPackageSource::local_directory(new.path()),
+                root.path().into(),
+                UpdateOptions {
+                    allow_downgrade: false,
+                    expected_version: None
+                }
+            )
+            .is_err()
+        );
+        assert_eq!(
+            fs::read(root.path().join("redis/plugin.toml")).unwrap(),
+            old_manifest,
+            "failed record write must restore old payload"
+        );
+        fs::remove_dir(&record_path).unwrap();
+        update_plugin_package(
+            "redis",
+            ProcessPluginPackageSource::local_directory(new.path()),
+            root.path().into(),
+            UpdateOptions {
+                allow_downgrade: false,
+                expected_version: None,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            read_process_plugin_install_record(&record_path)
+                .unwrap()
+                .installed_version,
+            "0.3.4"
+        );
+    }
+
+    #[test]
+    fn verified_update_preserves_disabled_state() {
+        let old = TempDir::new("disabled-old");
+        let new = TempDir::new("disabled-new");
+        let root = TempDir::new("disabled-root");
+        write_valid_plugin(old.path(), "redis", "redis", "0.3.3", "connection.read");
+        write_valid_plugin(new.path(), "redis", "redis", "0.3.4", "connection.read");
+        install_plugin_package(
+            ProcessPluginPackageSource::local_directory(old.path()),
+            root.path().into(),
+        )
+        .unwrap();
+        apply_lifecycle_operation(
+            "redis",
+            root.path().into(),
+            PluginLifecycleOperation::Disable,
+        )
+        .unwrap();
+        let result = update_plugin_package(
+            "redis",
+            ProcessPluginPackageSource::local_directory(new.path()),
+            root.path().into(),
+            UpdateOptions {
+                allow_downgrade: false,
+                expected_version: None,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            result.data.plugin.candidate_state,
+            ProcessPluginCandidateState::Disabled
+        );
+        assert!(
+            !read_process_plugin_install_record(&process_plugin_install_record_path(
+                root.path(),
+                "redis"
+            ))
+            .unwrap()
+            .enabled
+        );
+    }
+
+    #[test]
+    fn registry_selection_cannot_install_another_signed_identity_or_version() {
+        let source = TempDir::new("registry-identity-source");
+        let root = TempDir::new("registry-identity-root");
+        write_valid_plugin(source.path(), "redis", "redis", "0.3.4", "connection.read");
+        for (id, version, expected_code) in [
+            ("docker", "0.3.4", "validation.plugin_id_mismatch"),
+            ("redis", "0.3.5", "validation.plugin_version_mismatch"),
+        ] {
+            let error = install_plugin_package_expected(
+                ProcessPluginPackageSource::local_directory(source.path()),
+                root.path().into(),
+                Some(id),
+                Some(version),
+            )
+            .unwrap_err();
+            assert_eq!(error.code, expected_code);
+            assert!(!root.path().join("redis").exists());
+            assert!(!root.path().join("docker").exists());
+        }
+    }
+
+    #[test]
+    fn operation_lock_prevents_concurrent_mutation_and_releases_on_drop() {
+        let root = TempDir::new("operation-lock");
+        let first = lock_plugin_operations(root.path()).unwrap();
+        assert!(lock_plugin_operations(root.path()).is_err());
+        drop(first);
+        assert!(lock_plugin_operations(root.path()).is_ok());
     }
 
     fn write_valid_plugin(root: &Path, dir: &str, id: &str, version: &str, permission: &str) {
@@ -3383,6 +3935,33 @@ platforms = ["{platform}"]
             platform = current_platform(),
         );
         fs::write(plugin_dir.join("plugin.toml"), manifest).expect("write manifest");
+        let discovery = discover_process_plugins_from_roots(vec![ProcessPluginRoot::new(
+            root,
+            ProcessPluginRootKind::User,
+            0,
+        )]);
+        let candidate = discovery
+            .effective_candidate(id)
+            .expect("fixture candidate");
+        let payload = voidb_core::plugin_provenance::build_provenance_payload(
+            candidate,
+            voidb_core::plugin_provenance::HOST_TARGET,
+        )
+        .unwrap();
+        let payload = serde_json::to_string(&payload).unwrap();
+        let mut message = voidb_core::plugin_provenance::PROVENANCE_DOMAIN.to_vec();
+        message.extend_from_slice(payload.as_bytes());
+        let key = ed25519_dalek::SigningKey::from_bytes(&[7; 32]);
+        let proof = voidb_core::plugin_provenance::PluginProvenance {
+            key_id: "test-only".into(),
+            payload,
+            signature: voidb_core::sign_bytes(&message, &key),
+        };
+        fs::write(
+            plugin_dir.join("provenance.json"),
+            serde_json::to_vec(&proof).unwrap(),
+        )
+        .unwrap();
     }
 
     fn current_platform() -> &'static str {
@@ -3417,15 +3996,20 @@ platforms = ["{platform}"]
 
         let index_path = dist.path().join("index.json");
 
-        // 1. Index local plugin directory
+        // Index signed, target-qualified distribution archives.
         let plugin_dir = source.path().join("s3");
+        let tar_path = dist.path().join(format!(
+            "s3-0.3.0-{}.tar",
+            voidb_core::plugin_provenance::HOST_TARGET
+        ));
+        package_process_plugin(&plugin_dir, &tar_path, ProcessPluginPackageFormat::Tar).unwrap();
         let plugin_cli = PluginCliPlugin::new();
         let cmd = Command::new("plugin").subcommands(plugin_cli.commands());
 
         let matches = cmd.clone().get_matches_from(vec![
             "plugin",
             "registry-index",
-            plugin_dir.to_str().unwrap(),
+            tar_path.to_str().unwrap(),
             "--output",
             index_path.to_str().unwrap(),
             "--base-url",
@@ -3450,14 +4034,24 @@ platforms = ["{platform}"]
         assert_eq!(s3.versions[0].packages.len(), 1);
         assert_eq!(
             s3.versions[0].packages[0].url,
-            "https://downloads.voidb.dev/plugins/s3-0.3.0.tar.gz"
+            format!(
+                "https://downloads.voidb.dev/plugins/s3-0.3.0-{}.tar",
+                voidb_core::plugin_provenance::HOST_TARGET
+            )
         );
         assert!(!s3.versions[0].packages[0].sha256.is_empty());
 
         // 2. Package into tar.zst and index the archive (merging into existing index)
-        let archive_path = dist.path().join("s3-0.3.0.tar.zst");
-        package_process_plugin(&plugin_dir, &archive_path, ProcessPluginPackageFormat::TarZst)
-            .expect("package s3");
+        let archive_path = dist.path().join(format!(
+            "s3-0.3.0-{}.tar.zst",
+            voidb_core::plugin_provenance::HOST_TARGET
+        ));
+        package_process_plugin(
+            &plugin_dir,
+            &archive_path,
+            ProcessPluginPackageFormat::TarZst,
+        )
+        .expect("package s3");
 
         let matches2 = cmd.get_matches_from(vec![
             "plugin",
@@ -3471,11 +4065,22 @@ platforms = ["{platform}"]
         let (_, submatches2) = matches2.subcommand().unwrap();
         handle_registry_index(submatches2).expect("handle_registry_index merge");
 
-        let updated_index = PluginRegistryIndex::load_from_file(&index_path).expect("load updated index");
+        let updated_index =
+            PluginRegistryIndex::load_from_file(&index_path).expect("load updated index");
         let updated_s3 = updated_index.get_plugin("s3").unwrap();
         assert_eq!(updated_s3.versions[0].packages.len(), 2);
-        assert!(updated_s3.versions[0].packages.iter().any(|p| p.format == "tar.zst"));
-        assert!(updated_s3.versions[0].packages.iter().any(|p| p.format == "tar.gz"));
+        assert!(
+            updated_s3.versions[0]
+                .packages
+                .iter()
+                .any(|p| p.format == "tar.zst")
+        );
+        assert!(
+            updated_s3.versions[0]
+                .packages
+                .iter()
+                .any(|p| p.format == "tar")
+        );
     }
 
     #[tokio::test]
@@ -3537,7 +4142,9 @@ platforms = ["{platform}"]
             "--require-signature",
         ]);
         let (_, install_sub) = install_matches.subcommand().unwrap();
-        handle_install(install_sub).await.expect("handle_install with valid signature");
+        handle_install(install_sub)
+            .await
+            .expect("handle_install with valid signature");
 
         let record_path = process_plugin_install_record_path(install_root.path(), "redis");
         assert!(record_path.is_file());
@@ -3568,13 +4175,9 @@ platforms = ["{platform}"]
 
         // Test list with file url
         let list_url = format!("file://{}", index_file.display());
-        let matches = cmd.clone().get_matches_from(vec![
-            "plugin",
-            "registry",
-            "list",
-            "--url",
-            &list_url,
-        ]);
+        let matches = cmd
+            .clone()
+            .get_matches_from(vec!["plugin", "registry", "list", "--url", &list_url]);
         let (_, sub) = matches.subcommand().unwrap();
         let res = handle_registry(sub).await;
         assert!(res.is_ok());
@@ -3660,14 +4263,22 @@ platforms = ["{platform}"]
             install_root.path().to_str().unwrap(),
         ]);
         let (_, install_sub) = install_matches.subcommand().unwrap();
-        handle_install(install_sub).await.expect("online install myplug");
+        handle_install(install_sub)
+            .await
+            .expect("online install myplug");
 
         let record_path = process_plugin_install_record_path(install_root.path(), "myplug");
         assert!(record_path.is_file());
 
         // Update plugin online to 1.1.0
         let source_v2 = TempDir::new("online-source-v2");
-        write_valid_plugin(source_v2.path(), "myplug", "myplug", "1.1.0", "storage.read");
+        write_valid_plugin(
+            source_v2.path(),
+            "myplug",
+            "myplug",
+            "1.1.0",
+            "storage.read",
+        );
         let pkg_v2_path = dist.path().join("myplug-1.1.0.tar.zst");
         package_process_plugin(
             source_v2.path().join("myplug"),
@@ -3714,7 +4325,9 @@ platforms = ["{platform}"]
             install_root.path().to_str().unwrap(),
         ]);
         let (_, update_sub) = update_matches.subcommand().unwrap();
-        handle_update(update_sub).await.expect("online update myplug");
+        handle_update(update_sub)
+            .await
+            .expect("online update myplug");
 
         let record = read_process_plugin_install_record(&record_path).expect("read updated record");
         assert_eq!(record.installed_version, "1.1.0");

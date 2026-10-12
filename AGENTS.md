@@ -7,7 +7,7 @@ A terminal-based database management tool built with Rust + ratatui, replicating
 VoidB v4.1 uses a **completely decoupled, capability-first process plugin architecture**:
 
 - **VoidB Shell & Connection Manager** (`voidb`): Dedicated connection information, credential vault, profile management, and JIT authorization gateway. It never embeds or links heavyweight database drivers directly.
-- **Unified Command Dispatcher** (`voidb-cli`): The master dispatch desk. Discovers both bundled and user-installed process plugins and transparently routes subcommands, options, and flags.
+- **Unified Command Dispatcher** (`voidb-cli`): The master dispatch desk. Discovers user-installed process plugins and explicitly configured development/offline roots and transparently routes subcommands, options, and flags.
 - **Decoupled Process Plugins**: All 14 official plugins (`mysql`, `postgres`, `sqlite`, `redis`, `ssh`, `duckdb`, `docker`, `kubernetes`, `s3`, `elasticsearch`, `mongodb`, `jenkins`, `webdav`, `email`) live in independent repositories (`voidb-plugin-<name>`) with identical first-class status.
 - **Tri-Modal Standard Contract**: Every plugin adheres to:
   1. `test`: Fast connectivity & configuration verification.
@@ -15,7 +15,7 @@ VoidB v4.1 uses a **completely decoupled, capability-first process plugin archit
   3. `serve`: Headless `stdio-jsonrpc` protocol server for AI coding agents and machine automation.
   4. Domain commands: Full autonomous CLI subcommands (e.g., `mysql query`, `k8s pods`, `docker ps`).
 
-Default database plugins are bundled in distribution packages and initialized with `voidb-cli plugin install-default`.
+Core distributions contain only the shell and CLI. Recommended plugins are installed separately on explicit user choice with `voidb-cli plugin install-default` and require authenticated provenance.
 
 ## Service Layer & Plugin SDK
 

@@ -102,7 +102,7 @@ The normative matrix and compatibility boundary are in
 - Pattern: Registry pattern — factories stored in `HashMap<String, Box<dyn PluginFactory>>`
 
 ### `ProcessPluginCandidate` & `ProcessPluginDiscovery` (`crates/voidb-core/src/process_plugin.rs`)
-- Dynamic discovery engine scanning bundled, system, and user plugin directories.
+- Dynamic discovery engine scanning user plugin directories and explicitly configured development or offline roots. Core releases do not bundle plugins; users install all official plugins through the same lifecycle.
 - Loads and parses `plugin.toml` manifests, schemas, capability definitions, and binary paths.
 - Enforces candidate state validation, version resolution, and precedence ordering.
 

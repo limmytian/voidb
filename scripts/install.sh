@@ -180,23 +180,6 @@ main() {
         fi
     done
 
-    # Install bundled default plugins if present in distribution archive
-    if [[ -d "$TMP_DIR/plugins" ]]; then
-        local user_plugin_dir
-        if [[ "$os" == "darwin" ]]; then
-            user_plugin_dir="$HOME/Library/Application Support/voidb/plugins"
-        else
-            user_plugin_dir="${XDG_DATA_HOME:-$HOME/.local/share}/voidb/plugins"
-        fi
-        info "Installing bundled default database plugins to ${user_plugin_dir}..."
-        mkdir -p "$user_plugin_dir"
-        local plugin_result
-        plugin_result="$(VOIDB_BUNDLED_PLUGIN_ROOT="$TMP_DIR/plugins" "$dest_dir/voidb-cli" plugin install-default --from-bundled --install-root "$user_plugin_dir" --format json)" || error "Bundled plugin installation failed."
-        if printf '%s' "$plugin_result" | grep -q '"status": "failed"'; then
-            error "A bundled plugin failed validation or installation."
-        fi
-    fi
-
     # Verify installation
     if [[ -x "$dest_dir/voidb" ]] && [[ -x "$dest_dir/voidb-cli" ]]; then
         success "VoidB successfully installed!"

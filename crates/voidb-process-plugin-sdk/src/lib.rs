@@ -38,6 +38,10 @@ pub use voidb_core::{
     PROCESS_PLUGIN_SUPPORTED_PROTOCOL_VERSIONS, PROCESS_PLUGIN_SUPPORTED_TRANSPORTS,
 };
 
+pub use voidb_core::plugin_provenance::{
+    PROVENANCE_DOMAIN, PROVENANCE_FILE, PluginProvenance, PluginProvenancePayload,
+};
+
 pub mod sql;
 
 pub use sql::{

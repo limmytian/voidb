@@ -27,9 +27,6 @@ class Voidb < Formula
   def install
     bin.install "voidb"
     bin.install "voidb-cli"
-    if Dir.exist?("plugins")
-      (pkgshare/"plugins").install Dir["plugins/*"]
-    end
   end
 
   def caveats
@@ -38,10 +35,10 @@ class Voidb < Formula
 
       Quick start:
         voidb                             # Launch interactive TUI
-        voidb-cli plugin install-default  # Ensure all core database plugins are ready
+        voidb-cli plugin install-default  # Install the recommended plugins (optional)
         voidb-cli --help                  # Explore CLI & plugin commands
 
-      In VoidB TUI, press 'p' to open the visual Plugin Marketplace.
+      Plugins are installed separately in your user plugin directory.
       Install official plugins directly from CLI:
         voidb-cli plugin search
         voidb-cli plugin install mysql

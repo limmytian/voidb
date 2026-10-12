@@ -30,9 +30,32 @@ Replicating Navicat-class multi-protocol power in your terminal with Vim-style n
 VoidB uses a capability-first core with completely decoupled process plugins:
 
 - **Connection Manager (`voidb`)**: the default standalone application. It owns its event loop, encrypted credentials vault, profile state, and JIT authorization gateway. It never directly embeds heavy protocol drivers.
-- **Unified Command Dispatcher (`voidb-cli`)**: the master CLI dispatch desk. Discovers both bundled and user-installed process plugins and transparently routes commands, arguments, and flags.
+- **Unified Command Dispatcher (`voidb-cli`)**: the master CLI dispatch desk. Discovers user-installed process plugins and explicitly configured development plugins and transparently routes commands, arguments, and flags.
 - **Decoupled Process Plugins (`voidb-plugin-<name>`)**: All 14 official plugins live in separate repositories and adhere to the tri-modal contract: `test` (connectivity check), `tui` (interactive terminal app), and `serve` (`stdio-jsonrpc` for agents).
-- **Default Plugins**: Bundled with distributions or initialized with `voidb-cli plugin install-default`.
+- **Optional Plugins**: Core distributions contain no plugins. On first interactive launch, choose whether to install the recommended set, or run `voidb-cli plugin install-default` later. All official plugins use the same user installation and uninstall lifecycle.
+
+Install only what you need:
+
+```bash
+voidb-cli plugin install mysql
+# Or install the six recommended plugins:
+voidb-cli plugin install-default
+voidb-cli plugin uninstall mysql
+```
+
+In the Connection Manager, a profile with a missing plugin shows `NOT INSTALLED`.
+Select it and press `i`, then confirm to download only that official plugin.
+Installation runs in the background; the UI refreshes when it finishes.
+Disabled or incompatible plugins have separate statuses and are not overwritten.
+
+All managed installations use the user plugin directory (on macOS,
+`~/Library/Application Support/voidb/plugins`). Core installation and upgrades
+never install plugins automatically. Legacy plugins under a Homebrew or system
+installation prefix are no longer discovered implicitly; install the needed
+plugins through the registry instead. Connection profiles and credentials are
+preserved. Explicit development and offline roots remain available through
+`VOIDB_PLUGIN_PATH` and `VOIDB_BUNDLED_PLUGIN_ROOT`; `install-default` uses the
+registry unless `--from-bundled` is explicitly selected.
 
 See [docs/architecture.md](docs/architecture.md) for full architecture details.
 
@@ -301,3 +324,29 @@ VoidB is released under the Apache License 2.0. See [LICENSE](LICENSE) for detai
 ---
 
 **Built with ❤️ by the VoidB community**
+
+### Plugin trust and legacy recovery
+
+VoidB v0.3.5 verifies managed plugin signatures against a compiled official public
+key before CLI, TUI or agent execution. Installation records are inventory caches;
+deleting them or rewriting their hashes never authorizes a replacement binary.
+Install the new signed official plugin v0.3.4 packages explicitly. Recover an old
+unsigned installation with `voidb-cli plugin update <plugin>`; profiles and
+credentials are preserved. The public registry advances only after signed release
+assets are published, so candidate verification uses the candidate registry.
+
+Unsigned development requires `VOIDB_PLUGIN_PATH` plus
+`VOIDB_ALLOW_UNSIGNED_PLUGINS=1` and cannot target standard managed user directories.
+This opt-in permits arbitrary developer code and access to credentials deliberately
+provided to it. Offline managed packages still require authenticated provenance;
+`--verify-key` only adds an archive signature check and does not add a runtime
+trust root. See [the trust contract](docs/plugin-trust-v0.3.5.md) for migration,
+key rotation and the residual path-to-execution race. Replacing the trusted core
+or a privileged host remains outside this protection.
+
+Candidate validation can select a registry with `VOIDB_PLUGIN_REGISTRY_URL` or
+`--registry-url`. This changes the download location only; it never changes the
+compiled trusted signing keys. Release signing/verification scripts require
+Python 3.11+ and OpenSSL 3. Use `scripts/update-homebrew-formula.py` after all four
+verified Unix core archives are available; published v0.3.4 formula hashes remain
+unchanged until that evidence exists.

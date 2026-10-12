@@ -21,6 +21,7 @@ pub mod local_path;
 pub mod object_sync;
 pub mod plugin;
 pub mod plugin_conformance;
+pub mod plugin_provenance;
 pub mod plugin_registry_metadata;
 pub mod plugin_signing;
 pub mod process_plugin;
@@ -203,14 +204,13 @@ pub use plugin_conformance::{
     render_conformance_report_markdown, runtime_conformance_checks, summarize_conformance_report,
 };
 pub use plugin_registry_metadata::{
-    PluginCategory, PluginRegistryIndex, RegistryPackageArtifact, RegistryPluginEntry,
-    RegistryPluginVersion, DEFAULT_OFFICIAL_REGISTRY_URL, REGISTRY_SCHEMA_URI,
-    REGISTRY_SCHEMA_VERSION,
+    DEFAULT_OFFICIAL_REGISTRY_URL, PluginCategory, PluginRegistryIndex, REGISTRY_SCHEMA_URI,
+    REGISTRY_SCHEMA_VERSION, RegistryPackageArtifact, RegistryPluginEntry, RegistryPluginVersion,
 };
 pub use plugin_signing::{
+    SIGNATURE_FILE_EXTENSION, SIGNATURE_SCHEME_ED25519, SignatureVerificationResult,
     default_signature_path, generate_signing_keypair, sign_bytes, sign_file, sign_file_detached,
-    verify_bytes_signature, verify_file_signature, SignatureVerificationResult,
-    SIGNATURE_FILE_EXTENSION, SIGNATURE_SCHEME_ED25519,
+    verify_bytes_signature, verify_file_signature,
 };
 pub use process_plugin::{
     PROCESS_PLUGIN_INSTALL_METADATA_DIR, PROCESS_PLUGIN_INSTALL_RECORD_FILE,
@@ -218,15 +218,15 @@ pub use process_plugin::{
     ProcessPluginCandidateState, ProcessPluginCapability, ProcessPluginConnections,
     ProcessPluginDiagnostic, ProcessPluginDiagnosticSeverity, ProcessPluginDiscovery,
     ProcessPluginInstallCompatibilityRecord, ProcessPluginInstallRecord,
-    ProcessPluginInstallSourceRecord, ProcessPluginManifest,
-    ProcessPluginPackageFormat, ProcessPluginPackageResult, ProcessPluginPackageSource,
-    ProcessPluginPackageSourceKind, ProcessPluginPackageSourceSummary,
-    ProcessPluginPackageValidation, ProcessPluginPackageValidationError,
-    ProcessPluginPackagedFile, ProcessPluginPreviousVersionRecord, ProcessPluginRequirements,
-    ProcessPluginRoot, ProcessPluginRootKind, ProcessPluginRuntime, ProcessPluginSource,
-    ProcessPluginTrustLevel, ProcessPluginUi, cleanup_process_plugin_package_staging,
+    ProcessPluginInstallSourceRecord, ProcessPluginManifest, ProcessPluginPackageFormat,
+    ProcessPluginPackageResult, ProcessPluginPackageSource, ProcessPluginPackageSourceKind,
+    ProcessPluginPackageSourceSummary, ProcessPluginPackageValidation,
+    ProcessPluginPackageValidationError, ProcessPluginPackagedFile,
+    ProcessPluginPreviousVersionRecord, ProcessPluginRequirements, ProcessPluginRoot,
+    ProcessPluginRootKind, ProcessPluginRuntime, ProcessPluginSource, ProcessPluginTrustLevel,
+    ProcessPluginUi, cleanup_process_plugin_package_staging, default_bundled_plugin_roots,
     default_process_plugin_roots, default_user_process_plugin_install_root,
-    default_bundled_plugin_roots, discover_process_plugins, discover_process_plugins_from_roots, package_process_plugin,
+    discover_process_plugins, discover_process_plugins_from_roots, package_process_plugin,
     process_plugin_install_metadata_root, process_plugin_install_record_path,
     process_plugin_roots_from_parts, read_process_plugin_install_record,
     validate_process_plugin_package, validate_process_plugin_package_from_path,

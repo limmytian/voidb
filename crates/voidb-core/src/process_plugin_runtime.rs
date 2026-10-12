@@ -1432,14 +1432,20 @@ mod tests {
             let validation = crate::process_plugin::validate_process_plugin_package(
                 crate::process_plugin::ProcessPluginPackageSource::from_path(
                     &candidate.source.plugin_dir,
-                ).expect("fixture package source"),
+                )
+                .expect("fixture package source"),
                 fixture.path(),
-            ).expect("validate intact fixture package");
+            )
+            .expect("validate intact fixture package");
             crate::process_plugin::write_process_plugin_install_record(&validation.install_record)
                 .expect("write integrity record");
             crate::process_plugin::cleanup_process_plugin_package_staging(&validation.staging_root)
                 .expect("remove fixture package staging");
-            fixture.host.initialize_and_health().await.expect("intact plugin health");
+            fixture
+                .host
+                .initialize_and_health()
+                .await
+                .expect("intact plugin health");
 
             let marker = fixture.path().join("unexpected-process-start");
             if tamper_manifest {
@@ -1451,8 +1457,11 @@ mod tests {
                 fs::write(binary, format!("#!/bin/sh\ntouch '{}'\n", marker.display())).unwrap();
             }
             let health_error = fixture.host.initialize_and_health().await.unwrap_err();
-            let invoke_error = fixture.host.invoke(sample_invocation(Some(1_000)), &sample_grant())
-                .await.unwrap_err();
+            let invoke_error = fixture
+                .host
+                .invoke(sample_invocation(Some(1_000)), &sample_grant())
+                .await
+                .unwrap_err();
             let session_error = match fixture.host.open_session_runtime().await {
                 Ok(_) => panic!("tampered plugin session started"),
                 Err(error) => error,
@@ -1764,6 +1773,157 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    async fn missing_or_legacy_records_never_launch_a_child() {
+        for attack in ["missing", "malformed", "legacy"] {
+            let fixture = RuntimeFixture::new("graceful_shutdown");
+            let candidate = fixture.host.candidate();
+            let path = crate::process_plugin::process_plugin_install_record_path(
+                &candidate.source.root,
+                &candidate.id,
+            );
+            match attack {
+                "missing" => fs::remove_file(&path).unwrap(),
+                "malformed" => fs::write(&path, "invalid = [").unwrap(),
+                _ => {
+                    let mut record =
+                        crate::process_plugin::read_process_plugin_install_record(&path).unwrap();
+                    record.binary_digest = None;
+                    crate::process_plugin::write_process_plugin_install_record(&record).unwrap();
+                }
+            }
+            let before = fs::read(&path).ok();
+            let error = fixture
+                .host
+                .initialize_and_health()
+                .await
+                .expect_err("reject untrusted installation");
+            assert_eq!(error.code, "security.process_plugin_integrity_failed");
+            assert!(!fixture.path().join("fixture/shutdown.marker").exists());
+            assert_eq!(
+                fs::read(&path).ok(),
+                before,
+                "verification must be read-only"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn authenticated_provenance_rejects_forgery_and_substitution_on_all_runtime_paths() {
+        use crate::plugin_provenance::{
+            PROVENANCE_DOMAIN, PROVENANCE_FILE, PluginProvenance, PluginProvenancePayload,
+        };
+        use crate::process_plugin::{
+            digest_file, process_plugin_install_record_path, read_process_plugin_install_record,
+            write_process_plugin_install_record,
+        };
+        for attack in [
+            "missing-proof",
+            "malformed-proof",
+            "bad-signature",
+            "unknown-signer",
+            "wrong-key",
+            "wrong-id",
+            "wrong-version",
+            "wrong-target",
+            "wrong-protocol",
+            "wrong-path",
+            "co-modified",
+            "schema",
+            "extra-file",
+            "symlink",
+        ] {
+            let fixture = RuntimeFixture::new("graceful_shutdown");
+            let candidate = fixture.host.candidate();
+            let proof_path = candidate.source.plugin_dir.join(PROVENANCE_FILE);
+            let mut envelope: PluginProvenance =
+                serde_json::from_slice(&fs::read(&proof_path).unwrap()).unwrap();
+            let marker = fixture.path().join("unexpected-process-start");
+            match attack {
+                "missing-proof" => fs::remove_file(&proof_path).unwrap(),
+                "malformed-proof" => fs::write(&proof_path, b"{").unwrap(),
+                "co-modified" => {
+                    let binary = candidate.resolved_runtime_command.as_ref().unwrap();
+                    fs::write(binary, format!("#!/bin/sh\ntouch '{}'\n", marker.display()))
+                        .unwrap();
+                    let path =
+                        process_plugin_install_record_path(&candidate.source.root, &candidate.id);
+                    let mut record = read_process_plugin_install_record(&path).unwrap();
+                    record.binary_digest = Some(digest_file(binary).unwrap());
+                    write_process_plugin_install_record(&record).unwrap();
+                }
+                "symlink" => {
+                    let binary = candidate.resolved_runtime_command.as_ref().unwrap();
+                    let outside = fixture.path().join("outside-binary");
+                    fs::rename(binary, &outside).unwrap();
+                    std::os::unix::fs::symlink(&outside, binary).unwrap();
+                }
+                "schema" => fs::write(
+                    candidate
+                        .source
+                        .plugin_dir
+                        .join("schemas/profile.schema.json"),
+                    b"{}",
+                )
+                .unwrap(),
+                "extra-file" => fs::write(
+                    candidate.source.plugin_dir.join("extra"),
+                    b"unauthenticated",
+                )
+                .unwrap(),
+                _ => {
+                    let mut payload: PluginProvenancePayload =
+                        serde_json::from_str(&envelope.payload).unwrap();
+                    match attack {
+                        "wrong-id" => payload.plugin_id = "redis".into(),
+                        "wrong-version" => payload.version = "9.0.0".into(),
+                        "wrong-target" => payload.target = "wrong-target".into(),
+                        "wrong-protocol" => payload.protocol_version = "999".into(),
+                        "wrong-path" => payload.binary_path = "../outside".into(),
+                        "unknown-signer" => envelope.key_id = "untrusted".into(),
+                        _ => {}
+                    }
+                    envelope.payload = serde_json::to_string(&payload).unwrap();
+                    let mut message = PROVENANCE_DOMAIN.to_vec();
+                    message.extend_from_slice(envelope.payload.as_bytes());
+                    let key = ed25519_dalek::SigningKey::from_bytes(
+                        &[if attack == "wrong-key" { 8 } else { 7 }; 32],
+                    );
+                    envelope.signature = crate::plugin_signing::sign_bytes(&message, &key);
+                    if attack == "bad-signature" {
+                        envelope.signature = "00".repeat(64);
+                    }
+                    fs::write(&proof_path, serde_json::to_vec(&envelope).unwrap()).unwrap();
+                }
+            }
+            let health = fixture
+                .host
+                .initialize_and_health()
+                .await
+                .expect_err(attack);
+            let invoke = fixture
+                .host
+                .invoke(sample_invocation(Some(1_000)), &sample_grant())
+                .await
+                .expect_err(attack);
+            let session = match fixture.host.open_session_runtime().await {
+                Ok(_) => panic!("untrusted session started: {attack}"),
+                Err(error) => error,
+            };
+            for error in [health, invoke, session] {
+                assert_eq!(
+                    error.code, "security.process_plugin_integrity_failed",
+                    "{attack}"
+                );
+            }
+            assert!(!marker.exists(), "substituted child started: {attack}");
+            assert!(
+                !candidate.source.plugin_dir.join("shutdown.marker").exists(),
+                "child started: {attack}"
+            );
+        }
+    }
+
     struct RuntimeFixture {
         _temp: TempDir,
         host: ProcessPluginRuntimeHost,
@@ -1788,6 +1948,18 @@ mod tests {
                 .find(|candidate| candidate.id == "fixture")
                 .expect("fixture candidate");
             assert_eq!(candidate.state, ProcessPluginCandidateState::Available);
+            let validation = crate::process_plugin::validate_process_plugin_package(
+                crate::process_plugin::ProcessPluginPackageSource::local_directory(
+                    &candidate.source.plugin_dir,
+                ),
+                temp.path(),
+            )
+            .expect("fixture validation");
+            crate::process_plugin::write_process_plugin_install_record(&validation.install_record)
+                .unwrap();
+            crate::process_plugin::cleanup_process_plugin_package_staging(&validation.staging_root)
+                .unwrap();
+            crate::plugin_provenance::sign_test_candidate(&candidate);
             Self {
                 _temp: temp,
                 host: ProcessPluginRuntimeHost::with_options(candidate, options),
@@ -1811,6 +1983,7 @@ mod tests {
                 std::process::id()
             ));
             fs::create_dir_all(&path).expect("create temp dir");
+            let path = fs::canonicalize(path).expect("canonical temp dir");
             Self { path }
         }
 

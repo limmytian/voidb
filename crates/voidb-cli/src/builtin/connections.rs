@@ -279,6 +279,8 @@ async fn test_connection_with_discovery(
         let config_bytes = serde_json::to_vec(conn).unwrap_or_default();
         let stdin_run = (|| -> Result<std::process::Output, std::io::Error> {
             use std::io::Write;
+            voidb_core::process_plugin::verify_plugin_binary_integrity(candidate)
+                .map_err(std::io::Error::other)?;
             let mut child = std::process::Command::new(binary)
                 .arg("test")
                 .arg("--stdin-config")
@@ -300,6 +302,9 @@ async fn test_connection_with_discovery(
                 if err_str.contains("unexpected argument '--stdin-config'")
                     || err_str.contains("unrecognized option '--stdin-config'")
                 {
+                    // Repeat verification before each fallback launch.
+                    voidb_core::process_plugin::verify_plugin_binary_integrity(candidate)
+                        .map_err(|error| error.to_string())?;
                     // Fall back to legacy --connection argument for older plugin binaries
                     std::process::Command::new(binary)
                         .arg("test")
@@ -312,6 +317,8 @@ async fn test_connection_with_discovery(
                 }
             }
             Err(_) => {
+                voidb_core::process_plugin::verify_plugin_binary_integrity(candidate)
+                    .map_err(|error| error.to_string())?;
                 // Fall back to legacy --connection argument
                 std::process::Command::new(binary)
                     .arg("test")
@@ -439,6 +446,23 @@ streaming = false
                 .is_some_and(|c| c.resolved_runtime_command.is_some()),
             "{discovery:?}"
         );
+        // This synthetic transport fixture deliberately uses an unsigned development root.
+        // Restore the opt-in even if an assertion panics; managed roots still fail closed.
+        struct DevelopmentOptIn(Option<std::ffi::OsString>);
+        impl Drop for DevelopmentOptIn {
+            fn drop(&mut self) {
+                unsafe {
+                    match &self.0 {
+                        Some(value) => std::env::set_var("VOIDB_ALLOW_UNSIGNED_PLUGINS", value),
+                        None => std::env::remove_var("VOIDB_ALLOW_UNSIGNED_PLUGINS"),
+                    }
+                }
+            }
+        }
+        let _opt_in = DevelopmentOptIn(std::env::var_os("VOIDB_ALLOW_UNSIGNED_PLUGINS"));
+        unsafe {
+            std::env::set_var("VOIDB_ALLOW_UNSIGNED_PLUGINS", "1");
+        }
         let result = test_connection_with_discovery("fixture", &connection(), &discovery).await;
         let payload = std::fs::read(&received);
         std::fs::remove_dir_all(&root).unwrap();
