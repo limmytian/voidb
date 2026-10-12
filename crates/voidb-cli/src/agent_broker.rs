@@ -9294,7 +9294,9 @@ mod tests {
         wait_for_started_calls(&broker.state, 1).await;
 
         let closed = tokio::time::timeout(
-            Duration::from_millis(200),
+            // The fixture gate remains blocked, so completion proves independent control.
+            // Allow shared CI scheduler latency without changing the 100 ms close deadline.
+            Duration::from_secs(2),
             send_request(
                 &broker.grant,
                 BrokerRequest::SessionClose {

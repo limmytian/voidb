@@ -181,3 +181,17 @@ No process-global environment mutation is needed, and production trust gates are
 unchanged. With the opt-in absent from the parent, all 188 full-feature CLI tests
 and the relevant all-target Clippy check passed locally; remote revalidation is
 required after the fix.
+
+All 14 plugin PR CI runs passed at their exact candidate commits. All four native
+build targets passed for every plugin. Protected candidate signing was approved
+only after matching each run's event and source commit. The MySQL candidate proof
+was independently verified for all four targets; the remaining signed packages
+are being downloaded and authenticated. All publication jobs remain skipped.
+
+The refreshed core CI passed fast checks, capability drift and all five native
+platform gates. One pre-existing broker close race test exceeded its 200 ms outer
+watchdog on shared Linux CI. Its blocked fixture gate, 100 ms close request
+deadline, aborted lifecycle and exactly-once cleanup assertions are retained;
+the outer watchdog now permits 2 s of scheduler latency. The focused regression
+and full workspace tests passed locally. The full remote workspace gate must
+pass after this adjustment.
