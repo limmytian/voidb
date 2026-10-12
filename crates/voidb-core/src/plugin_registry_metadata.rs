@@ -4,14 +4,15 @@
 //! Registry index, enabling discovery, version resolution, SHA256 integrity
 //! verification, and Ed25519 signature checks.
 
-use std::path::{Path, PathBuf};
+use crate::error::VoidbError;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::error::VoidbError;
+use std::path::{Path, PathBuf};
 
 pub const REGISTRY_SCHEMA_VERSION: u32 = 1;
 pub const REGISTRY_SCHEMA_URI: &str = "https://voidb.dev/schemas/plugin-registry.schema.json";
-pub const DEFAULT_OFFICIAL_REGISTRY_URL: &str = "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json";
+pub const DEFAULT_OFFICIAL_REGISTRY_URL: &str =
+    "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json";
 
 /// High-level category for plugin discovery.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -146,22 +147,28 @@ impl PluginRegistryIndex {
 
     /// Serialize to formatted JSON.
     pub fn to_json_pretty(&self) -> Result<String, VoidbError> {
-        serde_json::to_string_pretty(self).map_err(|e| VoidbError::Plugin(format!("Failed to serialize registry index to JSON: {e}")))
+        serde_json::to_string_pretty(self).map_err(|e| {
+            VoidbError::Plugin(format!("Failed to serialize registry index to JSON: {e}"))
+        })
     }
 
     /// Parse from JSON string.
     pub fn from_json(json_str: &str) -> Result<Self, VoidbError> {
-        serde_json::from_str(json_str).map_err(|e| VoidbError::Plugin(format!("Failed to parse registry index JSON: {e}")))
+        serde_json::from_str(json_str)
+            .map_err(|e| VoidbError::Plugin(format!("Failed to parse registry index JSON: {e}")))
     }
 
     /// Serialize to TOML string.
     pub fn to_toml(&self) -> Result<String, VoidbError> {
-        toml::to_string_pretty(self).map_err(|e| VoidbError::Plugin(format!("Failed to serialize registry index to TOML: {e}")))
+        toml::to_string_pretty(self).map_err(|e| {
+            VoidbError::Plugin(format!("Failed to serialize registry index to TOML: {e}"))
+        })
     }
 
     /// Parse from TOML string.
     pub fn from_toml(toml_str: &str) -> Result<Self, VoidbError> {
-        toml::from_str(toml_str).map_err(|e| VoidbError::Plugin(format!("Failed to parse registry index TOML: {e}")))
+        toml::from_str(toml_str)
+            .map_err(|e| VoidbError::Plugin(format!("Failed to parse registry index TOML: {e}")))
     }
 
     /// Save index to file (JSON or TOML based on file extension).
@@ -204,11 +211,9 @@ impl PluginRegistryIndex {
             .build()
             .map_err(|e| VoidbError::Network(format!("Failed to build HTTP client: {e}")))?;
 
-        let resp = client
-            .get(url)
-            .send()
-            .await
-            .map_err(|e| VoidbError::Network(format!("Failed to fetch registry from '{url}': {e}")))?;
+        let resp = client.get(url).send().await.map_err(|e| {
+            VoidbError::Network(format!("Failed to fetch registry from '{url}': {e}"))
+        })?;
 
         if !resp.status().is_success() {
             return Err(VoidbError::Network(format!(
@@ -218,10 +223,11 @@ impl PluginRegistryIndex {
             )));
         }
 
-        let content = resp
-            .text()
-            .await
-            .map_err(|e| VoidbError::Network(format!("Failed to read registry response body from '{url}': {e}")))?;
+        let content = resp.text().await.map_err(|e| {
+            VoidbError::Network(format!(
+                "Failed to read registry response body from '{url}': {e}"
+            ))
+        })?;
 
         if url.ends_with(".toml") {
             Self::from_toml(&content)
@@ -258,7 +264,10 @@ impl PluginRegistryIndex {
             Err(e) => {
                 // If remote fetch fails, fallback to existing stale cache if present
                 if let Ok(stale) = Self::load_from_file(cache_path) {
-                    tracing::warn!("Failed to fetch remote registry ({e}), using cached fallback: {}", cache_path.display());
+                    tracing::warn!(
+                        "Failed to fetch remote registry ({e}), using cached fallback: {}",
+                        cache_path.display()
+                    );
                     Ok(stale)
                 } else {
                     Err(e)
@@ -273,6 +282,18 @@ impl PluginRegistryIndex {
         artifact: &RegistryPackageArtifact,
         dest_path: impl AsRef<Path>,
     ) -> Result<PathBuf, VoidbError> {
+        if artifact.filename.is_empty()
+            || artifact.filename == "."
+            || artifact.filename == ".."
+            || !artifact
+                .filename
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_'))
+        {
+            return Err(VoidbError::Security(
+                "Registry artifact filename must be a safe basename".into(),
+            ));
+        }
         let dest_path = dest_path.as_ref();
         if let Some(parent) = dest_path.parent() {
             std::fs::create_dir_all(parent)?;
@@ -286,13 +307,18 @@ impl PluginRegistryIndex {
             let client = reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(60))
                 .build()
-                .map_err(|e| VoidbError::Network(format!("Failed to build HTTP client for artifact download: {e}")))?;
+                .map_err(|e| {
+                    VoidbError::Network(format!(
+                        "Failed to build HTTP client for artifact download: {e}"
+                    ))
+                })?;
 
-            let resp = client
-                .get(&artifact.url)
-                .send()
-                .await
-                .map_err(|e| VoidbError::Network(format!("Failed to download package from '{}': {e}", artifact.url)))?;
+            let resp = client.get(&artifact.url).send().await.map_err(|e| {
+                VoidbError::Network(format!(
+                    "Failed to download package from '{}': {e}",
+                    artifact.url
+                ))
+            })?;
 
             if !resp.status().is_success() {
                 return Err(VoidbError::Network(format!(
@@ -304,7 +330,12 @@ impl PluginRegistryIndex {
 
             resp.bytes()
                 .await
-                .map_err(|e| VoidbError::Network(format!("Failed to read response stream from '{}': {e}", artifact.url)))?
+                .map_err(|e| {
+                    VoidbError::Network(format!(
+                        "Failed to read response stream from '{}': {e}",
+                        artifact.url
+                    ))
+                })?
                 .to_vec()
         };
 
@@ -314,7 +345,10 @@ impl PluginRegistryIndex {
         hasher.update(&bytes);
         let calculated_sha256 = hex::encode(hasher.finalize());
 
-        let expected_sha256 = artifact.sha256.strip_prefix("sha256:").unwrap_or(&artifact.sha256);
+        let expected_sha256 = artifact
+            .sha256
+            .strip_prefix("sha256:")
+            .unwrap_or(&artifact.sha256);
         if !calculated_sha256.eq_ignore_ascii_case(expected_sha256) {
             return Err(VoidbError::Plugin(format!(
                 "Artifact SHA256 checksum mismatch for '{}'! Expected: {}, Calculated: {}",
@@ -349,15 +383,11 @@ impl RegistryPluginVersion {
             _ => String::new(),
         };
         // Match the exact triple or the architecture qualified by its platform.
-        if let Some(artifact) = self
-            .packages
-            .iter()
-            .find(|p| {
-                p.target
-                    .as_deref()
-                    .is_some_and(|t| t == current_target || t == platform_target)
-            })
-        {
+        if let Some(artifact) = self.packages.iter().find(|p| {
+            p.target
+                .as_deref()
+                .is_some_and(|t| t == current_target || t == platform_target)
+        }) {
             return Some(artifact);
         }
 
@@ -397,7 +427,10 @@ impl RegistryPluginVersion {
 impl RegistryPluginEntry {
     /// Get the latest version descriptor.
     pub fn get_latest_version(&self) -> Option<&RegistryPluginVersion> {
-        self.versions.iter().find(|v| v.version == self.latest_version).or_else(|| self.versions.last())
+        self.versions
+            .iter()
+            .find(|v| v.version == self.latest_version)
+            .or_else(|| self.versions.last())
     }
 
     /// Find a specific version or fall back to latest.
@@ -411,6 +444,36 @@ impl RegistryPluginEntry {
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn unsafe_registry_filenames_are_rejected_before_filesystem_writes() {
+        for filename in [
+            "../outside",
+            "nested/file",
+            "nested\\file",
+            "C:outside",
+            "..",
+            "",
+        ] {
+            let artifact = RegistryPackageArtifact {
+                filename: filename.into(),
+                format: "tar.gz".into(),
+                target: None,
+                url: "file://must-not-be-read".into(),
+                sha256: "sha256:invalid".into(),
+                size_bytes: None,
+                signature: None,
+            };
+            let destination = std::env::temp_dir()
+                .join(format!("voidb-rejected-{}", uuid::Uuid::new_v4()))
+                .join("outside");
+            assert!(matches!(
+                PluginRegistryIndex::download_artifact(&artifact, &destination).await,
+                Err(VoidbError::Security(_))
+            ));
+            assert!(!destination.parent().unwrap().exists());
+        }
+    }
+
     use super::*;
 
     #[test]
@@ -433,7 +496,11 @@ mod tests {
             protocol_version: "1".to_string(),
             released_at: Some(Utc::now()),
             voidb_core: Some(">=0.1.0".to_string()),
-            platforms: vec!["darwin".to_string(), "linux".to_string(), "windows".to_string()],
+            platforms: vec![
+                "darwin".to_string(),
+                "linux".to_string(),
+                "windows".to_string(),
+            ],
             signature_scheme: None,
             packages: vec![artifact],
         };
@@ -457,7 +524,10 @@ mod tests {
         let parsed_json = PluginRegistryIndex::from_json(&json).expect("json deserialize");
         assert_eq!(parsed_json.plugins.len(), 1);
         assert_eq!(parsed_json.plugins[0].id, "s3");
-        assert_eq!(parsed_json.plugins[0].category, Some(PluginCategory::Storage));
+        assert_eq!(
+            parsed_json.plugins[0].category,
+            Some(PluginCategory::Storage)
+        );
 
         let toml_str = index.to_toml().expect("toml serialize");
         let parsed_toml = PluginRegistryIndex::from_toml(&toml_str).expect("toml deserialize");
@@ -490,7 +560,8 @@ mod tests {
                     format: "tar.gz".to_string(),
                     target: None,
                     url: "https://example.com/docker.tar.gz".to_string(),
-                    sha256: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890".to_string(),
+                    sha256: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+                        .to_string(),
                     size_bytes: Some(2048),
                     signature: None,
                 }],
@@ -499,7 +570,9 @@ mod tests {
         index.upsert_plugin(plugin);
 
         let json_value = serde_json::to_value(&index).unwrap();
-        let schema_json: serde_json::Value = serde_json::from_str(include_str!("../../../schemas/plugin-registry.schema.json")).unwrap();
+        let schema_json: serde_json::Value =
+            serde_json::from_str(include_str!("../../../schemas/plugin-registry.schema.json"))
+                .unwrap();
         let compiled = jsonschema::validator_for(&schema_json).unwrap();
         assert!(compiled.is_valid(&json_value));
     }

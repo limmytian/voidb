@@ -8,7 +8,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fs::{self, File};
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf};
 
 use chrono::{DateTime, Utc};
@@ -580,6 +580,13 @@ pub fn write_process_plugin_install_record(
     record: &ProcessPluginInstallRecord,
 ) -> Result<PathBuf, ProcessPluginPackageValidationError> {
     let path = process_plugin_install_record_path(&record.install_root, &record.plugin_id);
+    crate::plugin_provenance::reject_plugin_path_symlinks(&path).map_err(|error| {
+        ProcessPluginPackageValidationError::new(
+            "install_record.path_untrusted",
+            "Install record path contains a symlink",
+            json!({ "message": error.to_string() }),
+        )
+    })?;
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|error| {
             ProcessPluginPackageValidationError::io(
@@ -596,69 +603,106 @@ pub fn write_process_plugin_install_record(
             json!({ "message": error.to_string() }),
         )
     })?;
-    fs::write(&path, content).map_err(|error| {
-        ProcessPluginPackageValidationError::io("write install record", &path, error)
-    })?;
+    let temporary = path.with_extension(format!("tmp-{}", uuid::Uuid::new_v4()));
+    let result = (|| -> io::Result<()> {
+        let mut options = fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let mut file = options.open(&temporary)?;
+        file.write_all(content.as_bytes())?;
+        file.sync_all()?;
+        fs::rename(&temporary, &path)?;
+        Ok(())
+    })();
+    if let Err(error) = result {
+        let _ = fs::remove_file(&temporary);
+        return Err(ProcessPluginPackageValidationError::io(
+            "atomically write install record",
+            &path,
+            error,
+        ));
+    }
     Ok(path)
 }
 
-/// Verify the on-disk integrity of an external process plugin before execution.
-/// If an install record exists, checks manifest digest and binary digest against the recorded hashes.
-/// If unauthorized modification is detected, returns VoidbError::Security to prevent malicious execution.
+/// Verify managed installation metadata before execution without repairing it.
+/// Explicit development execution requires both a development root and opt-in.
 pub fn verify_plugin_binary_integrity(
     candidate: &ProcessPluginCandidate,
 ) -> Result<(), VoidbError> {
-    let install_record_path = process_plugin_install_record_path(&candidate.source.root, &candidate.id);
-    if !install_record_path.exists() {
+    if unsigned_development_allowed(candidate)? {
         return Ok(());
     }
-
-    let mut record = read_process_plugin_install_record(&install_record_path).map_err(|error| {
+    let install_record_path =
+        process_plugin_install_record_path(&candidate.source.root, &candidate.id);
+    let record = read_process_plugin_install_record(&install_record_path).map_err(|error| {
         VoidbError::Security(format!(
-            "Failed to read install integrity record for plugin '{}': {}",
+            "Plugin '{}' requires a valid installation record; reinstall or update from an authenticated source: {}",
             candidate.id, error
         ))
     })?;
-
-    // Verify manifest digest
-    let current_manifest_digest = digest_file(&candidate.manifest_path).map_err(|error| {
-        VoidbError::Security(format!(
-            "Failed to compute manifest digest for plugin '{}': {}",
-            candidate.id, error
-        ))
+    if record.schema_version != PROCESS_PLUGIN_INSTALL_RECORD_SCHEMA_VERSION
+        || record.plugin_id != candidate.id
+        || Some(&record.installed_version) != candidate.version.as_ref()
+        || record.install_root != candidate.source.root
+        || !record.enabled
+    {
+        return Err(VoidbError::Security(
+            "Plugin installation identity or state does not match discovery".into(),
+        ));
+    }
+    let expected_binary_digest = record.binary_digest.as_ref().ok_or_else(|| {
+        VoidbError::Security(
+            "Legacy plugin record has no binary digest; verified reinstall is required".into(),
+        )
     })?;
-
-    if current_manifest_digest != record.manifest_digest {
+    let binary_path = candidate
+        .resolved_runtime_command
+        .as_ref()
+        .ok_or_else(|| VoidbError::Security("Plugin executable is unresolved".into()))?;
+    let current_manifest_digest = digest_file(&candidate.manifest_path)
+        .map_err(|error| VoidbError::Security(error.to_string()))?;
+    let current_binary_digest =
+        digest_file(binary_path).map_err(|error| VoidbError::Security(error.to_string()))?;
+    if current_manifest_digest != record.manifest_digest
+        || &current_binary_digest != expected_binary_digest
+    {
         return Err(VoidbError::Security(format!(
-            "Integrity gate violation: Manifest for plugin '{}' has been modified! Expected {}, found {}. Refusing execution.",
-            candidate.id, record.manifest_digest, current_manifest_digest
+            "SECURITY GATE BLOCKED: Plugin '{}' does not match installed digest; refusing execution",
+            candidate.id
         )));
     }
+    crate::plugin_provenance::verify_plugin_provenance(candidate)
+}
 
-    // Verify binary digest
-    if let Some(binary_path) = &candidate.resolved_runtime_command {
-        let current_binary_digest = digest_file(binary_path).map_err(|error| {
-            VoidbError::Security(format!(
-                "Failed to compute binary digest for plugin '{}': {}",
-                candidate.id, error
-            ))
-        })?;
-
-        if let Some(expected_binary_digest) = &record.binary_digest {
-            if &current_binary_digest != expected_binary_digest {
-                return Err(VoidbError::Security(format!(
-                    "SECURITY GATE BLOCKED: Binary for plugin '{}' ({}) does not match installed digest! Expected {}, found {}. Potential unauthorized binary replacement or tampering detected. Refusing execution to prevent credential leakage.",
-                    candidate.id, binary_path.display(), expected_binary_digest, current_binary_digest
-                )));
-            }
-        } else {
-            // First run on a legacy install record: backfill the binary digest
-            record.binary_digest = Some(current_binary_digest);
-            let _ = write_process_plugin_install_record(&record);
+pub(crate) fn unsigned_development_allowed(
+    candidate: &ProcessPluginCandidate,
+) -> Result<bool, VoidbError> {
+    if candidate.source.kind != ProcessPluginRootKind::EnvPath
+        || candidate.source.trust_level != ProcessPluginTrustLevel::ExplicitDevelopment
+        || std::env::var("VOIDB_ALLOW_UNSIGNED_PLUGINS").as_deref() != Ok("1")
+    {
+        return Ok(false);
+    }
+    let plugin_dir = fs::canonicalize(&candidate.source.plugin_dir)?;
+    for root in default_user_plugin_roots() {
+        if let Ok(root) = fs::canonicalize(root)
+            && plugin_dir.starts_with(root)
+        {
+            return Err(VoidbError::Security(
+                "Managed plugin directories cannot become unsigned development roots".into(),
+            ));
         }
     }
-
-    Ok(())
+    tracing::warn!(
+        plugin_id = candidate.id,
+        "Executing an explicitly opted-in unsigned development plugin"
+    );
+    Ok(true)
 }
 
 pub fn cleanup_process_plugin_package_staging(
@@ -750,7 +794,7 @@ pub fn default_process_plugin_roots() -> Vec<ProcessPluginRoot> {
     let mut roots = process_plugin_roots_from_parts(
         std::env::var_os(PROCESS_PLUGIN_DEVELOPMENT_PATH_ENV).as_deref(),
         primary_user_root,
-        default_system_plugin_roots(),
+        Vec::new(),
         default_bundled_plugin_roots(),
     );
 
@@ -834,67 +878,13 @@ fn default_user_plugin_root() -> Option<PathBuf> {
     default_user_plugin_roots().into_iter().next()
 }
 
-/// Discover default bundled plugin roots from environment and binary installation prefix.
+/// Return explicitly configured offline package roots.
+/// Core distributions contain no plugins. Installation-prefix and system roots
+/// are not discovered implicitly; custom locations require explicit opt-in.
 pub fn default_bundled_plugin_roots() -> Vec<PathBuf> {
-    let mut roots: Vec<PathBuf> = std::env::var_os(PROCESS_PLUGIN_BUNDLED_ROOT_ENV)
+    std::env::var_os(PROCESS_PLUGIN_BUNDLED_ROOT_ENV)
         .map(|roots| std::env::split_paths(&roots).collect())
-        .unwrap_or_default();
-
-    if let Ok(current_exe) = std::env::current_exe()
-        && let Some(exe_dir) = current_exe.parent()
-    {
-        // 1. Sibling plugins directory: <exe_dir>/plugins
-        let sibling = exe_dir.join("plugins");
-        if sibling.is_dir() && !roots.contains(&sibling) {
-            roots.push(sibling);
-        }
-
-        // 2. Standard installation prefix paths:
-        // e.g. /usr/local/bin/voidb -> /usr/local/share/voidb/plugins
-        if let Some(prefix) = exe_dir.parent() {
-            let share_plugins = prefix.join("share").join("voidb").join("plugins");
-            if share_plugins.is_dir() && !roots.contains(&share_plugins) {
-                roots.push(share_plugins);
-            }
-
-            let lib_plugins = prefix.join("lib").join("voidb").join("plugins");
-            if lib_plugins.is_dir() && !roots.contains(&lib_plugins) {
-                roots.push(lib_plugins);
-            }
-
-            let libexec_plugins = prefix.join("libexec").join("voidb").join("plugins");
-            if libexec_plugins.is_dir() && !roots.contains(&libexec_plugins) {
-                roots.push(libexec_plugins);
-            }
-        }
-    }
-
-    roots
-}
-
-#[cfg(target_os = "macos")]
-fn default_system_plugin_roots() -> Vec<PathBuf> {
-    vec![PathBuf::from("/Library/Application Support/voidb/plugins")]
-}
-
-#[cfg(target_os = "linux")]
-fn default_system_plugin_roots() -> Vec<PathBuf> {
-    vec![
-        PathBuf::from("/usr/local/share/voidb/plugins"),
-        PathBuf::from("/usr/share/voidb/plugins"),
-    ]
-}
-
-#[cfg(windows)]
-fn default_system_plugin_roots() -> Vec<PathBuf> {
-    std::env::var_os("ProgramData")
-        .map(|dir| vec![PathBuf::from(dir).join("voidb").join("plugins")])
         .unwrap_or_default()
-}
-
-#[cfg(not(any(target_os = "macos", target_os = "linux", windows)))]
-fn default_system_plugin_roots() -> Vec<PathBuf> {
-    Vec::new()
 }
 
 fn summarize_package_source(
@@ -1754,13 +1744,14 @@ pub fn package_process_plugin(
     let package_root = locate_single_package_root(&source_root)?;
 
     // Read manifest to get plugin id and version
-    let manifest_content = fs::read_to_string(package_root.join(MANIFEST_FILE_NAME)).map_err(|error| {
-        ProcessPluginPackageValidationError::io(
-            "read package manifest",
-            &package_root.join(MANIFEST_FILE_NAME),
-            error,
-        )
-    })?;
+    let manifest_content =
+        fs::read_to_string(package_root.join(MANIFEST_FILE_NAME)).map_err(|error| {
+            ProcessPluginPackageValidationError::io(
+                "read package manifest",
+                &package_root.join(MANIFEST_FILE_NAME),
+                error,
+            )
+        })?;
     let toml_value = manifest_content.parse::<toml::Value>().map_err(|error| {
         ProcessPluginPackageValidationError::new(
             "manifest.toml_invalid",
@@ -1807,23 +1798,32 @@ pub fn package_process_plugin(
 
     match format {
         ProcessPluginPackageFormat::TarZst => {
-            let zstd_encoder = zstd::stream::write::Encoder::new(output_file, 10).map_err(|error| {
-                ProcessPluginPackageValidationError::new(
-                    "package.zstd_init_failed",
-                    "Failed to initialize zstd compression encoder.",
-                    json!({ "message": error.to_string() }),
-                )
-            })?;
+            let zstd_encoder =
+                zstd::stream::write::Encoder::new(output_file, 10).map_err(|error| {
+                    ProcessPluginPackageValidationError::new(
+                        "package.zstd_init_failed",
+                        "Failed to initialize zstd compression encoder.",
+                        json!({ "message": error.to_string() }),
+                    )
+                })?;
             let mut tar_builder = tar::Builder::new(zstd_encoder);
             tar_builder.mode(tar::HeaderMode::Deterministic);
 
             for (rel_path, abs_path, is_exec) in &file_entries {
                 let mut f = File::open(abs_path).map_err(|error| {
-                    ProcessPluginPackageValidationError::io("read file for packaging", abs_path, error)
+                    ProcessPluginPackageValidationError::io(
+                        "read file for packaging",
+                        abs_path,
+                        error,
+                    )
                 })?;
                 let mut bytes = Vec::new();
                 f.read_to_end(&mut bytes).map_err(|error| {
-                    ProcessPluginPackageValidationError::io("read file content for packaging", abs_path, error)
+                    ProcessPluginPackageValidationError::io(
+                        "read file content for packaging",
+                        abs_path,
+                        error,
+                    )
                 })?;
 
                 let size = bytes.len() as u64;
@@ -1870,11 +1870,19 @@ pub fn package_process_plugin(
 
             for (rel_path, abs_path, is_exec) in &file_entries {
                 let mut f = File::open(abs_path).map_err(|error| {
-                    ProcessPluginPackageValidationError::io("read file for packaging", abs_path, error)
+                    ProcessPluginPackageValidationError::io(
+                        "read file for packaging",
+                        abs_path,
+                        error,
+                    )
                 })?;
                 let mut bytes = Vec::new();
                 f.read_to_end(&mut bytes).map_err(|error| {
-                    ProcessPluginPackageValidationError::io("read file content for packaging", abs_path, error)
+                    ProcessPluginPackageValidationError::io(
+                        "read file content for packaging",
+                        abs_path,
+                        error,
+                    )
                 })?;
 
                 let size = bytes.len() as u64;
@@ -1941,7 +1949,10 @@ fn collect_package_files(
         if metadata.file_type().is_dir() {
             // Ignore hidden/dot directories like .git or .voidb-install
             if !is_dot_prefixed(&entry_path) {
-                let name = entry_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                let name = entry_path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("");
                 // When packaging from a workspace/repo root, ignore heavy build/output dirs
                 if name != "target" && name != "dist" {
                     collect_package_files(root, &entry_path, entries)?;
@@ -2837,7 +2848,9 @@ mod tests {
         let user_roots = default_user_plugin_roots();
         for user_root in user_roots {
             assert!(
-                default_roots.iter().any(|r| r.path == user_root && r.kind == ProcessPluginRootKind::User),
+                default_roots
+                    .iter()
+                    .any(|r| r.path == user_root && r.kind == ProcessPluginRootKind::User),
                 "default roots should include user root: {:?}",
                 user_root
             );
@@ -2878,10 +2891,9 @@ mod tests {
         let temp = TempDir::new("session-execution-metadata");
         write_valid_plugin(temp.path(), "mysql", "mysql", "1", &[current_platform()]);
         let manifest_path = temp.path().join("mysql").join(MANIFEST_FILE_NAME);
-        let manifest_toml: toml::Value = toml::from_str(
-            &fs::read_to_string(manifest_path).expect("read generated manifest"),
-        )
-        .expect("parse generated manifest");
+        let manifest_toml: toml::Value =
+            toml::from_str(&fs::read_to_string(manifest_path).expect("read generated manifest"))
+                .expect("parse generated manifest");
         let mut manifest_json =
             serde_json::to_value(manifest_toml).expect("convert manifest to JSON");
         let capability = manifest_json["capabilities"][0]
@@ -2903,7 +2915,13 @@ mod tests {
     #[test]
     fn manifest_roundtrip_preserves_authorization_and_rejects_unbounded_live_sessions() {
         let temp = TempDir::new("live-contract-roundtrip");
-        write_valid_plugin(temp.path(), "fixture", "fixture", "1", &[current_platform()]);
+        write_valid_plugin(
+            temp.path(),
+            "fixture",
+            "fixture",
+            "1",
+            &[current_platform()],
+        );
         let path = temp.path().join("fixture/plugin.toml");
         let value: toml::Value = toml::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
         let mut json = serde_json::to_value(value).unwrap();
@@ -2925,18 +2943,43 @@ mod tests {
         validate_process_plugin_manifest_json(&json).unwrap();
         let manifest: ProcessPluginManifest = serde_json::from_value(json.clone()).unwrap();
         fs::write(&path, toml::to_string(&manifest).unwrap()).unwrap();
-        let roots = vec![ProcessPluginRoot::new(temp.path(), ProcessPluginRootKind::User, 0)];
+        let roots = vec![ProcessPluginRoot::new(
+            temp.path(),
+            ProcessPluginRootKind::User,
+            0,
+        )];
         let discovery = discover_process_plugins_from_roots(roots.clone());
-        assert_eq!(discovery.candidates[0].state, ProcessPluginCandidateState::Available, "{:?}", discovery.candidates[0].diagnostics);
-        assert!(!discovery.candidates[0].manifest.as_ref().unwrap().capabilities[0].authorization.capability_wide_allowed);
+        assert_eq!(
+            discovery.candidates[0].state,
+            ProcessPluginCandidateState::Available,
+            "{:?}",
+            discovery.candidates[0].diagnostics
+        );
+        assert!(
+            !discovery.candidates[0]
+                .manifest
+                .as_ref()
+                .unwrap()
+                .capabilities[0]
+                .authorization
+                .capability_wide_allowed
+        );
         json["capabilities"][0]["session_handoff"]["live_session"]["buffer"]["max_events"] =
             json!(crate::MAX_AGENT_LIVE_SESSION_BUFFER_EVENTS + 1);
         validate_process_plugin_manifest_json(&json).unwrap();
         let invalid: ProcessPluginManifest = serde_json::from_value(json).unwrap();
         fs::write(&path, toml::to_string(&invalid).unwrap()).unwrap();
         let discovery = discover_process_plugins_from_roots(roots);
-        assert_eq!(discovery.candidates[0].state, ProcessPluginCandidateState::Invalid);
-        assert!(discovery.candidates[0].diagnostics.iter().any(|d| d.code == "manifest.live_session_invalid"));
+        assert_eq!(
+            discovery.candidates[0].state,
+            ProcessPluginCandidateState::Invalid
+        );
+        assert!(
+            discovery.candidates[0]
+                .diagnostics
+                .iter()
+                .any(|d| d.code == "manifest.live_session_invalid")
+        );
     }
 
     #[test]
@@ -3413,7 +3456,13 @@ destructive = true"#,
         assert_eq!(record.plugin_id, "redis");
         assert_eq!(record.manifest_digest, validation.manifest_digest);
         assert_eq!(record.binary_digest, validation.binary_digest);
-        assert!(validation.binary_digest.as_ref().map(|d| d.starts_with("sha256:")).unwrap_or(false));
+        assert!(
+            validation
+                .binary_digest
+                .as_ref()
+                .map(|d| d.starts_with("sha256:"))
+                .unwrap_or(false)
+        );
         cleanup_process_plugin_package_staging(&validation.staging_root).expect("cleanup staging");
     }
 
@@ -3586,6 +3635,7 @@ destructive = true"#,
             let path =
                 std::env::temp_dir().join(format!("voidb-process-plugin-{}-{}", label, nonce));
             fs::create_dir_all(&path).expect("create temp dir");
+            let path = fs::canonicalize(path).expect("canonical temp dir");
             Self { path }
         }
 
@@ -3769,14 +3819,20 @@ platforms = [{platform_list}]
             ProcessPluginRootKind::User,
             0,
         )]);
-        let candidate = discovery.effective_candidate("redis").expect("effective candidate");
+        let candidate = discovery
+            .effective_candidate("redis")
+            .expect("effective candidate");
 
-        // 1. Without install record: succeeds (no record to mismatch)
-        assert!(verify_plugin_binary_integrity(candidate).is_ok());
+        // Missing records must never authorize execution.
+        assert!(verify_plugin_binary_integrity(candidate).is_err());
 
-        // 2. With matching install record: succeeds
+        // A matching record is only a cache; authenticate the payload as well.
+        crate::plugin_provenance::sign_test_candidate(candidate);
         let manifest_digest = digest_file(&candidate.manifest_path).expect("manifest digest");
-        let binary_path = candidate.resolved_runtime_command.as_ref().expect("binary path");
+        let binary_path = candidate
+            .resolved_runtime_command
+            .as_ref()
+            .expect("binary path");
         let binary_digest = digest_file(binary_path).expect("binary digest");
 
         let record = ProcessPluginInstallRecord {
@@ -3806,6 +3862,24 @@ platforms = [{platform_list}]
         write_process_plugin_install_record(&record).expect("write install record");
 
         assert!(verify_plugin_binary_integrity(candidate).is_ok());
+        let path = process_plugin_install_record_path(temp.path(), "redis");
+        let mut legacy = record.clone();
+        legacy.binary_digest = None;
+        write_process_plugin_install_record(&legacy).unwrap();
+        let before = fs::read(&path).unwrap();
+        assert!(verify_plugin_binary_integrity(candidate).is_err());
+        assert_eq!(
+            fs::read(&path).unwrap(),
+            before,
+            "launch must never backfill legacy metadata"
+        );
+        fs::write(&path, "invalid = [").unwrap();
+        assert!(verify_plugin_binary_integrity(candidate).is_err());
+        let mut wrong_identity = record.clone();
+        wrong_identity.installed_version = "9.0.0".into();
+        write_process_plugin_install_record(&wrong_identity).unwrap();
+        assert!(verify_plugin_binary_integrity(candidate).is_err());
+        write_process_plugin_install_record(&record).unwrap();
 
         // 3. Tampered binary: fails with VoidbError::Security
         fs::write(binary_path, b"#!/bin/sh\necho MALICIOUS\n").expect("tamper binary");

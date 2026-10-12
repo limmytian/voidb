@@ -24,6 +24,8 @@ use voidb_core::{
     LocalProfileStore, ProfileFormField, ProfileFormFieldKind, ProfileFormSchema,
 };
 
+use voidb_core::process_plugin::{ProcessPluginCandidateState, discover_process_plugins};
+
 use crate::profile_forms::{default_plugin_config, profile_form_schema};
 
 const MIN_WIDTH: u16 = 72;
@@ -58,6 +60,7 @@ enum ScreenMode {
     Search,
     Edit,
     ConfirmDelete,
+    ConfirmPluginInstall,
     Help,
     Credentials,
     Capabilities,
@@ -836,6 +839,9 @@ pub struct ConnectionManagerApp {
     credential_dialog: Option<CredentialDialog>,
     active_master_password: Option<String>,
     status: String,
+    plugin_states: HashMap<String, ProcessPluginCandidateState>,
+    plugin_install_target: Option<String>,
+    plugin_install_rx: Option<(String, BackgroundResult)>,
     test_rx: Option<BackgroundResult>,
     capability_rx: Option<BackgroundResult>,
     capabilities: Vec<CapabilityItem>,
@@ -887,6 +893,9 @@ impl ConnectionManagerApp {
             credential_dialog: None,
             active_master_password,
             status: "Ready".to_string(),
+            plugin_states: installed_plugin_states(),
+            plugin_install_target: None,
+            plugin_install_rx: None,
             test_rx: None,
             capability_rx: None,
             capabilities: Vec::new(),
@@ -1010,6 +1019,7 @@ impl ConnectionManagerApp {
             ScreenMode::Search => self.handle_search_key(key),
             ScreenMode::Edit => self.handle_editor_key(key),
             ScreenMode::ConfirmDelete => self.handle_delete_key(key),
+            ScreenMode::ConfirmPluginInstall => self.handle_plugin_install_key(key),
             ScreenMode::Help => {
                 if matches!(key.code, KeyCode::Esc | KeyCode::Char('?') | KeyCode::Enter) {
                     self.mode = ScreenMode::Browse;
@@ -1036,10 +1046,16 @@ impl ConnectionManagerApp {
             KeyCode::Char('d') if self.selected_profile().is_some() => {
                 self.mode = ScreenMode::ConfirmDelete;
             }
-            KeyCode::Char('r') => match self.refresh_profiles() {
-                Ok(()) => self.status = format!("Reloaded {} native profiles", self.profiles.len()),
-                Err(error) => self.status = format!("Refresh failed: {error}"),
-            },
+            KeyCode::Char('r') => {
+                self.plugin_states = installed_plugin_states();
+                match self.refresh_profiles() {
+                    Ok(()) => {
+                        self.status = format!("Reloaded {} native profiles", self.profiles.len())
+                    }
+                    Err(error) => self.status = format!("Refresh failed: {error}"),
+                }
+            }
+            KeyCode::Char('i') => self.offer_selected_plugin_install(),
             KeyCode::Char('t') => self.start_test(),
             KeyCode::Char('c') => self.start_capability_load(),
             KeyCode::Char('a') => self.open_agent_authorization(None),
@@ -1788,6 +1804,60 @@ impl ConnectionManagerApp {
         }
     }
 
+    fn offer_selected_plugin_install(&mut self) {
+        if self.plugin_install_rx.is_some() {
+            self.status = "A plugin installation is already running".into();
+            return;
+        }
+        let Some(profile) = self.selected_profile() else {
+            self.status = "Select a profile to install its plugin".into();
+            return;
+        };
+        let plugin_id = profile.plugin_id.clone();
+        self.plugin_states = installed_plugin_states();
+        if !can_install_missing_plugin(&plugin_id, self.plugin_states.get(&plugin_id).copied()) {
+            self.status = format!(
+                "Plugin '{plugin_id}' is already present or is not an official installable plugin; inspect with voidb-cli plugin describe {plugin_id}"
+            );
+            return;
+        }
+        self.plugin_install_target = Some(plugin_id);
+        self.mode = ScreenMode::ConfirmPluginInstall;
+    }
+
+    fn handle_plugin_install_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('n') => {
+                self.plugin_install_target = None;
+                self.mode = ScreenMode::Browse;
+            }
+            KeyCode::Enter | KeyCode::Char('y') => {
+                let Some(plugin_id) = self.plugin_install_target.take() else {
+                    self.mode = ScreenMode::Browse;
+                    return;
+                };
+                self.mode = ScreenMode::Browse;
+                self.plugin_states = installed_plugin_states();
+                if self.plugin_install_rx.is_some()
+                    || !can_install_missing_plugin(
+                        &plugin_id,
+                        self.plugin_states.get(&plugin_id).copied(),
+                    )
+                {
+                    self.status = "Plugin state changed; refresh and try again".into();
+                    return;
+                }
+                let (tx, rx) = mpsc::channel();
+                self.status = format!("Downloading and installing '{plugin_id}'...");
+                self.plugin_install_rx = Some((plugin_id.clone(), rx));
+                std::thread::spawn(move || {
+                    let _ = tx.send(run_plugin_install(&plugin_id));
+                });
+            }
+            _ => {}
+        }
+    }
+
     fn show_guidance(&mut self) {
         if let Some(profile) = self.selected_profile() {
             self.status = format!(
@@ -1857,6 +1927,36 @@ impl ConnectionManagerApp {
 
     fn poll_background(&mut self) -> bool {
         let mut changed = false;
+        if let Some((plugin_id, rx)) = &self.plugin_install_rx {
+            let finished = match rx.try_recv() {
+                Ok(result) => Some(result),
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    Some(Err("Plugin installer worker stopped".into()))
+                }
+                Err(mpsc::TryRecvError::Empty) => None,
+            };
+            if let Some(result) = finished {
+                let plugin_id = plugin_id.clone();
+                self.plugin_states = installed_plugin_states();
+                self.status = match result {
+                    Ok(message)
+                        if self.plugin_states.get(&plugin_id)
+                            == Some(&ProcessPluginCandidateState::Available) =>
+                    {
+                        message
+                    }
+                    Ok(_) => format!(
+                        "Plugin '{plugin_id}' was installed but is unavailable; inspect with voidb-cli plugin describe {plugin_id}"
+                    ),
+                    Err(error) => {
+                        format!("Install '{plugin_id}' failed: {error} · press i to retry")
+                    }
+                };
+                self.plugin_install_rx = None;
+                self.next_authorization_refresh = Instant::now();
+                changed = true;
+            }
+        }
         self.start_authorization_status_refresh();
         if let Some(rx) = &self.test_rx {
             match rx.try_recv() {
@@ -2041,6 +2141,9 @@ impl ConnectionManagerApp {
         match self.mode {
             ScreenMode::Edit => self.render_editor(frame, area),
             ScreenMode::ConfirmDelete => self.render_delete_confirmation(frame, area),
+            ScreenMode::ConfirmPluginInstall => {
+                self.render_plugin_install_confirmation(frame, area)
+            }
             ScreenMode::Help => self.render_help(frame, area),
             ScreenMode::Credentials => self.render_credentials(frame, area),
             ScreenMode::Capabilities => self.render_capabilities(frame, area),
@@ -2104,6 +2207,20 @@ impl ConnectionManagerApp {
                             "UNSUPPORTED"
                         }
                     });
+                let installing = self
+                    .plugin_install_rx
+                    .as_ref()
+                    .is_some_and(|(id, _)| id == &profile.plugin_id);
+                let plugin_badge = if installing {
+                    "INSTALLING"
+                } else {
+                    match self.plugin_states.get(&profile.plugin_id) {
+                        None if columns[0].width < 40 => "MISSING",
+                        None => "NOT INSTALLED",
+                        Some(ProcessPluginCandidateState::Available) => authorization,
+                        Some(state) => state.as_str(),
+                    }
+                };
                 ListItem::new(Line::from(vec![
                     Span::styled(
                         format!("{} ", protocol_icon(&profile.plugin_id)),
@@ -2115,8 +2232,8 @@ impl ConnectionManagerApp {
                         Style::default().fg(Color::DarkGray),
                     ),
                     Span::styled(
-                        format!("  [{authorization}]"),
-                        Style::default().fg(if authorization == "OFF" {
+                        format!("  [{plugin_badge}]"),
+                        Style::default().fg(if plugin_badge == "OFF" {
                             Color::DarkGray
                         } else {
                             Color::Yellow
@@ -2153,6 +2270,11 @@ impl ConnectionManagerApp {
                         "UNSUPPORTED · no agent-ready capabilities".to_string()
                     }
                 });
+            let authorization_detail = if !self.plugin_states.contains_key(&profile.plugin_id) {
+                "Unavailable until this plugin is installed".to_string()
+            } else {
+                authorization_detail
+            };
             Text::from(vec![
                 Line::from(Span::styled(
                     display,
@@ -2168,6 +2290,14 @@ impl ConnectionManagerApp {
                 detail_line(
                     "Credential refs",
                     &profile.credential_refs.len().to_string(),
+                ),
+                detail_line(
+                    "Plugin status",
+                    self.plugin_states
+                        .get(&profile.plugin_id)
+                        .map_or("Not installed · press i to install", |state| {
+                            state.as_str()
+                        }),
                 ),
                 detail_line("Agent access", &authorization_detail),
                 Line::raw(""),
@@ -2185,7 +2315,16 @@ impl ConnectionManagerApp {
                     "TUI:  voidb-cli {} tui --profile id:{}",
                     profile.plugin_id, profile.id
                 )),
-                Line::raw("Authorize/manage: press a"),
+                Line::raw(
+                    if can_install_missing_plugin(
+                        &profile.plugin_id,
+                        self.plugin_states.get(&profile.plugin_id).copied(),
+                    ) {
+                        "Install this plugin: press i (confirmation required)"
+                    } else {
+                        "Authorize/manage: press a"
+                    },
+                ),
             ])
         } else if self.profiles.is_empty() {
             Text::from(vec![
@@ -2218,7 +2357,7 @@ impl ConnectionManagerApp {
         let help = match self.mode {
             ScreenMode::Search => "Type to filter · Enter/Esc finish · ↑↓ navigate",
             _ => {
-                "n/e/d profile · t test · c capabilities · a manage agent access · x review revoke-all · m credentials · ? help"
+                "n/e/d profile · i install plugin · t test · c capabilities · a manage agent access · x review revoke-all · m credentials · ? help"
             }
         };
         frame.render_widget(
@@ -2409,6 +2548,24 @@ impl ConnectionManagerApp {
         );
     }
 
+    fn render_plugin_install_confirmation(&self, frame: &mut Frame, area: Rect) {
+        let plugin_id = self
+            .plugin_install_target
+            .as_deref()
+            .unwrap_or("selected plugin");
+        let popup = centered_rect(86, 60, area);
+        frame.render_widget(Clear, popup);
+        frame.render_widget(
+            Paragraph::new(format!(
+                "Download and install official plugin '{plugin_id}' from the registry?\n\nOnly this plugin will be installed in your user plugin directory.\nConnection settings and credentials stay unchanged.\n\nEnter/y install · n/Esc cancel"
+            ))
+            .alignment(Alignment::Center)
+            .wrap(Wrap { trim: true })
+            .block(Block::default().title(" Install plugin ").borders(Borders::ALL)),
+            popup,
+        );
+    }
+
     fn render_delete_confirmation(&self, frame: &mut Frame, area: Rect) {
         let popup = centered_rect(58, 24, area);
         frame.render_widget(Clear, popup);
@@ -2445,6 +2602,7 @@ impl ConnectionManagerApp {
             Line::raw("F2              Toggle interactive form / advanced JSON"),
             Line::raw("Ctrl+S          Validate and save the profile"),
             Line::raw("d               Delete selected profile"),
+            Line::raw("i               Install the selected profile’s missing official plugin"),
             Line::raw("t               Test through voidb-cli profile test"),
             Line::raw("c               Browse plugin capabilities"),
             Line::raw("a               Quick read-only access for the selected profile"),
@@ -3277,6 +3435,62 @@ fn protocol_icon(plugin_id: &str) -> &'static str {
     }
 }
 
+fn installed_plugin_states() -> HashMap<String, ProcessPluginCandidateState> {
+    let discovery = discover_process_plugins();
+    discovery
+        .candidates
+        .iter()
+        .filter(|candidate| candidate.state != ProcessPluginCandidateState::Shadowed)
+        .map(|candidate| (candidate.id.clone(), candidate.state))
+        .collect()
+}
+
+fn can_install_missing_plugin(plugin_id: &str, state: Option<ProcessPluginCandidateState>) -> bool {
+    state.is_none() && PLUGINS.iter().any(|(id, _)| *id == plugin_id)
+}
+
+fn run_plugin_install(plugin_id: &str) -> std::result::Result<String, String> {
+    if !can_install_missing_plugin(plugin_id, None) {
+        return Err("Only official plugin IDs can be installed here".into());
+    }
+    let output = std::process::Command::new(resolve_voidb_cli_binary())
+        .args(["plugin", "install", plugin_id, "--format", "json"])
+        .env_remove(voidb_core::VOIDB_MASTER_PASSWORD_ENV)
+        .stdin(std::process::Stdio::null())
+        .output()
+        .map_err(|error| format!("could not launch voidb-cli: {error}"))?;
+    if !output.status.success() {
+        return Err(format!("Plugin installer exited with {}", output.status));
+    }
+    let response: Value = serde_json::from_slice(&output.stdout)
+        .map_err(|_| "Invalid plugin installer response".to_string())?;
+    parse_plugin_install_response(plugin_id, &response)
+}
+
+fn parse_plugin_install_response(
+    plugin_id: &str,
+    response: &Value,
+) -> std::result::Result<String, String> {
+    if response.get("ok").and_then(Value::as_bool) != Some(true) {
+        return Err(response
+            .pointer("/error/message")
+            .and_then(Value::as_str)
+            .unwrap_or("Plugin installer reported an error")
+            .to_string());
+    }
+    if response.pointer("/data/plugin/id").and_then(Value::as_str) != Some(plugin_id)
+        || response
+            .pointer("/data/plugin/candidate_state")
+            .and_then(Value::as_str)
+            != Some("available")
+    {
+        return Err("Installer did not return the requested available plugin".into());
+    }
+    Ok(format!(
+        "Plugin '{plugin_id}' installed · press t to test or c for capabilities"
+    ))
+}
+
 fn resolve_voidb_cli_binary() -> PathBuf {
     if let Ok(path) = std::env::var("VOIDB_CLI_BIN") {
         return path.into();
@@ -3284,7 +3498,11 @@ fn resolve_voidb_cli_binary() -> PathBuf {
     if let Ok(current) = std::env::current_exe()
         && let Some(directory) = current.parent()
     {
-        let sibling = directory.join("voidb-cli");
+        let sibling = directory.join(if cfg!(windows) {
+            "voidb-cli.exe"
+        } else {
+            "voidb-cli"
+        });
         if sibling.exists() {
             return sibling;
         }
@@ -3870,6 +4088,43 @@ fn sanitize_display_text(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn contextual_install_only_accepts_missing_official_plugins() {
+        assert!(can_install_missing_plugin("mysql", None));
+        assert!(!can_install_missing_plugin("../mysql", None));
+        assert!(!can_install_missing_plugin("custom-plugin", None));
+        for state in [
+            ProcessPluginCandidateState::Available,
+            ProcessPluginCandidateState::Disabled,
+            ProcessPluginCandidateState::Invalid,
+            ProcessPluginCandidateState::Incompatible,
+            ProcessPluginCandidateState::Failed,
+        ] {
+            assert!(!can_install_missing_plugin("mysql", Some(state)));
+        }
+    }
+
+    #[test]
+    fn installer_response_rejects_error_envelopes_even_with_zero_exit_status() {
+        let response = json!({"ok": false, "error": {"message": "No compatible artifact"}});
+        assert_eq!(
+            parse_plugin_install_response("mysql", &response),
+            Err("No compatible artifact".into())
+        );
+    }
+
+    #[test]
+    fn installer_response_requires_the_requested_available_plugin() {
+        let mut response = json!({"ok": true, "data": {"plugin": {
+            "id": "mysql", "candidate_state": "available"
+        }}});
+        assert!(parse_plugin_install_response("mysql", &response).is_ok());
+        assert!(parse_plugin_install_response("postgres", &response).is_err());
+        response["data"]["plugin"]["candidate_state"] = json!("disabled");
+        assert!(parse_plugin_install_response("mysql", &response).is_err());
+        assert!(parse_plugin_install_response("mysql", &json!({"ok": true})).is_err());
+    }
 
     #[test]
     fn plugin_templates_are_valid_json_objects() {

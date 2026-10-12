@@ -5,6 +5,16 @@ All notable changes to VoidB will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.5] - 2026-10-12
+
+- Require trusted Ed25519 plugin provenance before execution; reject missing/legacy records, rewritten digests, forged proofs and modified payloads without silently trusting installed binaries.
+- Add verified legacy recovery, serialized atomic installation/update and authenticated rollback while preserving profiles and credentials.
+- Prepare new signed v0.3.4 packages for all 14 official plugins; retain explicit unsigned development opt-in and document privileged-compromise/execution-race limits.
+- Distribute only the core shell and dispatcher. Install plugins explicitly through the registry, optional first-launch onboarding or selected-connection installation with `i`.
+- Keep authenticated registry metadata in a trust-policy cache namespace so fresh legacy caches do not delay verified upgrade.
+- Preserve skip and failure retry behavior, avoid downloads during noninteractive startup, and keep installation children free of the main password.
+- Validate four plugin targets, five core targets and real signed HTTP/PTY lifecycle; official plugins are published and the core release is in preparation.
+
 ## [0.3.4] - 2026-10-12
 
 - Fix registry artifact selection when CLI callers supply architecture names instead of full target triples.

@@ -80,7 +80,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15-intel, macos-15, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -88,6 +88,10 @@ jobs:
       - name: Install System Dependencies (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+      - name: Test Authenticated Process Plugin Runtime Gates
+        run: cargo test -p voidb-core process_plugin
+      - name: Test Verified Migration and Package Activation
+        run: cargo test -p voidb-cli builtin::plugin
       - name: Test Core Package Signing and Verification
         run: cargo test -p voidb-core --lib plugin_signing
       - name: Test Process Plugin Cross-Platform Packaging and Gate

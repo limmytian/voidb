@@ -14,7 +14,7 @@ spec.loader.exec_module(staging)
 
 
 class ReleaseStagingTests(unittest.TestCase):
-    def exercise(self, entries, corrupt=False):
+    def exercise(self, entries, corrupt=False, allow_legacy_unsigned=True):
         with tempfile.TemporaryDirectory() as temporary:
             output = pathlib.Path(temporary)
             target = 'aarch64-apple-darwin'
@@ -31,12 +31,16 @@ class ReleaseStagingTests(unittest.TestCase):
             digest = hashlib.sha256(archive.read_bytes()).hexdigest()
             (download / 'SHA256SUMS').write_text(f'{"0" * 64 if corrupt else digest}  {filename}\n')
             with patch.object(staging.subprocess, 'run') as fetch:
-                staging.stage('0.3.3', target, 'sqlite', output)
+                staging.stage('0.3.3', target, 'sqlite', output, allow_legacy_unsigned)
                 fetch.assert_called_once()
                 self.assertTrue((output / target / 'plugins/sqlite/bin/voidb-plugin-sqlite').exists())
 
     def test_verified_archive_is_staged(self):
         self.exercise(['plugin.toml', 'bin/voidb-plugin-sqlite'])
+
+    def test_unsigned_legacy_staging_requires_explicit_opt_in(self):
+        with self.assertRaisesRegex(ValueError, 'Missing authenticated release provenance'):
+            self.exercise(['plugin.toml', 'bin/voidb-plugin-sqlite'], allow_legacy_unsigned=False)
 
     def test_corrupt_archive_is_rejected(self):
         with self.assertRaisesRegex(ValueError, 'Checksum mismatch'):

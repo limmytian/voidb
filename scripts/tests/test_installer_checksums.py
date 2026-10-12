@@ -49,11 +49,12 @@ esac
         result = subprocess.run(['bash', str(INSTALLER)], env=env, capture_output=True, text=True)
         return root, result
 
-    def test_verified_bundle_uses_cli_install_records(self):
+    def test_verified_core_install_never_bootstraps_legacy_bundled_plugins(self):
         root, result = self.run_installer('valid')
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        args = (root / 'install/bootstrap.args').read_text()
-        self.assertIn('install-default\n--from-bundled', args)
+        self.assertFalse((root / 'install/bootstrap.args').exists())
+        self.assertFalse((root / 'home/Library/Application Support/voidb/plugins').exists())
+        self.assertFalse((root / 'home/.local/share/voidb/plugins').exists())
         self.assertTrue((root / 'install/voidb').exists())
 
     def test_mismatch_does_not_replace_binaries(self):

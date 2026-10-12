@@ -1,0 +1,483 @@
+{
+  "status": "local_candidate_only",
+  "core_version": "0.3.5",
+  "official_plugin_version": "0.3.4",
+  "public_baseline": {
+    "core": "0.3.4",
+    "plugins": "0.3.3"
+  },
+  "verified_target": "aarch64-apple-darwin",
+  "unverified_plugin_targets": [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-apple-darwin"
+  ],
+  "signing_key_id": "official-2026-10",
+  "public_key": "2d00e2e461719c94b77cf0e9d1d49a9cf1c8dbe8f802696b801b432bfcc95ea2",
+  "plugin_builds": [
+    {
+      "plugin": "mysql",
+      "exit_code": 0,
+      "seconds": 41.6
+    },
+    {
+      "plugin": "postgres",
+      "exit_code": 0,
+      "seconds": 38.8
+    },
+    {
+      "plugin": "sqlite",
+      "exit_code": 0,
+      "seconds": 32.2
+    },
+    {
+      "plugin": "redis",
+      "exit_code": 0,
+      "seconds": 34.7
+    },
+    {
+      "plugin": "ssh",
+      "exit_code": 0,
+      "seconds": 45.9
+    },
+    {
+      "plugin": "duckdb",
+      "exit_code": 0,
+      "seconds": 155.4
+    },
+    {
+      "plugin": "docker",
+      "exit_code": 0,
+      "seconds": 44.2
+    },
+    {
+      "plugin": "kubernetes",
+      "exit_code": 0,
+      "seconds": 56.1
+    },
+    {
+      "plugin": "s3",
+      "exit_code": 0,
+      "seconds": 42.0
+    },
+    {
+      "plugin": "elasticsearch",
+      "exit_code": 0,
+      "seconds": 42.1
+    },
+    {
+      "plugin": "mongodb",
+      "exit_code": 0,
+      "seconds": 57.1
+    },
+    {
+      "plugin": "jenkins",
+      "exit_code": 0,
+      "seconds": 37.4
+    },
+    {
+      "plugin": "webdav",
+      "exit_code": 0,
+      "seconds": 51.3
+    },
+    {
+      "plugin": "email",
+      "exit_code": 0,
+      "seconds": 39.8
+    }
+  ],
+  "plugin_gates": [
+    {
+      "plugin": "mysql",
+      "exit_codes": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "plugin": "postgres",
+      "exit_codes": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "plugin": "sqlite",
+      "exit_codes": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "plugin": "redis",
+      "exit_codes": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "plugin": "ssh",
+      "exit_codes": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "plugin": "duckdb",
+      "exit_codes": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "plugin": "docker",
+      "exit_codes": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "plugin": "kubernetes",
+      "exit_codes": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "plugin": "s3",
+      "exit_codes": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "plugin": "elasticsearch",
+      "exit_codes": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "plugin": "mongodb",
+      "exit_codes": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "plugin": "jenkins",
+      "exit_codes": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "plugin": "webdav",
+      "exit_codes": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "plugin": "email",
+      "exit_codes": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "native_cli_smoke": {
+    "core_version": "voidb 0.3.5",
+    "target": "aarch64-apple-darwin",
+    "registry_transport": "real loopback HTTP",
+    "checks": [
+      "install-default downloaded and verified six actual signed plugins",
+      "all 14 actual plugins passed production dispatch, initialize and health",
+      "verified registry update and signed previous-package rollback",
+      "five attacks rejected before domain, TUI, serve and test dispatch; no child marker, secret output or backfill",
+      "uninstall all 14 leaves no implicit bundled fallback",
+      "actual immutable v0.3.3 backup with no record migrated through authenticated registry update",
+      "isolated user-data sentinel preserved; actual user installation and backup unchanged"
+    ],
+    "status": "passed"
+  },
+  "native_tui_smoke": {
+    "status": "passed",
+    "transport": "real PTY, production CLI, signed loopback HTTP registry",
+    "checks": [
+      "noninteractive startup performs no registry requests or installation",
+      "first interactive install downloads six real signed packages and persists acknowledgment",
+      "partial first-launch failure installs five, persists no acknowledgment and retries the missing plugin next launch",
+      "skip persists and contextual cancellation creates no download",
+      "minimum-size contextual failure retries and installs only MySQL; profile/credential files unchanged"
+    ]
+  },
+  "artifact_hashes": {
+    "docker-0.3.4-aarch64-apple-darwin.tar": "86f88d0fa05f30d13135f87a5c0ee740c014781c4047e4be3ad7ba19466f9e7e",
+    "docker-0.3.4-aarch64-apple-darwin.tar.gz": "4ee0a1c60b75c48cd34c444f3027e50e8135366a425a16dad6972b6b36725d3a",
+    "docker-0.3.4-aarch64-apple-darwin.tar.gz.sig": "783f8efabb35598c3f27f65bd10ae5487706f3072e3dbf7b584bbe60dfacdf91",
+    "docker-0.3.4-aarch64-apple-darwin.tar.sig": "336a4865eae806212187e9a759214ca58c2bad652553deb854ba38d59102ba75",
+    "docker-0.3.4-aarch64-apple-darwin.tar.zst": "4a99734df4da96661e4a2162e352a24bd1b8d9f05a5bd47039682e36cf46a451",
+    "docker-0.3.4-aarch64-apple-darwin.tar.zst.sig": "61cb48324a14b02d9a7b65245f1be5ebd83a22b6790cc8a7be692f6b4c42c830",
+    "duckdb-0.3.4-aarch64-apple-darwin.tar": "335d0bd02f005dc493b1a23ec82ca92b0ba3677db2324fe3fd9e964b1b208db8",
+    "duckdb-0.3.4-aarch64-apple-darwin.tar.gz": "7ccbab1921537407c46ae932a1fcd7b91161e9a8e819aa3aff7ba6c1e55facf8",
+    "duckdb-0.3.4-aarch64-apple-darwin.tar.gz.sig": "715c239a4b9da173fc0f9ded896e696435e0de46177fb8c5bdaf130bdd1868b6",
+    "duckdb-0.3.4-aarch64-apple-darwin.tar.sig": "3cac55dece9eded87f443ad6945d102972de50b6aa55abef455d35b1d7e07cd2",
+    "duckdb-0.3.4-aarch64-apple-darwin.tar.zst": "abea141260ab9831ce18636ea1046be556af853bc07c3083138dd50a05dfaad8",
+    "duckdb-0.3.4-aarch64-apple-darwin.tar.zst.sig": "646a9163f8bb0ab29f11e459e78e5962b2da37807cbc30fbaef0f258654ddceb",
+    "elasticsearch-0.3.4-aarch64-apple-darwin.tar": "d69dfd756c8d7b4d98d4b1402ef7b16166e4abd019a6152cb8aade138e2c899d",
+    "elasticsearch-0.3.4-aarch64-apple-darwin.tar.gz": "410305f320a0498e3f8caa67121c9611c20b8c030bc068f612b8189e42e397f6",
+    "elasticsearch-0.3.4-aarch64-apple-darwin.tar.gz.sig": "bac5166015cd9b109146abbef6943b82d5792de3ce0737faa148c4ef73efc539",
+    "elasticsearch-0.3.4-aarch64-apple-darwin.tar.sig": "e383ee78c56689b3f59a2e0df27246de9598d9b5521315b0dc1d6a02cea2704b",
+    "elasticsearch-0.3.4-aarch64-apple-darwin.tar.zst": "b525a43d2e4f65b7781a2a4f5c4b780c2eec05b0faefc11607ae8facaab89e42",
+    "elasticsearch-0.3.4-aarch64-apple-darwin.tar.zst.sig": "097ebe92f55dc9069c19d0fe809cb113c97698cbbe6907e95f063a371dad4904",
+    "email-0.3.4-aarch64-apple-darwin.tar": "84f65cd9461d019dac4e1ef29d1170d74a9598393db88ac2399d7057bdfa0047",
+    "email-0.3.4-aarch64-apple-darwin.tar.gz": "2e2410cd711faeeb094eca9764ced7a6b3dba4dfbad44877770fb6d94cc1a455",
+    "email-0.3.4-aarch64-apple-darwin.tar.gz.sig": "59701eb034b3af51bf22ca75da2ee74041045e8586384c773778f015bc8cdf12",
+    "email-0.3.4-aarch64-apple-darwin.tar.sig": "d5ed310078f9eff8cb7f176f01af5a768ef2070433753f38cb5c4ded1b273bec",
+    "email-0.3.4-aarch64-apple-darwin.tar.zst": "8a7e2712eeb989a3164d762232e06596508b8df377250e1c8ce7e56db935ef6a",
+    "email-0.3.4-aarch64-apple-darwin.tar.zst.sig": "dba792986abe4d8c8815cb82180800ef91bda5c8fdf97eaab56c11448bddd639",
+    "jenkins-0.3.4-aarch64-apple-darwin.tar": "ad4de021707da5912c18c2b748f8805a60b9ce61c1b940a453ca19a99777bb85",
+    "jenkins-0.3.4-aarch64-apple-darwin.tar.gz": "78c83b45bd673f73ceae4b3bce0c58ddaa9c9323d087f72d2a5500cd55140c02",
+    "jenkins-0.3.4-aarch64-apple-darwin.tar.gz.sig": "b433e9946e69af2e8e5ae0f80d3c7f9426b374d774daf2bfea6f18835f44acde",
+    "jenkins-0.3.4-aarch64-apple-darwin.tar.sig": "484099daf47af04d71deaf2d64cc3c32aecc6b839ff6b8572e2b107ba0b459e9",
+    "jenkins-0.3.4-aarch64-apple-darwin.tar.zst": "e353fa63a455c34bb0a47960360151779381c482b44969db9b60ee2cb10e6267",
+    "jenkins-0.3.4-aarch64-apple-darwin.tar.zst.sig": "1afae0a785e637adc07744fef16a3a0e84e69ca14163e44745beddbe453f338e",
+    "kubernetes-0.3.4-aarch64-apple-darwin.tar": "ad9c35b834600f852cb93c9d6e6ee018b9631c2fd323265e979186cf2b1678ff",
+    "kubernetes-0.3.4-aarch64-apple-darwin.tar.gz": "5beff9fa4efda29264dc46bd332048d95c1591fcfb746041f55fe84f9d5abf53",
+    "kubernetes-0.3.4-aarch64-apple-darwin.tar.gz.sig": "b83c98a4805271881e25129ac4fb36e0bb211fdb0e79c30f95ff43ed8c91db89",
+    "kubernetes-0.3.4-aarch64-apple-darwin.tar.sig": "b49be01e70c3941b8c44693a2df36454594e60e0579ba0be3a7447a85085d609",
+    "kubernetes-0.3.4-aarch64-apple-darwin.tar.zst": "56921fecf63909376026dc90787a9f46ff2b4cccb0e628eb7a6e6148833ef3aa",
+    "kubernetes-0.3.4-aarch64-apple-darwin.tar.zst.sig": "0fcf3899aa1f5abd8c9a658e912480a90938c0fcca3e1214717274434cfac9d2",
+    "mongodb-0.3.4-aarch64-apple-darwin.tar": "e56cf7da3673777a0f18331b7b31e3d472e35082a0b5cb3faa4c9f00ab913bec",
+    "mongodb-0.3.4-aarch64-apple-darwin.tar.gz": "cef5fb474da7e4cd34689632882cb7542c275737852c1bff27f9f2c47f58ea07",
+    "mongodb-0.3.4-aarch64-apple-darwin.tar.gz.sig": "1f1cd6aecfa0ec367da2f3fc085b29af286e00fec2387f00f779a9748bdf6683",
+    "mongodb-0.3.4-aarch64-apple-darwin.tar.sig": "4320c1d44bceecc791c3a54ee18a45de8e7cf5bbd5722640c39f2af3b5707e1f",
+    "mongodb-0.3.4-aarch64-apple-darwin.tar.zst": "07de6cad787a2b24eef8d60a9a06af3c8d105ee28e33846a9c23e90474fd340c",
+    "mongodb-0.3.4-aarch64-apple-darwin.tar.zst.sig": "e9aac7a047be6c32ce1342d12a60fefd62793b74000d0ec6da6b11adc8ee9fec",
+    "mysql-0.3.4-aarch64-apple-darwin.tar": "c4d263fd3ca66ac912b7e5336b80355de2a9882b1874d379761082d51656cf15",
+    "mysql-0.3.4-aarch64-apple-darwin.tar.gz": "ea46c80e59f56c1ad482811ee38069841e03aa07c397f9e9dc38549e5a4182b0",
+    "mysql-0.3.4-aarch64-apple-darwin.tar.gz.sig": "cf5c1fb4a8324b7c3dd50ec314c98ef763ac554aa19cf159cad31e2c3966a54e",
+    "mysql-0.3.4-aarch64-apple-darwin.tar.sig": "d8ceddd1a47845cad6dc1b59200b27295691dc83a94d07ec4e99aaea4f904cd3",
+    "mysql-0.3.4-aarch64-apple-darwin.tar.zst": "8720603a5802ccb6ebfc2d9d792b9c5ff2a8b4622c1c02107a0a175128376305",
+    "mysql-0.3.4-aarch64-apple-darwin.tar.zst.sig": "3b7aac2bac5fc2bac4fa947a42b0b6eade6df3aa1b7418e828dce997656a0d3c",
+    "postgres-0.3.4-aarch64-apple-darwin.tar": "59ccf742aabbdd70921e4583a8d0d323def6897a6cf1714f13b6b22d97f872cd",
+    "postgres-0.3.4-aarch64-apple-darwin.tar.gz": "2ac9ef50c3c355a41789497602ea76d2b7d1e43f3a9043818742e58a9590b8dd",
+    "postgres-0.3.4-aarch64-apple-darwin.tar.gz.sig": "4f3dd1b2b31c5a18f5056f774452f3b913e44872487d04b8912ade3e1fb6f9bb",
+    "postgres-0.3.4-aarch64-apple-darwin.tar.sig": "c73661e07e82e4206b3111aa6173b7fd2d33ce6892327e3b0b8b526ced133174",
+    "postgres-0.3.4-aarch64-apple-darwin.tar.zst": "9f9a1ee13e2c3b4100ea1e0be97c3ff61875a9c845438f0ec2778c40e2342951",
+    "postgres-0.3.4-aarch64-apple-darwin.tar.zst.sig": "58402237c0ad2d42ba440df74ea07aceefcf7e51f53d9e43f04df88477a47bae",
+    "redis-0.3.4-aarch64-apple-darwin.tar": "f785009d9f958b1bb055f49aeb85ea3eccac7b4ae804a86e935859462fee416c",
+    "redis-0.3.4-aarch64-apple-darwin.tar.gz": "409b6bdf035dadbe7568897e32ca10f3c11e1cfaafb062a63a5e4f06066b3114",
+    "redis-0.3.4-aarch64-apple-darwin.tar.gz.sig": "fd2a4dc5cc74893f9c824a269e6e46f13e0db650edd9872d3d4e6cd437431d83",
+    "redis-0.3.4-aarch64-apple-darwin.tar.sig": "679294ebf8f4e13aa06365c27970ea7cfaa864b29d244b9361f5284680e8da25",
+    "redis-0.3.4-aarch64-apple-darwin.tar.zst": "34809a613225d83cb8c99ac08e906662ce3d157407c6b0445be4d13bfc6935c6",
+    "redis-0.3.4-aarch64-apple-darwin.tar.zst.sig": "493be1d3d197651da892e02c9c9ce6c65c75247beae703fd5255ac64783e34b2",
+    "s3-0.3.4-aarch64-apple-darwin.tar": "4ea16a5af98c222b9324377e3c6988dd4b7949ebddd733c624aa94a661387563",
+    "s3-0.3.4-aarch64-apple-darwin.tar.gz": "c5eb1e078c8da45e78cea7c770064a20cbf73dda8eed288cef8e822572421209",
+    "s3-0.3.4-aarch64-apple-darwin.tar.gz.sig": "3f8d0d2399c435e2b735cc953b070b9626d1d074c54ebe6b3d008213d33952e4",
+    "s3-0.3.4-aarch64-apple-darwin.tar.sig": "bfb76bbe607ac116a377c907f477ac3b1a6a491b58b86393463a335acca0c4da",
+    "s3-0.3.4-aarch64-apple-darwin.tar.zst": "15cf4d6dc4af2264e7d0f84c516411e0b408a87bc0ffe16897f2920d399ab88e",
+    "s3-0.3.4-aarch64-apple-darwin.tar.zst.sig": "351cff1d30cc8f88df78c1a8477a78326cd5d338ba25f8205ffe06632685fb5c",
+    "sqlite-0.3.4-aarch64-apple-darwin.tar": "4614f24271791e5bfc823ee4ed6f90744fc3dc7f7ea8673329184c45b9e6ae72",
+    "sqlite-0.3.4-aarch64-apple-darwin.tar.gz": "22396fba368d802b187328a5e5a9421d9fcab2c4095b79e801361c0d810ddfbf",
+    "sqlite-0.3.4-aarch64-apple-darwin.tar.gz.sig": "5c4702435463c996688d4c06bab6d99a63bffc95b2ac87a195132f50a80073da",
+    "sqlite-0.3.4-aarch64-apple-darwin.tar.sig": "46afd14a0aa94de78cb4017e79ecef095c26b1f6f538fb021e7fe30a895a7378",
+    "sqlite-0.3.4-aarch64-apple-darwin.tar.zst": "fd973dea1602a55c3cb31645ebfa7439def677a3c501a817b31f9c9a0c91ed38",
+    "sqlite-0.3.4-aarch64-apple-darwin.tar.zst.sig": "3c21910b1781cce8a83bcf5da0e1896ecefc43ecbb612c218374be5c7e7c7cd9",
+    "ssh-0.3.4-aarch64-apple-darwin.tar": "99eabd721c6ebb38f5a9816635b7f7cd8483c482c589c12c04ed7ad8981748c7",
+    "ssh-0.3.4-aarch64-apple-darwin.tar.gz": "f5910ee87f39e1b062e3d0b5de5f3b63da93bdbe969994e31efb3190a39a3600",
+    "ssh-0.3.4-aarch64-apple-darwin.tar.gz.sig": "f9f4f4a2d3d715e869d34645b26c4f879f2972f5834de03b4f3e5d66596af511",
+    "ssh-0.3.4-aarch64-apple-darwin.tar.sig": "602b1191cb4857e255909a5f5f30bfed6da9a0028843f1fd9247dfca18d44e51",
+    "ssh-0.3.4-aarch64-apple-darwin.tar.zst": "c086490ec53f931e7c79bc9a598a95dbf7f7ca685cfa22c22cc82c0cc33f18ed",
+    "ssh-0.3.4-aarch64-apple-darwin.tar.zst.sig": "d962308829755ea4b576545140a06e331bd109fae4c0bfabb82ceb487b61a2ca",
+    "voidb-0.3.5-darwin-arm64.tar.gz": "29dbd7c75ff0d082f4e5ea992733c0ca814cb8bf4c59a16d0689ada7bf78ea63",
+    "webdav-0.3.4-aarch64-apple-darwin.tar": "58b96b384a7104704b25d3c9948296eddabd13ba9fe732414c13f90ebb7781cf",
+    "webdav-0.3.4-aarch64-apple-darwin.tar.gz": "4b7433772414a7a3c69db87bfd0a8765051612fe201dbbd78ef41dc5f0c88c8b",
+    "webdav-0.3.4-aarch64-apple-darwin.tar.gz.sig": "fb7858a54c2740be22fae44ae50d2c3e7bf22a432817f2361bcb9a179eb7bb4e",
+    "webdav-0.3.4-aarch64-apple-darwin.tar.sig": "19dcdfe5f0e79be609e19f8dd2936201d7cdd92c2074de63907a211c3c648d4d",
+    "webdav-0.3.4-aarch64-apple-darwin.tar.zst": "3aa2d53234e902c9ec5161226316bf642b14d0447c3d4e40cdf3de877c4d3249",
+    "webdav-0.3.4-aarch64-apple-darwin.tar.zst.sig": "bf83c41776badbcae3e0788e912bac398442fbb19713c36be7821596d723b17d"
+  },
+  "workspace_test_results": [
+    [
+      "138",
+      "0",
+      "0"
+    ],
+    [
+      "299",
+      "0",
+      "0"
+    ],
+    [
+      "5",
+      "0",
+      "0"
+    ],
+    [
+      "30",
+      "0",
+      "0"
+    ],
+    [
+      "1",
+      "0",
+      "0"
+    ],
+    [
+      "10",
+      "0",
+      "0"
+    ],
+    [
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "32",
+      "0",
+      "0"
+    ],
+    [
+      "16",
+      "0",
+      "0"
+    ],
+    [
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "2",
+      "0",
+      "6"
+    ],
+    [
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "0",
+      "0",
+      "0"
+    ],
+    [
+      "0",
+      "0",
+      "0"
+    ]
+  ],
+  "publication": {
+    "tags_created": false,
+    "pushed": false,
+    "public_releases_created": false
+  },
+  "workspace_clippy": "passed, zero warnings",
+  "cli_full_feature_tests": "188 passed",
+  "local_repository_commits": [
+    {
+      "repository": "voidb-plugin-mysql",
+      "commit": "9c93917eb91be953b4b9b40f91118c09e685ba4c",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-postgres",
+      "commit": "8a4d3355b0a54c310ecd18cd02465726ce4d0306",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-sqlite",
+      "commit": "376c3877fd2a827015a3ae8154689aa6ec9bb567",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-redis",
+      "commit": "4be2bb39070d571023718f2019f3a35b8eafa004",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-ssh",
+      "commit": "fda5e0a6d13a0f44ec98751df2dc5500ae959753",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-duckdb",
+      "commit": "bd4624f7cedc387d882da63ab0464045a06776c2",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-docker",
+      "commit": "51961489967c4ac2db849c3f809bb332d566a373",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-kubernetes",
+      "commit": "701f14816e7fbca14bdbebf2ac2c10427c80b4a3",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-s3",
+      "commit": "84dd62d15a4cfee7fd3aa81edd5b2bae1d7fe9dd",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-elasticsearch",
+      "commit": "ef4935a2d3b378b659b594fed50b5709a68e91f6",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-mongodb",
+      "commit": "894018fdcee29a8b67b49e9678e194af5393fbd7",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-jenkins",
+      "commit": "bf95f9fdeccb216d4a16be97236d4be98c10cb15",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-webdav",
+      "commit": "779fa13401df3c4ce5958677d16d874005f58938",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "voidb-plugin-email",
+      "commit": "321ce7bf689b563218888d38b6227a99a859ba42",
+      "branch": "codex/v0.3.5-trust-hardening"
+    },
+    {
+      "repository": "homebrew-tap",
+      "commit": "0c5c49e5c670bce935d64e79e2705a6d12fd5814",
+      "branch": "codex/v0.3.5-trust-hardening"
+    }
+  ],
+  "task_weaver": {
+    "requirement_status": "in_progress",
+    "completed_task_ids": [
+      "ce7b981c-0dec-4124-a6b7-21e64105c9db",
+      "056df3b3-118e-47ef-88ef-aa5a22d02660",
+      "7c1ba6bc-c34f-4034-b837-58bafa408b79",
+      "f2645c81-a4fe-4c08-be30-7d5158186ee8"
+    ],
+    "signing_task_status": "in_review",
+    "remaining_tasks": "todo; exact-source foreign-platform artifact acceptance pending"
+  }
+}

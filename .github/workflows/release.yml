@@ -4,10 +4,24 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Exact source commit or branch to validate
+        required: false
+        default: ''
+      release_version:
+        description: Candidate version (must match source package versions)
+        required: true
+        default: '0.3.5'
+      publish_release:
+        description: Publish only after owner review; false uploads candidates without creating tags or releases
+        type: boolean
+        required: false
+        default: false
 
 env:
-  # Core patches retain the independently validated official plugin release.
-  OFFICIAL_PLUGIN_VERSION: "0.3.3"
+  RELEASE_VERSION: ${{ inputs.release_version || github.ref_name }}
 
 jobs:
   build-release:
@@ -35,6 +49,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref || github.ref }}
 
       - name: Install Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -52,15 +68,10 @@ jobs:
         run: |
           cli="target/${{ matrix.target }}/release/voidb-cli"
           if [ "${{ runner.os }}" = "Windows" ]; then cli="${cli}.exe"; fi
-          test "$("$cli" --version)" = "voidb ${GITHUB_REF_NAME#v}"
+          test "$("$cli" --version)" = "voidb ${RELEASE_VERSION#v}"
           "$cli" --help
-        shell: bash
-
-      - name: Stage Verified Default Plugins (Unix)
-        if: runner.os != 'Windows'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/download-release-plugins.py --version "$OFFICIAL_PLUGIN_VERSION" --target "${{ matrix.target }}" --output stage
+          expected="${RELEASE_VERSION#v}"
+          test "$("$cli" --version | awk '{print $NF}')" = "$expected"
         shell: bash
 
       - name: Package Binaries (Unix)
@@ -69,9 +80,8 @@ jobs:
           mkdir -p dist
           cp target/${{ matrix.target }}/release/voidb dist/voidb
           cp target/${{ matrix.target }}/release/voidb-cli dist/voidb-cli
-          cp -R stage/${{ matrix.target }}/plugins dist/plugins
           cd dist
-          tar -czf voidb-${GITHUB_REF_NAME#v}-${{ matrix.platform }}.tar.gz voidb voidb-cli plugins
+          tar -czf voidb-${RELEASE_VERSION#v}-${{ matrix.platform }}.tar.gz voidb voidb-cli
         shell: bash
 
       - name: Package Binaries (Windows)
@@ -81,7 +91,7 @@ jobs:
           cp target/${{ matrix.target }}/release/voidb.exe dist/voidb.exe
           cp target/${{ matrix.target }}/release/voidb-cli.exe dist/voidb-cli.exe
           cd dist
-          7z a voidb-${GITHUB_REF_NAME#v}-${{ matrix.platform }}.zip voidb.exe voidb-cli.exe
+          7z a voidb-${RELEASE_VERSION#v}-${{ matrix.platform }}.zip voidb.exe voidb-cli.exe
         shell: bash
 
       - name: Upload Artifact
@@ -93,6 +103,7 @@ jobs:
             dist/*.zip
 
   publish-release:
+    if: github.event_name == 'push' || inputs.publish_release == true
     name: Publish GitHub Release
     needs: build-release
     runs-on: ubuntu-latest
@@ -100,6 +111,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref || github.ref }}
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
@@ -112,9 +125,11 @@ jobs:
           sha256sum * > SHA256SUMS
         shell: bash
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            dist/*
-          generate_release_notes: true
+      - name: Create New Immutable Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="v${RELEASE_VERSION#v}"
+          git fetch origin "refs/tags/$tag:refs/tags/$tag"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "$tag^{commit}")"
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes dist/*

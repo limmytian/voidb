@@ -13,3 +13,7 @@ profiles.json
 .env.*
 /dist
 
+
+# Python script caches
+__pycache__/
+*.py[cod]

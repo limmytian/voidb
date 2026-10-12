@@ -2,6 +2,7 @@
 mod app_v4; // New v4.0 pure router architecture
 mod components;
 mod connection_manager_app;
+mod plugin_onboarding;
 mod plugins; // Built-in plugins
 mod profile_forms;
 mod theme;
@@ -57,6 +58,8 @@ async fn main() -> Result<()> {
     );
 
     tracing::info!("Loaded {} connection(s)", config.connections.len());
+
+    plugin_onboarding::offer_plugin_installation();
 
     // Initialize terminal
     let mut terminal = ratatui::init();

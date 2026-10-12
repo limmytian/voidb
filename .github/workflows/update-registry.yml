@@ -38,7 +38,7 @@ jobs:
       - name: Download Verified Published Plugin Archives
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_VERSION: ${{ inputs.version || github.event.client_payload.release || 'v0.3.3' }}
+          RELEASE_VERSION: ${{ inputs.version || github.event.client_payload.release || 'v0.3.4' }}
         run: python3 scripts/download-release-plugins.py --all --version "$RELEASE_VERSION" --output target/registry-release
 
       - name: Rebuild Registry From Published Archives

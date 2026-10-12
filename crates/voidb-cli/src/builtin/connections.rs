@@ -279,6 +279,8 @@ async fn test_connection_with_discovery(
         let config_bytes = serde_json::to_vec(conn).unwrap_or_default();
         let stdin_run = (|| -> Result<std::process::Output, std::io::Error> {
             use std::io::Write;
+            voidb_core::process_plugin::verify_plugin_binary_integrity(candidate)
+                .map_err(std::io::Error::other)?;
             let mut child = std::process::Command::new(binary)
                 .arg("test")
                 .arg("--stdin-config")
@@ -300,6 +302,9 @@ async fn test_connection_with_discovery(
                 if err_str.contains("unexpected argument '--stdin-config'")
                     || err_str.contains("unrecognized option '--stdin-config'")
                 {
+                    // Repeat verification before each fallback launch.
+                    voidb_core::process_plugin::verify_plugin_binary_integrity(candidate)
+                        .map_err(|error| error.to_string())?;
                     // Fall back to legacy --connection argument for older plugin binaries
                     std::process::Command::new(binary)
                         .arg("test")
@@ -312,6 +317,8 @@ async fn test_connection_with_discovery(
                 }
             }
             Err(_) => {
+                voidb_core::process_plugin::verify_plugin_binary_integrity(candidate)
+                    .map_err(|error| error.to_string())?;
                 // Fall back to legacy --connection argument
                 std::process::Command::new(binary)
                     .arg("test")
@@ -379,6 +386,11 @@ mod tests {
     #[cfg(unix)]
     #[tokio::test]
     async fn subprocess_receives_credentials_only_through_stdin() {
+        if crate::run_development_fixture_in_child(
+            "builtin::connections::tests::subprocess_receives_credentials_only_through_stdin",
+        ) {
+            return;
+        }
         use std::os::unix::fs::PermissionsExt;
         use voidb_core::{
             ProcessPluginRoot, ProcessPluginRootKind, discover_process_plugins_from_roots,
