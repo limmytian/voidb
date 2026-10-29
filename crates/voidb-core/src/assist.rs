@@ -1544,6 +1544,15 @@ impl AssistBrokerStore {
         self.confirm_operation(request_id, confirmation)
     }
 
+    /// Poll until the record carries an operation request or reaches a
+    /// terminal state.
+    ///
+    /// # Blocking
+    /// Convenience variant: parks the calling thread between polls (up to one
+    /// second per park, up to `timeout` in total) and must never be called
+    /// from an async executor thread. Use
+    /// [`wait_for_operation_request_async`](Self::wait_for_operation_request_async)
+    /// from async contexts.
     pub fn wait_for_operation_request(
         &self,
         request_id: &str,
@@ -1565,6 +1574,35 @@ impl AssistBrokerStore {
         }
     }
 
+    /// Async variant of [`wait_for_operation_request`](Self::wait_for_operation_request):
+    /// awaits between polls so the executor stays responsive while agent
+    /// operation reviews are pending.
+    pub async fn wait_for_operation_request_async(
+        &self,
+        request_id: &str,
+        timeout: StdDuration,
+        interval: StdDuration,
+    ) -> Result<AssistBrokerDetail> {
+        let started = Instant::now();
+        loop {
+            let detail = self.detail(request_id)?;
+            if detail.record.latest_operation_request().is_some()
+                || detail.record.request.status.is_terminal()
+            {
+                return Ok(detail);
+            }
+            if started.elapsed() >= timeout {
+                bail!("context-share operation wait timed out");
+            }
+            tokio::time::sleep(interval.min(StdDuration::from_secs(1))).await;
+        }
+    }
+
+    /// # Blocking
+    /// Synchronous alias of
+    /// [`wait_for_operation_request`](Self::wait_for_operation_request); see
+    /// the blocking warning there. Prefer
+    /// [`wait_for_response_async`](Self::wait_for_response_async) in async code.
     pub fn wait_for_response(
         &self,
         request_id: &str,
@@ -1572,6 +1610,18 @@ impl AssistBrokerStore {
         interval: StdDuration,
     ) -> Result<AssistBrokerDetail> {
         self.wait_for_operation_request(request_id, timeout, interval)
+    }
+
+    /// Async alias of
+    /// [`wait_for_operation_request_async`](Self::wait_for_operation_request_async).
+    pub async fn wait_for_response_async(
+        &self,
+        request_id: &str,
+        timeout: StdDuration,
+        interval: StdDuration,
+    ) -> Result<AssistBrokerDetail> {
+        self.wait_for_operation_request_async(request_id, timeout, interval)
+            .await
     }
 
     fn read_all_records(&self) -> Result<Vec<AssistBrokerRecord>> {
@@ -2354,6 +2404,40 @@ mod tests {
         assert_eq!(encoded.get("external_agent"), None);
         assert_eq!(encoded.get("visible_screen"), None);
         assert_eq!(encoded.get("transcript_tail"), None);
+    }
+
+    #[tokio::test]
+    async fn async_wait_returns_once_operation_request_arrives() {
+        let store = assist_store();
+        let (request, snapshot) = pending_request_and_snapshot();
+        let request_id = request.id.clone();
+        store
+            .share(request, snapshot, None)
+            .expect("submit pending request");
+
+        // No operation request yet: a bounded async wait times out.
+        let timed_out = store
+            .wait_for_operation_request_async(
+                &request_id,
+                StdDuration::from_millis(40),
+                StdDuration::from_millis(5),
+            )
+            .await;
+        assert!(timed_out.is_err());
+
+        store
+            .post_operation_request(&request_id, non_pty_response(&request_id))
+            .expect("operation request");
+
+        let detail = store
+            .wait_for_operation_request_async(
+                &request_id,
+                StdDuration::from_millis(500),
+                StdDuration::from_millis(5),
+            )
+            .await
+            .expect("async wait returns once reviewed");
+        assert!(detail.record.latest_operation_request().is_some());
     }
 
     #[test]
