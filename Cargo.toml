@@ -37,11 +37,8 @@ rand_core = { version = "0.6", features = ["std"] }
 # JSON Schema validation
 jsonschema = "0.26"
 
-# Use specialized drivers for each database
-mysql_async = "0.34"
-tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-serde_json-1", "with-uuid-1"] }
-rusqlite = { version = "0.32", features = ["bundled", "chrono", "serde_json", "uuid"] }
-redis = { version = "0.27", features = ["tokio-comp", "aio"] }
+# NOTE: no database drivers here by design — all database drivers live in
+# their respective voidb-plugin-* repositories, never in the core workspace.
 
 # Common dependencies
 serde = { version = "1.0", features = ["derive"] }
