@@ -131,4 +131,4 @@ use crate::components::Grid;
 |---|---|---|---|
 | `#[allow(dead_code)]` overuse | workspace-wide | Low | Gate behind features or properly consume instead |
 | Duplicated `UserSession` helper | `tests/e2e_simulation.rs`, `tests/test_query_editor.rs` | Medium | Should be in shared `test_helpers.rs` |
-| Very large files | `crates/voidb-cli/src/agent_broker.rs` (9,909 lines), `crates/voidb-tui/src/connection_manager_app.rs` (4,570 lines) | Medium | Split into submodules for rendering, event handling, data loading |
+| Very large files | `crates/voidb-cli/src/builtin/invoke.rs` (4,425 lines), `crates/voidb-tui/src/connection_manager_app.rs` (4,600+ lines) | Medium | Split into submodules for rendering, event handling, data loading (`agent_broker.rs` was decomposed into `agent_broker/` in v0.3.6) |
