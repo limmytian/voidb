@@ -21,9 +21,10 @@ voidb --connection-manager
 ```
 
 `voidb` without arguments opens this native Connection Manager. The explicit
-`voidb --connection-manager` form remains supported. The old shell is available
-only through `voidb --shell`. `voidb-cli connections tui --print-command` prints
-the resolved standalone command for scripts and tests.
+`voidb --connection-manager` form remains supported. The legacy embedded shell
+was removed in v0.3.6; `voidb --shell` is a deprecated alias that still opens
+the native Connection Manager. `voidb-cli connections tui --print-command`
+prints the resolved standalone command for scripts and tests.
 
 ## Native storage
 

@@ -1,9 +1,17 @@
 # CI Check Tiers
 
-VoidB has a wide plugin surface, and some plugins pull heavy native dependencies.
-In particular, `voidb-plugin-duckdb` builds `libduckdb-sys`, which can spend many
-minutes compiling C++ code on a clean machine. Use tiered checks so common
-feedback loops stay fast while full validation still runs before merging.
+The core workspace contains the shell and CLI only: `voidb-core`, `voidb-tui`,
+`voidb-cli`, `voidb-process-plugin-sdk`, and the in-repo `voidb-plugin-sync`.
+The official protocol plugins (`mysql`, `postgres`, `sqlite`, `redis`, `duckdb`,
+`ssh`, `docker`, `kubernetes`, `mongodb`, `elasticsearch`, `s3`, `webdav`,
+`email`, `jenkins`) are external process plugins in their own
+`voidb-plugin-<name>` repositories. Every `cargo test -p voidb-plugin-<name>`
+style command below (except `voidb-plugin-sync`) therefore runs inside that
+plugin's repository checkout, not in this workspace. Plugin crates can pull
+heavy native dependencies — `voidb-plugin-duckdb` builds `libduckdb-sys`,
+which spends many minutes compiling C++ on a clean machine — which is exactly
+why they stay out of this workspace. Use tiered checks so common feedback
+loops stay fast while full validation still runs before merging.
 For release-candidate validation, use the unified
 [Release Candidate Checklist](release-candidate-checklist.md) as the entry
 point.
@@ -16,8 +24,6 @@ Use these while editing a focused area:
 cargo test -p voidb-core
 cargo test -p voidb-cli
 cargo test -p voidb-plugin-sync
-cargo test -p voidb-plugin-email
-cargo test -p voidb-plugin-duckdb
 cargo test -p voidb-tui
 ```
 
@@ -343,17 +349,10 @@ Docker harness:
 scripts/local-fixture-smoke.sh run --fixture probe
 ```
 
-For MongoDB release-candidate checks after capability changes, run:
-
-```bash
-scripts/mongodb-fixture-smoke.sh --report target/tmp/mongodb-fixture-smoke-evidence.md
-```
-
-For Elasticsearch release-candidate checks after capability changes, run:
-
-```bash
-scripts/elasticsearch-fixture-smoke.sh --report target/tmp/elasticsearch-fixture-smoke-evidence.md
-```
+For MongoDB and Elasticsearch release-candidate checks after capability
+changes, use the fixture-smoke helpers shipped in those plugin repositories;
+`scripts/mongodb-fixture-smoke.sh` and `scripts/elasticsearch-fixture-smoke.sh`
+moved with the plugins and are no longer in this repository.
 
 ## External-Agent Interaction Gates
 
@@ -371,12 +370,10 @@ the SSH and infrastructure evidence markers and local plan/denial tests, checks
 the normative plugin matrix, and requires supersession banners on Requirements
 88-92 historical evidence.
 
-Infrastructure live-session changes additionally run the shared deterministic
-conformance suite:
-
-```bash
-scripts/check-infrastructure-live-session-conformance.sh
-```
+Infrastructure live-session changes run the deterministic conformance suite
+shipped with the infrastructure plugin repositories (Docker, Kubernetes,
+Jenkins); `scripts/check-infrastructure-live-session-conformance.sh` moved
+with them and is no longer in this repository.
 
 That gate exercises every Docker, Kubernetes, and Jenkins live capability
 family through the same bounded-buffer, slow-consumer, reconnect/resume,
@@ -567,9 +564,10 @@ Run this before merging broad changes or release candidates:
 cargo test --workspace --no-fail-fast
 ```
 
-This validates all workspace members, integration tests, and doctests. On a clean
-machine it may take 20+ minutes because `libduckdb-sys` compiles bundled DuckDB
-C++ sources.
+This validates all workspace members, integration tests, and doctests. Since
+the externalization no database driver is compiled by this workspace, so a
+clean-machine run is dominated by ordinary Rust compilation; the DuckDB C++
+build cost now lives only in the external `voidb-plugin-duckdb` repository.
 
 Run full linting as a separate full-tier job:
 
@@ -646,7 +644,7 @@ slice summary and keep the diff limited to the selected warning group.
 | Process plugin runtime/package management | Pull request touching process-plugin discovery, manifests, trust roots, package install/update/lifecycle commands, stdio runtime, or process invocation | `cargo test -p voidb-core process_plugin`; `cargo test -p voidb-core process_plugin_runtime`; `cargo test -p voidb-cli plugin`; `cargo test -p voidb-cli invoke` | Proves deterministic local process-plugin discovery, package validation, compatibility diagnostics, lifecycle handling, and redacted runtime failures. |
 | Fast TUI | Pull request touching `crates/voidb-tui` | `cargo test -p voidb-tui` | Builds the default lightweight TUI surface: shell, tab manager, and Connection Manager only. |
 | Fast plugin | Pull request touching one plugin | `cargo test -p voidb-plugin-<name>` | Keeps plugin feedback scoped. |
-| Full workspace | Merge queue, nightly, release candidate | `cargo test --workspace --no-fail-fast` | Slow but authoritative; includes DuckDB native build. |
+| Full workspace | Merge queue, nightly, release candidate | `cargo test --workspace --no-fail-fast` | Slow but authoritative; no database drivers compile in this workspace. |
 | Full lint | Nightly, release candidate | `cargo clippy --workspace --all-targets --no-deps` | Keep separate from fast tests to avoid slowing every push. |
 
 ## Current Baseline

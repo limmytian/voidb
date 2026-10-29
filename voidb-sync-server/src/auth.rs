@@ -68,3 +68,59 @@ pub fn hash_token(token: &str) -> [u8; 32] {
     out.copy_from_slice(&hasher.finalize());
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn auth_verifier_roundtrips_and_rejects_other_credentials() {
+        let client_hash = random_bytes::<32>();
+        let srv_salt = random_bytes::<16>();
+
+        let stored = hash_auth(&client_hash, &srv_salt).expect("hash auth");
+        let recomputed = hash_auth(&client_hash, &srv_salt).expect("recompute auth");
+
+        assert!(verify_auth(&stored, &recomputed));
+
+        let wrong_client = random_bytes::<32>();
+        let wrong = hash_auth(&wrong_client, &srv_salt).expect("hash wrong credential");
+        assert!(!verify_auth(&stored, &wrong));
+
+        let other_salt = random_bytes::<16>();
+        let other = hash_auth(&client_hash, &other_salt).expect("hash other salt");
+        assert!(!verify_auth(&stored, &other));
+    }
+
+    #[test]
+    fn auth_hash_is_deterministic_for_identical_inputs() {
+        let client = vec![7u8; 32];
+        let salt = vec![9u8; 16];
+        let first = hash_auth(&client, &salt).expect("first");
+        let second = hash_auth(&client, &salt).expect("second");
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn issued_tokens_are_unique_and_hash_to_the_persisted_value() {
+        let (token_a, hash_a) = new_token();
+        let (token_b, hash_b) = new_token();
+
+        assert_ne!(token_a, token_b, "tokens must be unguessable and unique");
+        assert_ne!(hash_a, hash_b);
+        // Only sha256(token) may be persisted; the lookup path must agree.
+        assert_eq!(hash_token(&token_a), hash_a);
+        assert_eq!(hash_token(&token_b), hash_b);
+        assert_ne!(hash_token(&token_a), hash_token(&token_b));
+    }
+
+    #[test]
+    fn token_hashes_differ_for_similar_tokens() {
+        let (token, _) = new_token();
+        let mut sibling = token.clone();
+        let last = sibling.pop().expect("token not empty");
+        sibling.push(if last == 'A' { 'B' } else { 'A' });
+
+        assert_ne!(hash_token(&token), hash_token(&sibling));
+    }
+}

@@ -258,8 +258,7 @@ fn collect_files(
 const TEST_PUBLIC_KEY: &str = "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c";
 
 #[cfg(test)]
-pub(crate) fn sign_test_candidate(candidate: &ProcessPluginCandidate) {
-    use crate::plugin_signing::sign_bytes;
+pub(crate) fn sign_test_candidate(candidate: &ProcessPluginCandidate) {    use crate::plugin_signing::sign_bytes;
     let root = &candidate.source.plugin_dir;
     let mut files = BTreeMap::new();
     collect_files(root, root, &mut files).expect("fixture payload");
@@ -295,4 +294,352 @@ pub(crate) fn sign_test_candidate(candidate: &ProcessPluginCandidate) {
         serde_json::to_vec(&proof).unwrap(),
     )
     .unwrap();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::process_plugin::{
+        current_platform, discover_process_plugins_from_roots, ProcessPluginRoot,
+        ProcessPluginRootKind,
+    };
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    /// Temporary directory removed on drop.
+    struct TempDir(std::path::PathBuf);
+
+    impl TempDir {
+        fn new(label: &str) -> Self {
+            let path = std::env::temp_dir().join(format!(
+                "voidb-provenance-{label}-{}-{}",
+                std::process::id(),
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("system time")
+                    .as_nanos()
+            ));
+            fs::create_dir_all(&path).expect("create temp dir");
+            // Canonicalize so macOS /var and /tmp symlink ancestors do not
+            // trip the trusted-ancestry check under test.
+            let canonical = fs::canonicalize(&path).expect("canonical temp dir");
+            Self(canonical)
+        }
+    }
+
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    /// Write a minimal but structurally valid plugin package into `root`.
+    fn write_fixture_plugin(root: &Path, id: &str) {
+        let plugin_dir = root.join(id);
+        let schemas = plugin_dir.join("schemas");
+        let bin = plugin_dir.join("bin");
+        fs::create_dir_all(&schemas).expect("create schemas dir");
+        fs::create_dir_all(&bin).expect("create bin dir");
+
+        for schema_name in [
+            "profile.schema.json",
+            "get-input.schema.json",
+            "get-output.schema.json",
+            "set-input.schema.json",
+            "set-output.schema.json",
+        ] {
+            fs::write(schemas.join(schema_name), r#"{"type":"object"}"#).expect("write schema");
+        }
+
+        let command = bin.join("voidb-plugin-test");
+        fs::write(&command, "#!/bin/sh\nexit 0\n").expect("write command");
+        make_executable(&command);
+
+        let manifest = format!(
+            r#"
+id = "{id}"
+name = "{id}"
+version = "0.1.0"
+protocol_version = "1"
+description = "Test plugin."
+
+[runtime]
+command = "voidb-plugin-test"
+args = []
+transport = "stdio-jsonrpc"
+
+[connections]
+profile_schema = "schemas/profile.schema.json"
+secret_classes = ["password"]
+
+[[capabilities]]
+id = "get"
+description = "Read one key."
+input_schema = "schemas/get-input.schema.json"
+output_schema = "schemas/get-output.schema.json"
+permissions = ["connection.read"]
+destructive = false
+streaming = false
+connection_required = true
+required_secret_classes = []
+supports_dry_run = false
+default_timeout_ms = 10000
+
+[[capabilities]]
+id = "set"
+description = "Write one key."
+input_schema = "schemas/set-input.schema.json"
+output_schema = "schemas/set-output.schema.json"
+permissions = ["connection.read"]
+destructive = true
+streaming = false
+connection_required = true
+required_secret_classes = []
+supports_dry_run = true
+default_timeout_ms = 10000
+
+[ui]
+tui = false
+
+[requirements]
+voidb_core = ">=0.1.0"
+platforms = ["{}"]
+"#,
+            current_platform()
+        );
+        fs::write(plugin_dir.join("plugin.toml"), manifest).expect("write manifest");
+    }
+
+    fn make_executable(path: &Path) {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(path, fs::Permissions::from_mode(0o755)).expect("chmod");
+        }
+        #[cfg(not(unix))]
+        let _ = path;
+    }
+
+    fn discovered_candidate(root: &Path, id: &str) -> ProcessPluginCandidate {
+        let discovery = discover_process_plugins_from_roots(vec![ProcessPluginRoot::new(
+            root,
+            ProcessPluginRootKind::User,
+            0,
+        )]);
+        discovery
+            .effective_candidate(id)
+            .cloned()
+            .expect("effective candidate")
+    }
+
+    /// Sign an attacker-controlled payload with the compiled test key.
+    fn write_provenance(candidate: &ProcessPluginCandidate, payload: &PluginProvenancePayload) {
+        let payload = serde_json::to_string(payload).expect("serialize payload");
+        let key = ed25519_dalek::SigningKey::from_bytes(&[7; 32]);
+        let mut message = PROVENANCE_DOMAIN.to_vec();
+        message.extend_from_slice(payload.as_bytes());
+        let proof = PluginProvenance {
+            key_id: "test-only".into(),
+            payload,
+            signature: crate::plugin_signing::sign_bytes(&message, &key),
+        };
+        fs::write(
+            candidate.source.plugin_dir.join(PROVENANCE_FILE),
+            serde_json::to_vec(&proof).expect("serialize proof"),
+        )
+        .expect("write provenance");
+    }
+
+    #[test]
+    fn signed_package_verifies_for_host_target() {
+        let temp = TempDir::new("signed-ok");
+        write_fixture_plugin(&temp.0, "redis");
+        let candidate = discovered_candidate(&temp.0, "redis");
+        sign_test_candidate(&candidate);
+        assert!(verify_plugin_provenance_for_target(&candidate, HOST_TARGET).is_ok());
+    }
+
+    #[test]
+    fn missing_provenance_is_rejected() {
+        let temp = TempDir::new("missing");
+        write_fixture_plugin(&temp.0, "redis");
+        let candidate = discovered_candidate(&temp.0, "redis");
+        let error = verify_plugin_provenance_for_target(&candidate, HOST_TARGET)
+            .expect_err("unsigned package must fail closed");
+        assert!(error.to_string().contains("Missing authenticated plugin provenance"));
+    }
+
+    #[test]
+    fn tampered_payload_file_is_rejected() {
+        let temp = TempDir::new("tampered-file");
+        write_fixture_plugin(&temp.0, "redis");
+        let candidate = discovered_candidate(&temp.0, "redis");
+        sign_test_candidate(&candidate);
+
+        let schema = candidate
+            .source
+            .plugin_dir
+            .join("schemas")
+            .join("get-input.schema.json");
+        fs::write(&schema, r#"{"type":"object","hacked":true}"#).expect("tamper");
+
+        let error = verify_plugin_provenance_for_target(&candidate, HOST_TARGET)
+            .expect_err("tampered payload must fail closed");
+        assert!(error.to_string().contains("differs from authenticated file digests"));
+    }
+
+    #[test]
+    fn tampered_binary_is_rejected() {
+        let temp = TempDir::new("tampered-binary");
+        write_fixture_plugin(&temp.0, "redis");
+        let candidate = discovered_candidate(&temp.0, "redis");
+        sign_test_candidate(&candidate);
+
+        let binary = candidate.source.plugin_dir.join("bin").join("voidb-plugin-test");
+        fs::write(&binary, "#!/bin/sh\nrm -rf /tmp/pwned\n").expect("tamper binary");
+        make_executable(&binary);
+
+        assert!(verify_plugin_provenance_for_target(&candidate, HOST_TARGET).is_err());
+    }
+
+    #[test]
+    fn untrusted_signer_key_id_is_rejected() {
+        let temp = TempDir::new("untrusted-key");
+        write_fixture_plugin(&temp.0, "redis");
+        let candidate = discovered_candidate(&temp.0, "redis");
+        sign_test_candidate(&candidate);
+
+        // Keep a valid signature but claim an unknown signer identity.
+        let mut envelope: PluginProvenance = serde_json::from_slice(&fs::read(
+            candidate.source.plugin_dir.join(PROVENANCE_FILE),
+        )
+        .expect("read provenance"))
+        .expect("parse provenance");
+        envelope.key_id = "attacker-2026-01".into();
+        fs::write(
+            candidate.source.plugin_dir.join(PROVENANCE_FILE),
+            serde_json::to_vec(&envelope).expect("serialize"),
+        )
+        .expect("write provenance");
+
+        let error = verify_plugin_provenance_for_target(&candidate, HOST_TARGET)
+            .expect_err("unknown key id must fail closed");
+        assert!(error.to_string().contains("Untrusted plugin signer"));
+    }
+
+    #[test]
+    fn wrong_target_is_rejected() {
+        let temp = TempDir::new("wrong-target");
+        write_fixture_plugin(&temp.0, "redis");
+        let candidate = discovered_candidate(&temp.0, "redis");
+        sign_test_candidate(&candidate);
+
+        let error = verify_plugin_provenance_for_target(&candidate, "x86_64-unknown-other")
+            .expect_err("foreign target must fail closed");
+        assert!(error
+            .to_string()
+            .contains("does not match discovery or host target"));
+    }
+
+    #[test]
+    fn malformed_provenance_is_rejected() {
+        let temp = TempDir::new("malformed");
+        write_fixture_plugin(&temp.0, "redis");
+        let candidate = discovered_candidate(&temp.0, "redis");
+        fs::write(
+            candidate.source.plugin_dir.join(PROVENANCE_FILE),
+            b"this is not json",
+        )
+        .expect("write malformed provenance");
+
+        let error = verify_plugin_provenance_for_target(&candidate, HOST_TARGET)
+            .expect_err("malformed proof must fail closed");
+        assert!(error.to_string().contains("Malformed plugin provenance"));
+    }
+
+    #[test]
+    fn oversized_provenance_is_rejected() {
+        let temp = TempDir::new("oversized");
+        write_fixture_plugin(&temp.0, "redis");
+        let candidate = discovered_candidate(&temp.0, "redis");
+        fs::write(
+            candidate.source.plugin_dir.join(PROVENANCE_FILE),
+            vec![b'a'; (MAX_PROOF_BYTES + 1) as usize],
+        )
+        .expect("write oversized provenance");
+
+        let error = verify_plugin_provenance_for_target(&candidate, HOST_TARGET)
+            .expect_err("oversized proof must fail closed");
+        assert!(error.to_string().contains("Invalid plugin provenance file"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlinked_provenance_file_is_rejected() {
+        let temp = TempDir::new("symlink-proof");
+        write_fixture_plugin(&temp.0, "redis");
+        let candidate = discovered_candidate(&temp.0, "redis");
+        sign_test_candidate(&candidate);
+
+        let real = temp.0.join("real-provenance.json");
+        fs::rename(candidate.source.plugin_dir.join(PROVENANCE_FILE), &real)
+            .expect("move provenance");
+        std::os::unix::fs::symlink(
+            &real,
+            candidate.source.plugin_dir.join(PROVENANCE_FILE),
+        )
+        .expect("symlink provenance");
+
+        let error = verify_plugin_provenance_for_target(&candidate, HOST_TARGET)
+            .expect_err("symlinked proof must fail closed");
+        assert!(error.to_string().contains("Invalid plugin provenance file"));
+    }
+
+    #[test]
+    fn binary_path_escape_is_rejected() {
+        let temp = TempDir::new("path-escape");
+        write_fixture_plugin(&temp.0, "redis");
+        let candidate = discovered_candidate(&temp.0, "redis");
+
+        let mut files = BTreeMap::new();
+        collect_files(
+            &candidate.source.plugin_dir,
+            &candidate.source.plugin_dir,
+            &mut files,
+        )
+        .expect("collect payload digests");
+        let payload = PluginProvenancePayload {
+            schema_version: 1,
+            plugin_id: candidate.id.clone(),
+            version: candidate.version.clone().unwrap(),
+            protocol_version: candidate.protocol_version.clone().unwrap(),
+            target: HOST_TARGET.into(),
+            binary_path: "../outside/voidb-plugin-test".into(),
+            files,
+        };
+        write_provenance(&candidate, &payload);
+
+        let error = verify_plugin_provenance_for_target(&candidate, HOST_TARGET)
+            .expect_err("escaping binary path must fail closed");
+        assert!(error
+            .to_string()
+            .contains("Authenticated executable path does not match discovery"));
+    }
+
+    #[test]
+    fn reject_plugin_path_symlinks_flags_symlinked_ancestors() {
+        let temp = TempDir::new("symlink-ancestor");
+        let target = temp.0.join("real");
+        fs::create_dir_all(&target).expect("create target dir");
+        let link = temp.0.join("link");
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&target, &link).expect("symlink dir");
+
+        #[cfg(unix)]
+        {
+            let error = reject_plugin_path_symlinks(&link.join("child"))
+                .expect_err("symlinked ancestor must be rejected");
+            assert!(error.to_string().contains("Symlinked plugin metadata path"));
+            assert!(reject_plugin_path_symlinks(&target).is_ok());
+        }
+    }
 }

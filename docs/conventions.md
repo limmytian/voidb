@@ -16,7 +16,7 @@
 - Factory types: `{Db}PluginFactory` (e.g., `MySqlPluginFactory`)
 - Provider types: `{Db}ConnectionProvider` (e.g., `MySqlConnectionProvider`)
 - Config structs: `{Plugin}Config` (e.g., `MySqlConfig`, `SshConfig`)
-- Error enums: `VoidbError` (single error type in `crates/voidb-core/src/error.rs`)
+- Error enums: `{Domain}Error` per bounded domain (e.g. `SyncError`, `AgentAuthorizationError`) plus the shared `VoidbError` in `crates/voidb-core/src/error.rs`
 
 ### Functions
 - Use `snake_case` for all functions and methods
@@ -39,22 +39,31 @@
 - No `.rustfmt.toml`; uses default `rustfmt` settings — run `cargo fmt` before committing
 - Standard 4-space indentation
 - Uses `cargo clippy` for linting (no custom `.clippy.toml`)
-- `#[allow(dead_code)]` used on public API types not all consumed locally (43 occurrences across 20 files)
-- `#[deprecated]` attribute used on legacy modules with migration guidance (e.g., `connection_registry.rs`)
+- `#[allow(dead_code)]` used sparingly on public API types not all consumed locally
 - Edition 2024 (set in each crate's `Cargo.toml`)
 - No path aliases configured; use relative crate paths
-- Workspace crates referenced by name: `voidb-core`, `voidb-plugin-mysql`, etc.
+- Workspace crates referenced by name: `voidb-core`, `voidb-tui`, `voidb-cli`, `voidb-process-plugin-sdk`, `voidb-plugin-sync`, etc.
 
 ## Error Handling
 
-- Single enum `VoidbError` in `crates/voidb-core/src/error.rs` using `thiserror`
-- Variants: `Connection`, `Query`, `Schema`, `Config`, `Plugin`, `Crypto`, `InvalidConfig`, `IncompatiblePlugin`, `Runtime`, `Timeout`, `Io`, `Other`
-- Pattern: wrap errors with `.map_err(|e| VoidbError::Variant(e.to_string()))`
-- Use `anyhow::Result` for application-level functions; `main()` and plugin `update()` return `anyhow::Result<()>`
-- Chain `.map_err()` to convert external errors into `VoidbError` variants
+- Every bounded domain owns its own `thiserror` error enum named `{Domain}Error`
+  (for example `VoidbError` in `crates/voidb-core/src/error.rs`,
+  `SyncError` in the sync plugin, `AgentAuthorizationError` in
+  `agent_authorization.rs`, `JitAuthorizationStoreError` in the CLI,
+  `ProcessPluginSdkError` in the SDK). Cross-cutting core errors
+  (crypto, config, IO) stay in `VoidbError`; domain modules do not leak
+  stringly-typed core variants across their boundary.
+- Wrap external errors with `.map_err(|e| DomainError::Variant(...))` and
+  prefer `#[from]` / `source()` chains over stringly-flattening when the
+  cause is a typed error
+- Use `anyhow::Result` for application-level functions; `main()` and plugin
+  `update()` return `anyhow::Result<()>`
 - Use `?` operator pervasively; avoid manual `match` on `Result` when possible
 - `unwrap_or_else` with `tracing::warn!` for non-critical config loading
-- `panic!` used only for programming errors (e.g., duplicate plugin registration in `PluginRegistry::register`)
+- `panic!` used only for programming errors (e.g., duplicate plugin
+  registration)
+- Non-test code stays free of `.unwrap()`/`.expect()`; tests may unwrap
+  freely
 
 ## Documentation
 
@@ -109,10 +118,9 @@ use crate::components::Grid;
 | Plugin trait implementation | `crates/voidb-core/src/plugin/plugin_trait.rs` | All plugins implement `Plugin` trait with `id()`, `name()`, `init()`, `update()` |
 | Factory pattern | `crates/voidb-core/src/plugin/registry.rs` | `PluginFactory` creates plugin instances; registered in `PluginRegistry` |
 | Dependency injection | `crates/voidb-core/src/shell_capabilities.rs` | `ShellCapabilities` injected via `Plugin::init()` |
-| Channel-based communication | `crates/voidb-tui/src/app_v4.rs` | `TabRequest` enum sent via `mpsc::channel` from plugins to shell |
 | Adapter pattern | `crates/voidb-core/src/database/mod.rs` | `DatabaseAdapter` trait abstracts database operations |
-| Config deserialization | `crates/plugins/voidb-plugin-ssh/src/config.rs` | Plugin-specific config structs deserialized from `plugin_config` JSON |
-| Provider pattern | `crates/plugins/voidb-plugin-mysql/src/connection.rs` | `ConnectionDataProvider` + `ConnectionDisplayProvider` for UI metadata |
+| Config deserialization | `crates/plugins/voidb-plugin-sync/src/config.rs` | Plugin-specific config structs deserialized from `plugin_config` JSON |
+| Provider pattern | official `voidb-plugin-<name>` repositories (separate repos) | `ConnectionDataProvider` + `ConnectionDisplayProvider` for UI metadata |
 | Re-export pattern | `crates/voidb-core/src/lib.rs` | Top-level re-exports for ergonomic `use voidb_core::Type` imports |
 | Theme centralization | `crates/voidb-tui/src/theme.rs` | All UI colors/styles defined as static methods on `Theme` struct |
 | `Arc<RwLock<T>>` sharing | `crates/voidb-core/src/shell_capabilities.rs` | Shared state between shell and plugins uses `Arc<RwLock<T>>` |
@@ -121,7 +129,6 @@ use crate::components::Grid;
 
 | Pattern | Location | Severity | Notes |
 |---|---|---|---|
-| `#[allow(dead_code)]` overuse | 20 files, 43 occurrences | Low | Gate behind features or properly consume instead |
+| `#[allow(dead_code)]` overuse | workspace-wide | Low | Gate behind features or properly consume instead |
 | Duplicated `UserSession` helper | `tests/e2e_simulation.rs`, `tests/test_query_editor.rs` | Medium | Should be in shared `test_helpers.rs` |
-| Very large files | `db_browser.rs` (2779 lines), `table_plugin.rs` (2668 lines) | Medium | Split into submodules for rendering, event handling, data loading |
-| Deprecated module still compiled | `crates/voidb-core/src/connection_registry.rs` | Low | Consider feature-gating behind `cli` feature |
+| Very large files | largest remaining: `crates/voidb-core/src/process_plugin.rs` (3,892 lines), `crates/plugins/voidb-plugin-sync/src/ops.rs` (3,623 lines) | Medium | Split into submodules for rendering, event handling, data loading (`agent_broker.rs`, `builtin/invoke.rs` and `connection_manager_app.rs` were decomposed into directory modules in v0.3.6) |

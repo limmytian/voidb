@@ -371,4 +371,36 @@ mod tests {
         assert_eq!(encoded["master_password"], "unknown");
         assert_eq!(encoded["migration"], "unknown");
     }
+
+    #[test]
+    fn absent_material_never_requires_reencryption() {
+        let state = legacy_config_default_passphrase_state(&[]);
+
+        assert!(!state.requires_reencryption());
+        assert_eq!(state.warning_code(), None);
+        assert_eq!(
+            state.migration,
+            CredentialProtectionMigrationState::NotNeeded
+        );
+        assert_eq!(state.summary.credential_owner_count, 0);
+    }
+
+    #[test]
+    fn summary_aggregates_owner_counts_and_unique_sorted_plugins() {
+        let state = legacy_config_default_passphrase_state(&[
+            connection("first", "redis", json!({ "password": "p1" })),
+            connection("second", "redis", json!({ "password": "p2" })),
+            connection(
+                "third",
+                "mysql",
+                json!({ "password": "p3", "token": "t3" }),
+            ),
+            // A connection without credential material is not an owner.
+            connection("plain", "duckdb", json!({ "path": "analytics.duckdb" })),
+        ]);
+
+        assert_eq!(state.summary.credential_owner_count, 3);
+        assert_eq!(state.summary.credential_item_count, 4);
+        assert_eq!(state.summary.plugins, vec!["mysql", "redis"]);
+    }
 }

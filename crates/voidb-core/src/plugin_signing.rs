@@ -137,4 +137,92 @@ mod tests {
         let bad_result = verify_bytes_signature(&tampered, &sig_hex, &pub_hex).expect("verify bad");
         assert!(!bad_result.valid);
     }
+
+    #[test]
+    fn test_wrong_key_does_not_verify() {
+        let (signing_key, _) = generate_signing_keypair();
+        let (other_key, other_verifying) = generate_signing_keypair();
+        assert_ne!(signing_key.to_bytes(), other_key.to_bytes());
+
+        let message = b"signed by the real publisher";
+        let sig_hex = sign_bytes(message, &signing_key);
+        let result = verify_bytes_signature(message, &sig_hex, &hex::encode(other_verifying.to_bytes()))
+            .expect("verification itself must not error");
+        assert!(!result.valid);
+    }
+
+    #[test]
+    fn test_invalid_public_key_inputs_are_errors() {
+        let (signing_key, verifying_key) = generate_signing_keypair();
+        let sig_hex = sign_bytes(b"m", &signing_key);
+        let pub_hex = hex::encode(verifying_key.to_bytes());
+
+        assert!(verify_bytes_signature(b"m", &sig_hex, "not-hex!").is_err());
+        // 31 bytes of valid hex must be rejected by length.
+        let short = &pub_hex[..62];
+        assert!(verify_bytes_signature(b"m", &sig_hex, short).is_err());
+    }
+
+    #[test]
+    fn test_invalid_signature_inputs_are_errors() {
+        let (_, verifying_key) = generate_signing_keypair();
+        let pub_hex = hex::encode(verifying_key.to_bytes());
+
+        assert!(verify_bytes_signature(b"m", "zz-not-hex", &pub_hex).is_err());
+        assert!(verify_bytes_signature(b"m", &"a".repeat(63), &pub_hex).is_err());
+    }
+
+    #[test]
+    fn test_file_signature_roundtrip_and_tamper_detection() {
+        let (signing_key, verifying_key) = generate_signing_keypair();
+        let pub_hex = hex::encode(verifying_key.to_bytes());
+        let dir = std::env::temp_dir().join(format!(
+            "voidb-signing-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("system time")
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let path = dir.join("plugin.tar.zst");
+        std::fs::write(&path, b"package payload").expect("write package");
+
+        let sig_hex = sign_file_detached(&path, &signing_key).expect("sign detached");
+        assert_eq!(
+            default_signature_path(&path),
+            dir.join("plugin.tar.zst.sig")
+        );
+        assert_eq!(
+            std::fs::read_to_string(dir.join("plugin.tar.zst.sig")).expect("sig file"),
+            sig_hex
+        );
+        assert!(verify_file_signature(&path, &sig_hex, &pub_hex)
+            .expect("verify file")
+            .valid);
+
+        std::fs::write(&path, b"package payload TAMPERED").expect("tamper package");
+        assert!(
+            !verify_file_signature(&path, &sig_hex, &pub_hex)
+                .expect("verify tampered file")
+                .valid
+        );
+
+        std::fs::remove_dir_all(&dir).expect("cleanup");
+    }
+
+    #[test]
+    fn test_generated_keypairs_are_independent() {
+        let (key_a, verify_a) = generate_signing_keypair();
+        let (key_b, verify_b) = generate_signing_keypair();
+        assert_ne!(key_a.to_bytes(), key_b.to_bytes());
+        assert_ne!(verify_a.to_bytes(), verify_b.to_bytes());
+        // Each key verifies its own message.
+        let sig = sign_bytes(b"payload", &key_a);
+        assert!(
+            verify_bytes_signature(b"payload", &sig, &hex::encode(verify_a.to_bytes()))
+                .expect("verify")
+                .valid
+        );
+    }
 }

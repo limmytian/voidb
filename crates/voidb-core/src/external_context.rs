@@ -729,6 +729,14 @@ impl AgentContextStoreCatalog {
         status_from_record(&record, now)
     }
 
+    /// Poll until the referenced operation review completes or the timeout
+    /// expires.
+    ///
+    /// # Blocking
+    /// Convenience variant: parks the calling thread between polls and must
+    /// never be called from an async executor thread (waits can run up to
+    /// [`MAX_AGENT_CONTEXT_WAIT_MS`]). Use
+    /// [`wait_async`](Self::wait_async) from async contexts.
     pub fn wait(
         &self,
         principal: &AgentPrincipal,
@@ -736,16 +744,7 @@ impl AgentContextStoreCatalog {
         timeout: StdDuration,
         interval: StdDuration,
     ) -> Result<AgentContextWaitData, AgentContextProtocolError> {
-        if timeout.is_zero() || timeout > StdDuration::from_millis(MAX_AGENT_CONTEXT_WAIT_MS) {
-            return Err(AgentContextProtocolError::invalid_request(format!(
-                "wait timeout must be between 1 and {MAX_AGENT_CONTEXT_WAIT_MS} milliseconds"
-            )));
-        }
-        if interval.is_zero() || interval > StdDuration::from_secs(1) {
-            return Err(AgentContextProtocolError::invalid_request(
-                "wait poll interval must be between 1 and 1000 milliseconds",
-            ));
-        }
+        validate_wait_params(timeout, interval)?;
         let started = Instant::now();
         let initial = self.status(principal, reference)?;
         if initial.complete {
@@ -764,6 +763,45 @@ impl AgentContextStoreCatalog {
                 ));
             }
             thread::sleep(interval.min(timeout.saturating_sub(elapsed)));
+            let status = self.status(principal, reference)?;
+            if status.complete {
+                return Ok(AgentContextWaitData {
+                    status,
+                    changed: true,
+                    waited_ms: u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
+                });
+            }
+        }
+    }
+
+    /// Async variant of [`wait`](Self::wait): awaits between polls so the
+    /// executor stays responsive while agent operation reviews are pending.
+    pub async fn wait_async(
+        &self,
+        principal: &AgentPrincipal,
+        reference: &AgentContextRef,
+        timeout: StdDuration,
+        interval: StdDuration,
+    ) -> Result<AgentContextWaitData, AgentContextProtocolError> {
+        validate_wait_params(timeout, interval)?;
+        let started = Instant::now();
+        let initial = self.status(principal, reference)?;
+        if initial.complete {
+            return Ok(AgentContextWaitData {
+                status: initial,
+                changed: false,
+                waited_ms: 0,
+            });
+        }
+        loop {
+            let elapsed = started.elapsed();
+            if elapsed >= timeout {
+                return Err(AgentContextProtocolError::new(
+                    AgentContextErrorCode::Timeout,
+                    "context wait timed out before operation review completed",
+                ));
+            }
+            tokio::time::sleep(interval.min(timeout.saturating_sub(elapsed))).await;
             let status = self.status(principal, reference)?;
             if status.complete {
                 return Ok(AgentContextWaitData {
@@ -1136,6 +1174,9 @@ fn lock_context_record(
                         "context record is being updated by another process",
                     ));
                 }
+                // Deliberately bounded spin (<= 500 ms total, 5 ms steps) to
+                // take a cross-process record lock; the long agent-facing
+                // waits use the async variants instead of parking here.
                 thread::sleep(StdDuration::from_millis(5));
             }
             Err(_) => {
@@ -1146,6 +1187,24 @@ fn lock_context_record(
             }
         }
     }
+}
+
+/// Validate shared wait parameters for the sync and async wait variants.
+fn validate_wait_params(
+    timeout: StdDuration,
+    interval: StdDuration,
+) -> Result<(), AgentContextProtocolError> {
+    if timeout.is_zero() || timeout > StdDuration::from_millis(MAX_AGENT_CONTEXT_WAIT_MS) {
+        return Err(AgentContextProtocolError::invalid_request(format!(
+            "wait timeout must be between 1 and {MAX_AGENT_CONTEXT_WAIT_MS} milliseconds"
+        )));
+    }
+    if interval.is_zero() || interval > StdDuration::from_secs(1) {
+        return Err(AgentContextProtocolError::invalid_request(
+            "wait poll interval must be between 1 and 1000 milliseconds",
+        ));
+    }
+    Ok(())
 }
 
 fn write_protocol_record(
@@ -2314,6 +2373,71 @@ mod tests {
             .unwrap();
         assert!(!waited.changed);
         assert_eq!(waited.waited_ms, 0);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
+    async fn wait_async_returns_immediately_for_completed_reviews() {
+        let now = Utc::now();
+        let root = store_root("docker-async-wait-complete");
+        let context_id = "context:docker:async:1";
+        write_record(&root, "docker", context_id, None, now);
+        let catalog =
+            AgentContextStoreCatalog::new(vec![AgentContextStoreSource::new("docker", &root)]);
+        let reference = AgentContextRef::new("docker", context_id, 3).unwrap();
+        catalog
+            .operation_at(
+                &principal("task-a"),
+                &reference,
+                operation_input("operation:docker:async", "stop"),
+                now + Duration::seconds(1),
+            )
+            .unwrap();
+        catalog
+            .deny_at(
+                &principal("task-a"),
+                &reference,
+                "operation:docker:async",
+                0,
+                "Async denial.",
+                now + Duration::seconds(2),
+            )
+            .unwrap();
+
+        let waited = catalog
+            .wait_async(
+                &principal("task-a"),
+                &reference,
+                StdDuration::from_millis(50),
+                StdDuration::from_millis(5),
+            )
+            .await
+            .unwrap();
+        assert!(!waited.changed);
+        assert_eq!(waited.waited_ms, 0);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
+    async fn wait_async_times_out_awaiting_pending_reviews() {
+        let now = Utc::now();
+        let root = store_root("docker-async-wait-pending");
+        let context_id = "context:docker:async:2";
+        write_record(&root, "docker", context_id, None, now);
+        let catalog =
+            AgentContextStoreCatalog::new(vec![AgentContextStoreSource::new("docker", &root)]);
+        let reference = AgentContextRef::new("docker", context_id, 3).unwrap();
+
+        let error = catalog
+            .wait_async(
+                &principal("task-a"),
+                &reference,
+                StdDuration::from_millis(30),
+                StdDuration::from_millis(5),
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(error.code, AgentContextErrorCode::Timeout);
         fs::remove_dir_all(root).unwrap();
     }
 

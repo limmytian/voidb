@@ -12,7 +12,7 @@ keywords = ["voidb", "plugin", "sdk", "jsonrpc", "database"]
 categories = ["development-tools", "database-implementations"]
 
 [dependencies]
-voidb-core = { path = "../voidb-core" }
+voidb-core = { path = "../voidb-core", default-features = false }
 
 chrono = { workspace = true }
 serde = { workspace = true }

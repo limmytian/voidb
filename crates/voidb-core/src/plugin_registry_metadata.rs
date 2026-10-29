@@ -7,7 +7,9 @@
 use crate::error::VoidbError;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(feature = "registry")]
+use std::path::PathBuf;
 
 pub const REGISTRY_SCHEMA_VERSION: u32 = 1;
 pub const REGISTRY_SCHEMA_URI: &str = "https://voidb.dev/schemas/plugin-registry.schema.json";
@@ -198,6 +200,7 @@ impl PluginRegistryIndex {
     }
 
     /// Fetch registry index from a remote HTTP, HTTPS URL, file:// URL, or local path.
+    #[cfg(feature = "registry")]
     pub async fn fetch_from_url(url: &str) -> Result<Self, VoidbError> {
         if let Some(file_path) = url.strip_prefix("file://") {
             return Self::load_from_file(file_path);
@@ -237,6 +240,7 @@ impl PluginRegistryIndex {
     }
 
     /// Load from local cache file if fresh (less than `ttl`), otherwise fetch from URL and persist cache.
+    #[cfg(feature = "registry")]
     pub async fn fetch_with_cache<P: AsRef<Path>>(
         url: &str,
         cache_path: P,
@@ -278,6 +282,7 @@ impl PluginRegistryIndex {
 
     /// Download and verify a package artifact from remote URL.
     /// Verifies SHA256 digest and optionally detached signature.
+    #[cfg(feature = "registry")]
     pub async fn download_artifact(
         artifact: &RegistryPackageArtifact,
         dest_path: impl AsRef<Path>,
