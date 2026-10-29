@@ -30,6 +30,8 @@ use crate::profile_forms::{default_plugin_config, profile_form_schema};
 
 const MIN_WIDTH: u16 = 72;
 const MIN_HEIGHT: u16 = 20;
+/// Idle backoff buckets for the background poll cadence (100/200/400/800 ms).
+const POLL_INTERVAL_STEPS: u32 = 4;
 const NATIVE_PROFILE_SOURCE: &str = "native_profile_store";
 const AUTHORIZATION_REFRESH_INTERVAL: Duration = Duration::from_secs(2);
 const AUTHORIZATION_TTL_OPTIONS: &[u64] = &[5, 15, 30, 60];
@@ -932,11 +934,30 @@ impl ConnectionManagerApp {
     pub async fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
         terminal.draw(|frame| self.render(frame))?;
         let mut events = event::EventStream::new();
-        let mut tick = tokio::time::interval(Duration::from_millis(100));
+        // Adaptive background cadence: poll at 10 Hz while background work is
+        // producing changes, backing off to ~1.25 Hz when idle so the loop
+        // meets the docs/tui-interaction-performance.md idle budget. Key and
+        // paste events always wake the loop immediately via the event stream.
+        let mut idle_polls: u32 = 0;
+        let mut applied_bucket: u32 = 0;
+        let mut tick = tokio::time::interval(Self::poll_interval(applied_bucket));
 
         while !self.should_quit {
             let dirty = tokio::select! {
-                _ = tick.tick() => self.poll_background(),
+                _ = tick.tick() => {
+                    let dirty = self.poll_background();
+                    if dirty {
+                        idle_polls = 0;
+                    } else {
+                        idle_polls = idle_polls.saturating_add(1);
+                    }
+                    let bucket = idle_polls.min(POLL_INTERVAL_STEPS - 1);
+                    if bucket != applied_bucket {
+                        applied_bucket = bucket;
+                        tick = tokio::time::interval(Self::poll_interval(bucket));
+                    }
+                    dirty
+                }
                 next = events.next() => {
                     match next {
                         Some(Ok(event::Event::Key(key)))
@@ -949,6 +970,9 @@ impl ConnectionManagerApp {
                         None => break,
                     }
                     self.poll_background();
+                    idle_polls = 0;
+                    applied_bucket = 0;
+                    tick = tokio::time::interval(Self::poll_interval(applied_bucket));
                     true
                 }
             };
@@ -957,6 +981,12 @@ impl ConnectionManagerApp {
             }
         }
         Ok(())
+    }
+
+    /// Background poll cadence for a given idle bucket: 100 ms doubling to an
+    /// 800 ms ceiling.
+    fn poll_interval(idle_bucket: u32) -> Duration {
+        Duration::from_millis(100u64 << idle_bucket.min(POLL_INTERVAL_STEPS - 1))
     }
 
     fn refresh_profiles(&mut self) -> Result<()> {
@@ -4088,6 +4118,16 @@ fn sanitize_display_text(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn poll_interval_backs_off_and_caps_at_eight_hundred_ms() {
+        assert_eq!(ConnectionManagerApp::poll_interval(0), Duration::from_millis(100));
+        assert_eq!(ConnectionManagerApp::poll_interval(1), Duration::from_millis(200));
+        assert_eq!(ConnectionManagerApp::poll_interval(2), Duration::from_millis(400));
+        assert_eq!(ConnectionManagerApp::poll_interval(3), Duration::from_millis(800));
+        // Saturates instead of growing without bound.
+        assert_eq!(ConnectionManagerApp::poll_interval(50), Duration::from_millis(800));
+    }
 
     #[test]
     fn contextual_install_only_accepts_missing_official_plugins() {
