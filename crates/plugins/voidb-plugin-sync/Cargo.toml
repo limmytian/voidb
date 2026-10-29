@@ -7,7 +7,7 @@ authors.workspace = true
 description = "E2E encrypted configuration & data sync plugin for VoidB"
 
 [dependencies]
-voidb-core = { path = "../../voidb-core", default-features = false }
+voidb-core = { path = "../../voidb-core", default-features = false, features = ["cli"] }
 
 async-trait = { workspace = true }
 tracing = { workspace = true }

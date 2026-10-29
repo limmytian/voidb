@@ -5,6 +5,26 @@ All notable changes to VoidB will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.6] - 2026-10-29
+
+### Security
+- Replace the hardcoded default credential passphrase with a random per-installation secret stored in the OS keyring (0600 file fallback where no keyring exists); the retired compiled-in passphrase remains a decrypt-only migration path.
+- Make `decrypt()` strict: non-encrypted input is now an error instead of a silent passthrough; legacy plaintext configs opt in explicitly via `decrypt_allow_plaintext()`.
+- Zeroize derived Argon2id keys on drop; serialize installation-secret creation and create the file fallback atomically so concurrent first runs cannot mint divergent keys.
+
+### Added
+- Direct trust-path test coverage: plugin provenance (tampered payloads, untrusted signers, symlinked proofs, binary-path escapes), signing, redaction, credential protection, sync-server auth; new `voidb-cli` integration harness driving the real binary.
+
+### Changed
+- The plugin SDK builds terminal-free: `voidb-core` gates its TUI/CLI/registry stacks behind features (defaults unchanged in-repo), verified by an isolated dependency tree with no ratatui/crossterm/arboard/reqwest/clap; SDK contract types are re-exported publicly.
+- Remove the legacy embedded shell; the native Connection Manager is the only terminal app and the deprecated `--shell` flag launches it.
+- Decompose `agent_broker.rs` (9.9k lines), `builtin/invoke.rs` and `connection_manager_app.rs` into focused directory modules with byte-identical behavior.
+- Agent-facing waits gained async variants so long operation reviews no longer park the tokio executor; the Connection Manager backs off its background poll to 800 ms when idle.
+- The documented error model now describes the per-domain error-enum convention; docs refreshed to the v4.1 architecture and release evidence archived under `docs/releases/`.
+
+### Removed
+- Dead database-driver declarations from the root manifest and unused `vt100`/`tar` dependencies from core.
+
 ## [0.3.5] - 2026-10-12
 
 - Require trusted Ed25519 plugin provenance before execution; reject missing/legacy records, rewritten digests, forged proofs and modified payloads without silently trusting installed binaries.
