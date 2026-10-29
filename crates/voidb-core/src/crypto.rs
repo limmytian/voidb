@@ -13,12 +13,22 @@
 //! - Salt: 16 bytes (for Argon2 key derivation)
 //! - Nonce: 12 bytes (AES-GCM IV)
 //! - Ciphertext: variable length (includes 16-byte auth tag)
+//!
+//! # Key sources
+//!
+//! - `Some(password)`: the user master password is the sole key source.
+//! - `None`: a per-installation random secret generated on first use and
+//!   stored in the OS keyring (with a 0600 file fallback next to the config
+//!   when no usable keyring backend exists). Configs encrypted by very old
+//!   VoidB versions with the retired compiled-in default passphrase remain
+//!   readable through a decrypt-only migration fallback.
 
 use aes_gcm::aead::rand_core::RngCore;
 use aes_gcm::aead::{Aead, OsRng};
 use aes_gcm::{AeadCore, Aes256Gcm, Key, KeyInit, Nonce};
 use argon2::Argon2;
 use base64::prelude::*;
+use zeroize::Zeroizing;
 
 use crate::error::VoidbError;
 
@@ -37,16 +47,26 @@ const NONCE_LEN: usize = 12;
 /// AES-256 key length.
 const KEY_LEN: usize = 32;
 
-/// Default passphrase used when no master password is configured.
-/// This provides basic obfuscation — not strong security — but prevents
-/// casual reading of plaintext credentials in config files.
-const DEFAULT_PASSPHRASE: &str = "voidb-default-config-key-v1";
+/// Retired compiled-in default passphrase. New encryptions never use it; it
+/// remains a decrypt-only migration fallback for envelopes created by old
+/// versions before per-installation keys existed.
+const LEGACY_DEFAULT_PASSPHRASE: &str = "voidb-default-config-key-v1";
+
+/// OS keyring service name for VoidB-managed secrets.
+const KEYRING_SERVICE: &str = "voidb";
+
+/// OS keyring account holding the per-installation config secret.
+const KEYRING_INSTALL_KEY_ACCOUNT: &str = "config-install-key";
+
+/// File name of the per-installation key fallback, stored under the config
+/// directory with owner-only permissions.
+const INSTALL_KEY_FILE: &str = "install-key";
 
 /// Derive key with original expensive Argon2 defaults (V1 — for decrypting legacy configs).
-fn derive_key_v1(passphrase: &[u8], salt: &[u8]) -> Result<[u8; KEY_LEN], VoidbError> {
-    let mut key = [0u8; KEY_LEN];
+fn derive_key_v1(passphrase: &[u8], salt: &[u8]) -> Result<Zeroizing<[u8; KEY_LEN]>, VoidbError> {
+    let mut key = Zeroizing::new([0u8; KEY_LEN]);
     Argon2::default()
-        .hash_password_into(passphrase, salt, &mut key)
+        .hash_password_into(passphrase, salt, key.as_mut())
         .map_err(|e| VoidbError::Crypto(format!("Key derivation failed: {}", e)))?;
     Ok(key)
 }
@@ -55,23 +75,143 @@ fn derive_key_v1(passphrase: &[u8], salt: &[u8]) -> Result<[u8; KEY_LEN], VoidbE
 ///
 /// Parameters: m_cost=4096 KiB (4 MB), t_cost=3, p=1.
 /// Sufficient for config-file encryption; completes in milliseconds instead of seconds.
-fn derive_key_v2(passphrase: &[u8], salt: &[u8]) -> Result<[u8; KEY_LEN], VoidbError> {
+fn derive_key_v2(passphrase: &[u8], salt: &[u8]) -> Result<Zeroizing<[u8; KEY_LEN]>, VoidbError> {
     use argon2::{Algorithm, Params, Version};
-    let mut key = [0u8; KEY_LEN];
+    let mut key = Zeroizing::new([0u8; KEY_LEN]);
     let params = Params::new(4096, 3, 1, Some(KEY_LEN))
         .map_err(|e| VoidbError::Crypto(format!("Argon2 params error: {}", e)))?;
     Argon2::new(Algorithm::Argon2id, Version::V0x13, params)
-        .hash_password_into(passphrase, salt, &mut key)
+        .hash_password_into(passphrase, salt, key.as_mut())
         .map_err(|e| VoidbError::Crypto(format!("Key derivation failed: {}", e)))?;
     Ok(key)
 }
 
+/// Generate a fresh random installation secret (256-bit, URL-safe base64).
+fn generate_install_secret() -> String {
+    let mut bytes = [0u8; 32];
+    OsRng.fill_bytes(&mut bytes);
+    BASE64_URL_SAFE_NO_PAD.encode(bytes)
+}
+
+/// Resolve the per-installation fallback passphrase.
+///
+/// Prefers the OS keyring and falls back to a 0600 file next to the config
+/// when no usable keyring backend exists (headless machines, CI). The same
+/// source is used deterministically on a given machine: keyring-backed
+/// machines never consult the file and vice versa.
+///
+/// Creation is serialized process-wide so concurrent threads (and parallel
+/// tests) cannot each mint a different secret on first use. The file fallback
+/// is additionally created atomically with `O_EXCL` so the winner of a
+/// cross-process race is re-read instead of overwritten.
+fn installation_passphrase() -> Result<Zeroizing<String>, VoidbError> {
+    static INSTALL_KEY_LOCK: std::sync::OnceLock<std::sync::Mutex<()>> = std::sync::OnceLock::new();
+    let _guard = INSTALL_KEY_LOCK
+        .get_or_init(|| std::sync::Mutex::new(()))
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+
+    if let Some(passphrase) = install_passphrase_from_keyring()? {
+        return Ok(passphrase);
+    }
+    install_passphrase_from_file()
+}
+
+/// Read (or create) the per-installation secret in the OS keyring.
+///
+/// Returns `Ok(None)` when no keyring backend is available so the caller can
+/// fall back to the file-based secret.
+fn install_passphrase_from_keyring() -> Result<Option<Zeroizing<String>>, VoidbError> {
+    let entry = match keyring::Entry::new(KEYRING_SERVICE, KEYRING_INSTALL_KEY_ACCOUNT) {
+        Ok(entry) => entry,
+        Err(_) => return Ok(None),
+    };
+    match entry.get_password() {
+        Ok(existing) => Ok(Some(Zeroizing::new(existing))),
+        Err(keyring::Error::NoEntry) => {
+            let generated = generate_install_secret();
+            entry
+                .set_password(&generated)
+                .map_err(|e| VoidbError::Crypto(format!("Keyring write failed: {}", e)))?;
+            Ok(Some(Zeroizing::new(generated)))
+        }
+        Err(_) => Ok(None),
+    }
+}
+
+/// Read (or create) the per-installation secret file under the config
+/// directory with owner-only permissions (0600 on Unix, applied at creation).
+fn install_passphrase_from_file() -> Result<Zeroizing<String>, VoidbError> {
+    let dir = dirs::config_dir()
+        .ok_or_else(|| VoidbError::Crypto("Cannot determine config directory".to_string()))?;
+    let path = dir.join(INSTALL_KEY_FILE);
+
+    if let Ok(existing) = std::fs::read_to_string(&path) {
+        let trimmed = existing.trim();
+        if !trimmed.is_empty() {
+            return Ok(Zeroizing::new(trimmed.to_string()));
+        }
+    }
+
+    let generated = generate_install_secret();
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| VoidbError::Crypto(format!("Config dir create failed: {}", e)))?;
+
+    let open_result = {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .mode(0o600)
+                .open(&path)
+        }
+        #[cfg(not(unix))]
+        {
+            std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+        }
+    };
+
+    match open_result {
+        Ok(mut file) => {
+            use std::io::Write;
+            file.write_all(generated.as_bytes())
+                .map_err(|e| VoidbError::Crypto(format!("Install key write failed: {}", e)))?;
+            Ok(Zeroizing::new(generated))
+        }
+        // Another creator (process or thread) won the race; use its secret.
+        Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
+            let existing = std::fs::read_to_string(&path)
+                .map_err(|e| VoidbError::Crypto(format!("Install key read failed: {}", e)))?;
+            let trimmed = existing.trim();
+            if trimmed.is_empty() {
+                return Err(VoidbError::Crypto("Install key file is empty".to_string()));
+            }
+            Ok(Zeroizing::new(trimmed.to_string()))
+        }
+        Err(err) => Err(VoidbError::Crypto(format!("Install key create failed: {}", err))),
+    }
+}
+
+/// Resolve the passphrase for encryption: the user master password when set,
+/// otherwise the per-installation secret.
+fn encryption_passphrase(master_password: Option<&str>) -> Result<Zeroizing<String>, VoidbError> {
+    match master_password {
+        Some(password) => Ok(Zeroizing::new(password.to_string())),
+        None => installation_passphrase(),
+    }
+}
+
 /// Encrypt a plaintext string.
 ///
-/// Returns the encrypted envelope string (`$VOIDB$<base64>`).
-/// If `master_password` is `None`, uses the default passphrase.
+/// Returns the encrypted envelope string (`$VOIDB2$<base64>`).
+/// If `master_password` is `None`, the per-installation secret is used.
 pub fn encrypt(plaintext: &str, master_password: Option<&str>) -> Result<String, VoidbError> {
-    let passphrase = master_password.unwrap_or(DEFAULT_PASSPHRASE);
+    let passphrase = encryption_passphrase(master_password)?;
 
     // Generate random salt and nonce
     let mut salt = [0u8; SALT_LEN];
@@ -80,7 +220,7 @@ pub fn encrypt(plaintext: &str, master_password: Option<&str>) -> Result<String,
 
     // Derive key (V2 — light params)
     let key_bytes = derive_key_v2(passphrase.as_bytes(), &salt)?;
-    let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
+    let key = Key::<Aes256Gcm>::from_slice(key_bytes.as_slice());
     let cipher = Aes256Gcm::new(key);
 
     // Encrypt
@@ -99,18 +239,51 @@ pub fn encrypt(plaintext: &str, master_password: Option<&str>) -> Result<String,
 
 /// Decrypt an encrypted envelope string.
 ///
-/// Returns the plaintext. If the value is not encrypted (no `$VOIDB$` prefix),
-/// returns it as-is for backwards compatibility with plaintext configs.
+/// Errors on values that are not `$VOIDB$`/`$VOIDB2$` envelopes — plaintext
+/// inputs no longer pass through silently. Callers that must tolerate legacy
+/// plaintext configs opt in explicitly via [`decrypt_allow_plaintext`].
+///
+/// When `master_password` is `Some`, it is the sole key source. When `None`,
+/// the per-installation secret is tried first, then the retired default
+/// passphrase as a decrypt-only migration fallback for very old envelopes.
 pub fn decrypt(value: &str, master_password: Option<&str>) -> Result<String, VoidbError> {
-    // Not encrypted — return as-is (backwards compat)
+    if !is_encrypted(value) {
+        return Err(VoidbError::Crypto(
+            "value is not an encrypted envelope; call decrypt_allow_plaintext for legacy plaintext configs"
+                .to_string(),
+        ));
+    }
+
+    if let Some(password) = master_password {
+        return decrypt_envelope(value, password.as_bytes());
+    }
+
+    let install_key = installation_passphrase()?;
+    if let Ok(plaintext) = decrypt_envelope(value, install_key.as_bytes()) {
+        return Ok(plaintext);
+    }
+    // Migration-only fallback: envelopes created by versions that still used
+    // the retired compiled-in default passphrase.
+    decrypt_envelope(value, LEGACY_DEFAULT_PASSPHRASE.as_bytes())
+}
+
+/// Like [`decrypt`], but returns non-encrypted values unchanged for
+/// backwards compatibility with plaintext configs. Use only at explicit
+/// legacy-config loading boundaries.
+pub fn decrypt_allow_plaintext(
+    value: &str,
+    master_password: Option<&str>,
+) -> Result<String, VoidbError> {
     if !is_encrypted(value) {
         return Ok(value.to_string());
     }
+    decrypt(value, master_password)
+}
 
-    let passphrase = master_password.unwrap_or(DEFAULT_PASSPHRASE);
-
+/// Decrypt a `$VOIDB$`/`$VOIDB2$` envelope with a single passphrase.
+fn decrypt_envelope(value: &str, passphrase: &[u8]) -> Result<String, VoidbError> {
     // Determine version and strip prefix (check V2 first — V1 is a prefix of V2)
-    type DeriveFn = fn(&[u8], &[u8]) -> Result<[u8; KEY_LEN], VoidbError>;
+    type DeriveFn = fn(&[u8], &[u8]) -> Result<Zeroizing<[u8; KEY_LEN]>, VoidbError>;
     let (encoded, derive_fn): (&str, DeriveFn) =
         if let Some(stripped) = value.strip_prefix(ENCRYPTED_PREFIX_V2) {
             (stripped, derive_key_v2)
@@ -132,8 +305,8 @@ pub fn decrypt(value: &str, master_password: Option<&str>) -> Result<String, Voi
     let ciphertext = &envelope[SALT_LEN + NONCE_LEN..];
 
     // Derive key using the appropriate version
-    let key_bytes = derive_fn(passphrase.as_bytes(), salt)?;
-    let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
+    let key_bytes = derive_fn(passphrase, salt)?;
+    let key = Key::<Aes256Gcm>::from_slice(key_bytes.as_slice());
     let cipher = Aes256Gcm::new(key);
     let nonce = Nonce::from_slice(nonce_bytes);
 
@@ -237,11 +410,24 @@ mod tests {
     }
 
     #[test]
-    fn test_decrypt_plaintext_passthrough() {
-        // Unencrypted values should pass through unchanged
+    fn test_decrypt_rejects_plaintext_by_default() {
+        // decrypt() is strict: plaintext input is an error, not a silent
+        // passthrough. Legacy plaintext configs must opt in explicitly.
         let plain = "just-a-plain-string";
-        let result = decrypt(plain, None).unwrap();
+        assert!(decrypt(plain, None).is_err());
+        assert!(decrypt(plain, Some("pw")).is_err());
+
+        let result = decrypt_allow_plaintext(plain, None).unwrap();
         assert_eq!(result, plain);
+    }
+
+    #[test]
+    fn test_new_encryptions_do_not_use_legacy_default_passphrase() {
+        let encrypted = encrypt("install-key-protected", None).unwrap();
+        // The retired compiled-in passphrase must not decrypt fresh envelopes;
+        // they are protected by the per-installation secret instead.
+        assert!(decrypt_envelope(&encrypted, LEGACY_DEFAULT_PASSPHRASE.as_bytes()).is_err());
+        assert_eq!(decrypt(&encrypted, None).unwrap(), "install-key-protected");
     }
 
     #[test]
@@ -323,12 +509,12 @@ mod tests {
     fn test_v1_backward_compat() {
         // Manually create a V1-encrypted value using old derive_key_v1
         let plaintext = "legacy-secret";
-        let passphrase = DEFAULT_PASSPHRASE;
+        let passphrase = LEGACY_DEFAULT_PASSPHRASE;
         let mut salt = [0u8; SALT_LEN];
         OsRng.fill_bytes(&mut salt);
         let nonce_bytes = Aes256Gcm::generate_nonce(&mut OsRng);
         let key_bytes = derive_key_v1(passphrase.as_bytes(), &salt).unwrap();
-        let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
+        let key = Key::<Aes256Gcm>::from_slice(key_bytes.as_slice());
         let cipher = Aes256Gcm::new(key);
         let ciphertext = cipher.encrypt(&nonce_bytes, plaintext.as_bytes()).unwrap();
         let mut envelope = Vec::with_capacity(SALT_LEN + NONCE_LEN + ciphertext.len());

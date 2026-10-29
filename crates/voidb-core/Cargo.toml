@@ -19,6 +19,8 @@ base64 = { workspace = true }
 ed25519-dalek = { workspace = true }
 rand_core = { workspace = true }
 sha2 = "0.10"
+zeroize = { workspace = true }
+keyring = { workspace = true }
 
 # JSON Schema validation
 jsonschema = { workspace = true }
