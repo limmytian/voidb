@@ -325,4 +325,98 @@ mod tests {
         assert!(redacted.contains("<redacted:credential>"));
         assert!(redacted.contains("<redacted:sensitive_metadata>"));
     }
+
+    #[test]
+    fn redaction_status_is_not_required_without_matches() {
+        let config = json!({
+            "host": "redis.internal.example",
+            "password": "redis-secret"
+        });
+
+        let (redacted, status) = redact_text_with_json(
+            "connection attempt scheduled for retry",
+            &config,
+        );
+
+        assert_eq!(status, RedactionStatus::NotRequired);
+        assert_eq!(redacted, "connection attempt scheduled for retry");
+    }
+
+    #[test]
+    fn redaction_is_idempotent_across_repeated_passes() {
+        let config = json!({
+            "host": "redis.internal.example",
+            "password": "redis-secret"
+        });
+        let (redacted, _) = redact_text_with_json(
+            "failed redis://:redis-secret@redis.internal.example/0 against redis.internal.example",
+            &config,
+        );
+        let (twice, status) = redact_text_with_json(&redacted, &config);
+
+        assert_eq!(status, RedactionStatus::NotRequired);
+        assert_eq!(twice, redacted);
+        assert!(!redacted.contains("redis-secret"));
+    }
+
+    #[test]
+    fn collect_redaction_targets_walks_nested_arrays_and_objects() {
+        let config = json!({
+            "instances": [
+                { "host": "node1.internal.example", "password": "pw-one" },
+                { "host": "node2.internal.example", "auth": { "api_key": "key-two" } }
+            ]
+        });
+
+        let targets = collect_redaction_targets(&config);
+        let values: Vec<&str> = targets.iter().map(|t| t.value.as_str()).collect();
+
+        assert!(values.contains(&"pw-one"));
+        assert!(values.contains(&"key-two"));
+        assert!(values.contains(&"node1.internal.example"));
+        assert!(values.contains(&"node2.internal.example"));
+        // Every target carries a stable <redacted:...> placeholder.
+        assert!(targets
+            .iter()
+            .all(|t| t.placeholder.starts_with("<redacted:")));
+    }
+
+    #[test]
+    fn placeholders_cover_every_credential_class() {
+        for class in [
+            CredentialClass::Password,
+            CredentialClass::Token,
+            CredentialClass::ApiKey,
+            CredentialClass::PrivateKey,
+            CredentialClass::ClientCertificate,
+            CredentialClass::CloudAccessKey,
+            CredentialClass::CloudSecretKey,
+        ] {
+            let placeholder = placeholder_for_credential_class(&class);
+            assert!(placeholder.starts_with("<redacted:"));
+            assert!(placeholder.ends_with('>'));
+        }
+    }
+
+    #[test]
+    fn metadata_keys_and_credential_keys_do_not_overlap() {
+        // A key must not be both credential material and harmless metadata.
+        for key in [
+            "password",
+            "api-key",
+            "PRIVATE_KEY",
+            "refresh.token",
+            "access_key",
+            "host",
+            "endpoint",
+            "bucket",
+        ] {
+            let classified = credential_class_for_key(key).is_some();
+            let metadata = is_sensitive_metadata_key(key);
+            assert!(
+                !(classified && metadata),
+                "key {key} classified as both credential and metadata"
+            );
+        }
+    }
 }
