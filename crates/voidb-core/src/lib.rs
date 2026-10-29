@@ -3,6 +3,7 @@ pub mod assist;
 pub mod audit;
 pub mod autocomplete;
 pub mod capability;
+#[cfg(feature = "tui")]
 pub mod clipboard;
 pub mod config;
 pub mod connection;
@@ -10,6 +11,7 @@ pub mod credential_protection;
 pub mod crypto;
 pub mod database;
 pub mod error;
+#[cfg(feature = "tui")]
 pub mod event;
 pub mod export;
 pub mod external_context;
@@ -32,8 +34,10 @@ pub mod profile_schema;
 pub mod profile_store;
 pub mod redaction;
 pub mod session;
+#[cfg(feature = "tui")]
 pub mod shell_capabilities;
 pub mod sql_contract;
+#[cfg(feature = "tui")]
 pub mod sql_highlight;
 pub mod sql_session;
 pub mod sql_split;
@@ -43,6 +47,7 @@ pub mod team_sharing;
 pub mod transfer;
 pub mod tui_launch;
 pub mod tui_quality;
+#[cfg(feature = "tui")]
 pub mod widgets;
 
 // Re-export commonly used types
@@ -110,6 +115,7 @@ pub use capability::{
     TargetSystemFailure, evaluate_capability_policy, evaluate_profile_policy,
     grant_credentials_for_invocation,
 };
+#[cfg(feature = "tui")]
 pub use clipboard::{
     ClipboardRows, DatabaseClipboard, DatabaseDialect, TableClipboard, VoidbClipboard,
 };
@@ -129,6 +135,7 @@ pub use credential_protection::{
 pub use database::DatabaseAdapter;
 pub use database::types::*;
 pub use error::VoidbError;
+#[cfg(feature = "tui")]
 pub use event::Event;
 pub use export::ExportFormat;
 pub use external_context::{
@@ -193,9 +200,10 @@ pub use object_sync::{
     sync_credential_ref_payload, sync_object_envelope, sync_object_manifest, sync_profile_payload,
     sync_profile_policy_payload, validate_sync_object_id,
 };
-pub use plugin::{
-    CliContext, CliPlugin, CliPluginManager, Plugin, PluginFactory, PluginInfo, PluginRegistry,
-};
+#[cfg(feature = "cli")]
+pub use plugin::{CliContext, CliPlugin, CliPluginManager};
+#[cfg(feature = "tui")]
+pub use plugin::{Plugin, PluginFactory, PluginInfo, PluginRegistry};
 pub use plugin_conformance::{
     PluginCertificationSummary, PluginConformanceCheck, PluginConformanceEvidence,
     PluginConformanceReport, PluginConformanceStatus, PluginMaturityCriteria, PluginMaturityLevel,
@@ -296,6 +304,7 @@ pub use session::{
     PluginSessionReuseKey, PluginSessionReusePolicy, PluginSessionScope,
     is_supported_agent_broker_protocol_version, validate_agent_session_call_id,
 };
+#[cfg(feature = "tui")]
 pub use shell_capabilities::{ConnectionConfigRegistry, ShellCapabilities, TabInfo, TabManager};
 pub use sql_contract::{
     SQL_DEFAULT_ROW_LIMIT, SQL_MAX_ROW_LIMIT, SQL_RESULT_CONTRACT_VERSION, SqlCatalogScope,

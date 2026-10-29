@@ -14,7 +14,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use thiserror::Error;
-use voidb_core::{
+// Public contract types: re-exported so simple plugins can depend on the SDK
+// alone. `voidb-core` remains available with `default-features = false` for
+// advanced use beyond these re-exports.
+pub use voidb_core::{
     CapabilityAuthorizationMetadata, CapabilityError, CapabilityErrorCategory,
     CapabilityExecutionMode, CapabilityInvocation, CapabilityInvocationResult, CapabilityRiskLevel,
     CapabilitySessionHandoff, CredentialClass, InvocationStatus, PROCESS_PLUGIN_JSONRPC_VERSION,

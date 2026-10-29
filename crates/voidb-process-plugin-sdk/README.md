@@ -19,15 +19,18 @@ This crate provides:
 ```toml
 [dependencies]
 voidb-process-plugin-sdk = "0.3.0"
-voidb-core = "0.3.0"
 ```
+
+The SDK builds against a lean, terminal-free `voidb-core`; you only need a
+direct `voidb-core = { version = "0.3.0", default-features = false }`
+dependency for advanced use beyond the re-exported types.
 
 ### 2. Implement Your Plugin
 
 ```rust,no_run
 use anyhow::Result;
 use voidb_process_plugin_sdk::{CapabilityRouter, serve_stdio};
-use voidb_core::{CapabilityInvocationResult, InvocationStatus};
+use voidb_process_plugin_sdk::{CapabilityInvocationResult, InvocationStatus};
 
 fn main() -> Result<()> {
     let router = CapabilityRouter::new("myplugin")

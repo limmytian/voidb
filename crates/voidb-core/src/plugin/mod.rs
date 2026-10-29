@@ -19,18 +19,22 @@ pub mod native;
 // Connection Manager plugin traits (Phase 1)
 pub mod connection_data;
 pub mod connection_display;
+#[cfg(feature = "tui")]
 pub mod connection_dialog;
 
 // UI plugin trait for tree rendering (RFC 002 Phase 1)
 pub mod ui_plugin;
 
 // v4.0 Core Plugin trait
+#[cfg(feature = "tui")]
 pub mod plugin_trait;
 
 // v4.0 Plugin registry system
+#[cfg(feature = "tui")]
 pub mod registry;
 
 // CLI plugin trait
+#[cfg(feature = "cli")]
 pub mod cli;
 
 pub use native::NativePlugin;
@@ -44,16 +48,20 @@ pub use connection_data::{
 pub use connection_display::{
     ConnectionDisplayProvider, DefaultColumn, DisplayConfig, FilterOption, SortOption, ViewMode,
 };
+#[cfg(feature = "tui")]
 pub use connection_dialog::{ConnectionDialogComponent, DialogAction};
 
 // Re-export UI plugin traits
 pub use ui_plugin::{TreeNodeDef, UiPlugin};
 
 // Re-export v4.0 Plugin trait
+#[cfg(feature = "tui")]
 pub use plugin_trait::Plugin;
 
 // Re-export v4.0 Plugin registry
+#[cfg(feature = "tui")]
 pub use registry::{PluginFactory, PluginInfo, PluginRegistry};
 
 // Re-export CLI plugin traits
+#[cfg(feature = "cli")]
 pub use cli::{CliContext, CliPlugin, CliPluginManager};
