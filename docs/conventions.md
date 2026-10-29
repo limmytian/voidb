@@ -16,7 +16,7 @@
 - Factory types: `{Db}PluginFactory` (e.g., `MySqlPluginFactory`)
 - Provider types: `{Db}ConnectionProvider` (e.g., `MySqlConnectionProvider`)
 - Config structs: `{Plugin}Config` (e.g., `MySqlConfig`, `SshConfig`)
-- Error enums: `VoidbError` (single error type in `crates/voidb-core/src/error.rs`)
+- Error enums: `{Domain}Error` per bounded domain (e.g. `SyncError`, `AgentAuthorizationError`) plus the shared `VoidbError` in `crates/voidb-core/src/error.rs`
 
 ### Functions
 - Use `snake_case` for all functions and methods
@@ -46,14 +46,24 @@
 
 ## Error Handling
 
-- Single enum `VoidbError` in `crates/voidb-core/src/error.rs` using `thiserror`
-- Variants: `Connection`, `Query`, `Schema`, `Config`, `Plugin`, `Crypto`, `InvalidConfig`, `IncompatiblePlugin`, `Runtime`, `Timeout`, `Io`, `Other`
-- Pattern: wrap errors with `.map_err(|e| VoidbError::Variant(e.to_string()))`
-- Use `anyhow::Result` for application-level functions; `main()` and plugin `update()` return `anyhow::Result<()>`
-- Chain `.map_err()` to convert external errors into `VoidbError` variants
+- Every bounded domain owns its own `thiserror` error enum named `{Domain}Error`
+  (for example `VoidbError` in `crates/voidb-core/src/error.rs`,
+  `SyncError` in the sync plugin, `AgentAuthorizationError` in
+  `agent_authorization.rs`, `JitAuthorizationStoreError` in the CLI,
+  `ProcessPluginSdkError` in the SDK). Cross-cutting core errors
+  (crypto, config, IO) stay in `VoidbError`; domain modules do not leak
+  stringly-typed core variants across their boundary.
+- Wrap external errors with `.map_err(|e| DomainError::Variant(...))` and
+  prefer `#[from]` / `source()` chains over stringly-flattening when the
+  cause is a typed error
+- Use `anyhow::Result` for application-level functions; `main()` and plugin
+  `update()` return `anyhow::Result<()>`
 - Use `?` operator pervasively; avoid manual `match` on `Result` when possible
 - `unwrap_or_else` with `tracing::warn!` for non-critical config loading
-- `panic!` used only for programming errors (e.g., duplicate plugin registration in `PluginRegistry::register`)
+- `panic!` used only for programming errors (e.g., duplicate plugin
+  registration)
+- Non-test code stays free of `.unwrap()`/`.expect()`; tests may unwrap
+  freely
 
 ## Documentation
 
