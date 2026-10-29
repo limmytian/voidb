@@ -1,4 +1,5 @@
-// Library exports for testing
+// Library exports for testing.
 
-pub mod components;
-pub mod theme;
+pub mod connection_manager_app;
+pub mod plugin_onboarding;
+pub mod profile_forms;

@@ -1,5 +1,11 @@
 # VoidB Plugin Development Guide
 
+> **Deprecated since v0.3.6.** The embedded shell this guide targets
+> (`app_v4.rs`, in-repo TUI plugins) was removed; official plugins are external
+> process plugins in their own repositories. Use
+> [Process Plugin SDK](process-plugin-sdk.md) for new plugin development. The
+> service-layer patterns below remain valid background reading.
+
 This is the canonical reference for building plugins in VoidB v4.1. It covers architecture,
 module responsibilities, the full plugin API, required patterns, the service layer convention,
 and recommended UX practices.

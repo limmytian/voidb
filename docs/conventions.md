@@ -118,7 +118,6 @@ use crate::components::Grid;
 | Plugin trait implementation | `crates/voidb-core/src/plugin/plugin_trait.rs` | All plugins implement `Plugin` trait with `id()`, `name()`, `init()`, `update()` |
 | Factory pattern | `crates/voidb-core/src/plugin/registry.rs` | `PluginFactory` creates plugin instances; registered in `PluginRegistry` |
 | Dependency injection | `crates/voidb-core/src/shell_capabilities.rs` | `ShellCapabilities` injected via `Plugin::init()` |
-| Channel-based communication | `crates/voidb-tui/src/app_v4.rs` | `TabRequest` enum sent via `mpsc::channel` from plugins to shell |
 | Adapter pattern | `crates/voidb-core/src/database/mod.rs` | `DatabaseAdapter` trait abstracts database operations |
 | Config deserialization | `crates/plugins/voidb-plugin-sync/src/config.rs` | Plugin-specific config structs deserialized from `plugin_config` JSON |
 | Provider pattern | official `voidb-plugin-<name>` repositories (separate repos) | `ConnectionDataProvider` + `ConnectionDisplayProvider` for UI metadata |

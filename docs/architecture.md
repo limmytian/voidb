@@ -37,10 +37,11 @@
 
 ## Layers & Division of Responsibility
 
-### 1. VoidB Shell (`crates/voidb-tui/src/app_v4.rs`)
+### 1. Native Terminal App (`crates/voidb-tui/src/connection_manager_app.rs`)
 - Pure connection information & profile management UI.
 - Never embeds, hosts, or summons heavyweight external child processes.
-- Contains only the `ConnectionManagerPluginFactory`.
+- The legacy embedded shell (`app_v4.rs`) was removed in v0.3.6; the native
+  Connection Manager is the only terminal application.
 
 ### 2. Unified Command Dispatcher (`voidb-cli`)
 - Serves as the first-class dispatch desk.
@@ -131,7 +132,7 @@ The normative matrix and compatibility boundary are in
 |---|---|---|
 | TUI app | `crates/voidb-tui/src/main.rs` | User runs `voidb` |
 | CLI | `crates/voidb-cli/src/main.rs` | User runs `voidb-cli <plugin> <command>` |
-| Plugin registration | `crates/voidb-tui/src/app_v4.rs` lines 151-193 | `App::new()` during startup |
+| Plugin registration | `voidb-cli` dynamic discovery + provenance gate | `voidb-cli` startup and invocation |
 
 ## Error Handling
 

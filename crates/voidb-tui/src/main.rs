@@ -1,21 +1,15 @@
-// mod app; // Old message-based architecture (backed up as app_old.rs.bak)
-mod app_v4; // New v4.0 pure router architecture
-mod components;
 mod connection_manager_app;
 mod plugin_onboarding;
-mod plugins; // Built-in plugins
 mod profile_forms;
-mod theme;
 
 use anyhow::Result;
 
-// Use v4 App for now (can switch back with `use app::App;`)
-use app_v4::App;
 use connection_manager_app::ConnectionManagerApp;
 
+/// The legacy embedded-shell launch mode was removed in v0.3.6; the native
+/// Connection Manager is the only terminal application.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum LaunchMode {
-    Shell,
     ConnectionManager,
 }
 
@@ -41,16 +35,10 @@ async fn main() -> Result<()> {
 
     tracing::info!("VoidB starting up");
 
-    // The native Connection Manager can render locked profile metadata without
-    // decrypting credentials. The legacy shell still requires its connection
-    // list to be decrypted before startup.
+    // The native Connection Manager renders locked profile metadata without
+    // decrypting credentials, so the raw (still-encrypted) config suffices.
     let config_path = voidb_core::config::AppConfig::config_path()?;
-    let config = match launch_mode {
-        LaunchMode::ConnectionManager => {
-            voidb_core::config::AppConfig::load_raw_from_path(&config_path)?
-        }
-        LaunchMode::Shell => voidb_core::config::AppConfig::load()?,
-    };
+    let config = voidb_core::config::AppConfig::load_raw_from_path(&config_path)?;
 
     tracing::info!(
         "Loaded configuration from {:?}",
@@ -92,12 +80,8 @@ async fn main() -> Result<()> {
             false
         };
 
-    // Run the selected terminal app.
+    // Run the native terminal app.
     let result = match launch_mode {
-        LaunchMode::Shell => {
-            let mut app = App::new(config)?;
-            app.run(&mut terminal).await
-        }
         LaunchMode::ConnectionManager => {
             let mut app = ConnectionManagerApp::new(config)?;
             app.run(&mut terminal).await
@@ -127,25 +111,26 @@ fn parse_launch_mode() -> Result<LaunchMode> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     if matches!(args.first().map(String::as_str), Some("--help" | "-h")) {
         println!(
-            "Usage: voidb [--connection-manager | --shell]\n\nDefault: native Connection Manager"
+            "Usage: voidb [--connection-manager]\n\nDefault: native Connection Manager\n(deprecated: --shell is accepted and launches the native Connection Manager)"
         );
         std::process::exit(0);
     }
-    launch_mode_from_args(args)
+    Ok(launch_mode_from_args(args))
 }
 
-fn launch_mode_from_args(args: impl IntoIterator<Item = String>) -> Result<LaunchMode> {
+/// Resolve the launch mode from argv. `--shell` is retained as a deprecated
+/// alias so existing scripts keep working; it launches the native manager.
+fn launch_mode_from_args(args: impl IntoIterator<Item = String>) -> LaunchMode {
     let args = args.into_iter().collect::<Vec<_>>();
     match args.as_slice() {
-        [] => Ok(LaunchMode::ConnectionManager),
-        [arg] if matches!(arg.as_str(), "--connection-manager" | "connection-manager") => {
-            Ok(LaunchMode::ConnectionManager)
+        [arg] if matches!(arg.as_str(), "--shell" | "shell") => {
+            eprintln!(
+                "warning: the embedded shell mode was removed in v0.3.6; \
+                 launching the native Connection Manager instead"
+            );
+            LaunchMode::ConnectionManager
         }
-        [arg] if matches!(arg.as_str(), "--shell" | "shell") => Ok(LaunchMode::Shell),
-        [other] => anyhow::bail!(
-            "Unknown argument '{other}'. Usage: voidb [--connection-manager | --shell]"
-        ),
-        _ => anyhow::bail!("Usage: voidb [--connection-manager | --shell]"),
+        _ => LaunchMode::ConnectionManager,
     }
 }
 
@@ -156,20 +141,28 @@ mod tests {
     #[test]
     fn default_launches_native_connection_manager() {
         assert_eq!(
-            launch_mode_from_args(Vec::<String>::new()).expect("default mode"),
+            launch_mode_from_args(Vec::<String>::new()),
             LaunchMode::ConnectionManager
         );
     }
 
     #[test]
-    fn explicit_connection_manager_and_shell_modes_are_supported() {
+    fn explicit_connection_manager_flag_launches_the_manager() {
         assert_eq!(
-            launch_mode_from_args(vec!["--connection-manager".into()]).expect("manager mode"),
+            launch_mode_from_args(vec!["--connection-manager".into()]),
+            LaunchMode::ConnectionManager
+        );
+    }
+
+    #[test]
+    fn deprecated_shell_flag_still_launches_the_manager() {
+        assert_eq!(
+            launch_mode_from_args(vec!["--shell".into()]),
             LaunchMode::ConnectionManager
         );
         assert_eq!(
-            launch_mode_from_args(vec!["--shell".into()]).expect("shell mode"),
-            LaunchMode::Shell
+            launch_mode_from_args(vec!["shell".into()]),
+            LaunchMode::ConnectionManager
         );
     }
 }
