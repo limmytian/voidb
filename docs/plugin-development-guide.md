@@ -1,6 +1,6 @@
 # VoidB Plugin Development Guide
 
-This is the canonical reference for building plugins in VoidB v4.0. It covers architecture,
+This is the canonical reference for building plugins in VoidB v4.1. It covers architecture,
 module responsibilities, the full plugin API, required patterns, the service layer convention,
 and recommended UX practices.
 
@@ -35,7 +35,7 @@ Plugins that need durable connection/session reuse should also follow
 
 ## 1. Architecture Overview
 
-VoidB v4.0 uses a **pure router architecture**. The central insight is:
+VoidB v4.1 uses a **pure router architecture**. The central insight is:
 
 > **Plugins are autonomous applications. The shell is a dumb router.**
 

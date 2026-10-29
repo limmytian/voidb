@@ -158,9 +158,9 @@ Press `?` in the app for the current keybinding reference.
 ## 📚 Documentation
 
 - **Plugin Developers**
-  - [Plugin Development Guide](docs/plugin-development-guide.md) ⭐ Start here for v4.0 architecture
+  - [Plugin Development Guide](docs/plugin-development-guide.md) ⭐ Start here for v4.1 architecture
   - [Plugin-Owned TUI Development Guide](docs/plugin-owned-tui-development-guide.md) - Standalone TUI command, terminal lifecycle, tests, and release gates
-  - Example plugins in `crates/plugins/` directory
+  - Example plugins in `examples/` and the process-plugin template in `templates/process-plugin-template/`
 
 - **Core Contributors**
   - [CHANGELOG.md](CHANGELOG.md) - Version history and breaking changes
