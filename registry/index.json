@@ -3,7 +3,7 @@
   "schema_version": 1,
   "registry_name": "VoidB Official Plugin Registry",
   "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
-  "updated_at": "2026-10-12T11:28:02.421565Z",
+  "updated_at": "2026-10-30T20:38:06.783936770Z",
   "plugins": [
     {
       "id": "docker",
@@ -641,7 +641,7 @@
         "restart",
         "apply"
       ],
-      "latest_version": "0.3.4",
+      "latest_version": "0.3.5",
       "versions": [
         {
           "version": "0.3.3",
@@ -733,6 +733,55 @@
               "sha256": "sha256:f2d8efd5b1f17e9ee41997554c99bcb1daba07042325b98e7fd9568d9ddb38ba",
               "size_bytes": 6746954,
               "signature": "b0e49577bdc169ee03c8c164cbf5e95e40cc194156d3b9d13adc3917371048cce579991dd470a2cf424257d0e924e73aaddd6c1972c048b90e7115ec8d853506"
+            }
+          ]
+        },
+        {
+          "version": "0.3.5",
+          "protocol_version": "1",
+          "released_at": "2026-10-30T20:38:01.458627206Z",
+          "voidb_core": ">=0.3.3",
+          "platforms": [
+            "darwin",
+            "linux"
+          ],
+          "signature_scheme": "ed25519",
+          "packages": [
+            {
+              "filename": "kubernetes-0.3.5-aarch64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-kubernetes/releases/download/v0.3.5/kubernetes-0.3.5-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:90c9bb5bbf847ba23b8adf60276f71cbb380675f247249cba8571b2dabbc7633",
+              "size_bytes": 5996073,
+              "signature": "65ece4f0cccb862b869729cc5f9992a6078f148fd6d88a1b4f97ce75f775e1d0b4c8bbfca3d64e861702a8a89828ce24581fcf98307555fc66a40b82d675050d"
+            },
+            {
+              "filename": "kubernetes-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-kubernetes/releases/download/v0.3.5/kubernetes-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:4a50f83884313f8730f1d0158d64d28ca8526bd27528cc0876d4d166c7dcae1b",
+              "size_bytes": 7405284,
+              "signature": "e68fcdbbf77e46611bc984ca09cece336f1e18d1d33d34b006c3880ad9f8870f046fee3d16f6b5c8a811691ca85e0e0fd54c3ec7ebfb7424c99e4c32278db90f"
+            },
+            {
+              "filename": "kubernetes-0.3.5-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-kubernetes/releases/download/v0.3.5/kubernetes-0.3.5-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:771b0518f3229b2b139321f9e925e8eda757605301d274a3b81136b06c3c8aa6",
+              "size_bytes": 6171759,
+              "signature": "e788507c4277b06e7c530e6cd601768a6c9c70fdc46d488a6b44413e43b9a0e71e7179ff79a2a2f7c756132888d4429b04f2cc3e1a3963649b0757e512a1cc0d"
+            },
+            {
+              "filename": "kubernetes-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-kubernetes/releases/download/v0.3.5/kubernetes-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:3d9bdd09658f519e51fa5d60ae7cd92dbe0653968066a6ef74f18cfbd6ccb3b5",
+              "size_bytes": 7101286,
+              "signature": "1d1766a5d04418d7e5f2e62e2dbe69bb3ff2e5bbadef0fc4ca77fc5f22ce9bb3acb64d6939034b3e2c0dabf374583098ea8f39e7a1f531e066e02403e37cdb0c"
             }
           ]
         }
