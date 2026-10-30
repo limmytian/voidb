@@ -52,7 +52,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
-        run: python3 scripts/download-release-plugins.py --all --version "${RELEASE_VERSION}" --output target/registry-release
+          PLUGIN_ID: ${{ inputs.plugin_id }}
+        run: |
+          # Full sync downloads every plugin at the version; a per-plugin
+          # dispatch (plugin_id set) stages only that plugin's archives and
+          # merges them into the existing index.
+          if [ -n "${PLUGIN_ID}" ]; then
+            python3 scripts/download-release-plugins.py --plugin-id "${PLUGIN_ID}" --version "${RELEASE_VERSION}" --output target/registry-release
+          else
+            python3 scripts/download-release-plugins.py --all --version "${RELEASE_VERSION}" --output target/registry-release
+          fi
 
       - name: Rebuild Registry From Published Archives
         run: |
@@ -63,9 +72,9 @@ jobs:
           # expectation automatically. The download step above already fails
           # if any expected archive is missing; this guards against staging
           # drift (renamed or nested files).
-          expected="$(python3 -c "import importlib.util; spec=importlib.util.spec_from_file_location('download_release_plugins', 'scripts/download-release-plugins.py'); module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module); print(len(module.ALL) * len(module.TARGETS))")"
+          expected="$(PLUGIN_ID='${PLUGIN_ID}' python3 -c "import importlib.util, os; spec=importlib.util.spec_from_file_location('download_release_plugins', 'scripts/download-release-plugins.py'); module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module); plugin_ids=os.environ.get('PLUGIN_ID', ''); print((len(plugin_ids.split(',')) if plugin_ids else len(module.ALL)) * len(module.TARGETS))")"
           if [ "${#archives[@]}" -ne "${expected}" ]; then
-            echo "::error::Downloaded ${#archives[@]} plugin archives, expected ${expected} (ALL plugins x TARGETS in scripts/download-release-plugins.py)."
+            echo "::error::Downloaded ${#archives[@]} plugin archives, expected ${expected} (staged plugins x TARGETS in scripts/download-release-plugins.py)."
             exit 1
           fi
           cargo run -p voidb-cli -- plugin registry-index "${archives[@]}" --output registry/index.json --registry-name 'VoidB Official Plugin Registry' --format json

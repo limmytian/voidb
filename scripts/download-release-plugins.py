@@ -96,14 +96,28 @@ def main():
     parser.add_argument('--version', required=True)
     parser.add_argument('--target', choices=TARGETS)
     parser.add_argument('--all', action='store_true', help='Download all 14 plugins on all four targets.')
+    parser.add_argument(
+        '--plugin-id',
+        action='append',
+        default=[],
+        metavar='ID',
+        help='Restrict staging to one plugin ID (repeatable); downloads all targets. Conflicts with --all.',
+    )
     parser.add_argument('--output', type=pathlib.Path, required=True)
     parser.add_argument('--allow-legacy-unsigned-staging', action='store_true', help='Inspect old immutable unsigned archives; this does not authorize execution.')
     parser.add_argument('--openssl', default='openssl')
     args = parser.parse_args()
-    if not args.all and not args.target:
-        parser.error('--target is required unless --all is supplied')
-    for target in TARGETS if args.all else (args.target,):
-        for plugin in ALL if args.all else DEFAULT:
+    if args.all and args.plugin_id:
+        parser.error('--all cannot be combined with --plugin-id')
+    unknown = sorted(set(args.plugin_id) - set(ALL))
+    if unknown:
+        parser.error(f'unknown plugin id(s): {", ".join(unknown)}')
+    if not args.all and not args.target and not args.plugin_id:
+        parser.error('--target is required unless --all or --plugin-id is supplied')
+    targets = TARGETS if args.all or args.plugin_id else (args.target,)
+    plugins = ALL if args.all else (args.plugin_id or DEFAULT)
+    for target in targets:
+        for plugin in plugins:
             stage(args.version.removeprefix('v'), target, plugin, args.output, args.allow_legacy_unsigned_staging, args.openssl)
 
 
