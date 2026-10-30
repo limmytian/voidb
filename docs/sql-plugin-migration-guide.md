@@ -78,8 +78,9 @@ MySQL is the first networked SQL migration target.
 - Fast tests should cover schema discovery, input validation, dry-run, redacted
   target errors, and unavailable-service behavior without requiring a live
   server.
-- Live MySQL tests should be opt-in and container-friendly. See
-  [MySQL Capability Migration](mysql-capability-migration.md).
+- Live MySQL tests should be opt-in and container-friendly. The MySQL plugin
+  now lives in its own external repository (`voidb-plugin-mysql`); its fixture
+  smoke scripts remain in this repository under `scripts/`.
 
 ### PostgreSQL
 
@@ -168,9 +169,8 @@ cargo test -p voidb-core sql_contract
 git diff --check
 ```
 
-Optional live smoke is documented in
-[MySQL Capability Migration](mysql-capability-migration.md) and must remain
-outside the default fast gate.
+Optional live smoke is documented in the external MySQL plugin repository and
+must remain outside the default fast gate.
 
 For PostgreSQL capability changes, run:
 

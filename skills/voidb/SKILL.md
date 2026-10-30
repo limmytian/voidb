@@ -13,20 +13,22 @@ Read the files that match the task:
 
 - `AGENTS.md` for current assistant rules and architecture summary.
 - `docs/architecture.md` for shell/core/plugin responsibilities.
-- `docs/plugin-development-guide.md` for plugin APIs, lifecycle, and registration patterns.
+- `docs/process-plugin-development-guide.md` for the process plugin contract, packaging, and certification.
 - `docs/service-layer-design.md` for service boundaries and anti-patterns.
 - `docs/ci-checks.md` for focused and full validation tiers.
 - `docs/assist-handoff.md` and `docs/live-operations-tui-safety.md` for
   external-agent context sharing, operation review, and live-input policy.
 - `docs/security.md`, `docs/master-password-ux.md`, and `docs/secret-brokering-redaction-policy.md` for credential or redaction work.
 
-Prefer actual code over stale docs when they differ. Check the current implementation in `crates/voidb-tui/src/app_v4.rs`, `crates/voidb-cli/src/main.rs`, and the touched plugin crate before assuming a factory, CLI command, or capability is wired.
+Prefer actual code over stale docs when they differ. Check the current implementation in `crates/voidb-tui/src/connection_manager_app/`, `crates/voidb-cli/src/`, and the touched plugin repository before assuming a CLI command or capability is wired.
 
 ## Architecture Rules
 
 - Keep `voidb-core` shared and driver-free. It owns traits, shared types, capabilities, profile/config/credential primitives, `ShellCapabilities`, and `SyncWorker`.
-- Keep the shell in `crates/voidb-tui/src/app_v4.rs` as a router: tab bar, tab lifecycle, global shortcuts, render/event forwarding, and tab requests only.
-- Keep plugin UI, focus, state machines, keybindings, errors, and data loading inside the owning plugin or built-in Connection Manager.
+- The only terminal application is the native Connection Manager in
+  `crates/voidb-tui/src/connection_manager_app/`; do not reintroduce embedded
+  plugin tabs or shell routing.
+- Keep plugin UI, focus, state machines, keybindings, errors, and data loading inside the owning plugin or the native Connection Manager.
 - Treat `ConnectionConfigRegistry` as config metadata. The Connection Manager writes it; plugins read profiles and own live handles through their services.
 - Never import database, cloud, mail, or infrastructure driver crates from TUI shell code. TUI code talks to plugin-owned services or capability surfaces.
 - For service modules, do not import `ratatui`, `crossterm`, `Frame`, `Rect`, or widget types.
@@ -82,10 +84,13 @@ Prefer actual code over stale docs when they differ. Check the current implement
 - Core crate: `crates/voidb-core`.
 - TUI binary: `crates/voidb-tui`, binary name `voidb`.
 - CLI binary: `crates/voidb-cli`, binary name `voidb-cli`.
-- External plugin crates: `crates/plugins/voidb-plugin-*`.
-- Built-in Connection Manager: `crates/voidb-tui/src/plugins/connection_manager.rs`.
-- Capability invocation registry: `crates/voidb-cli/src/builtin/invoke.rs`.
-- Plugin CLI registration: `crates/voidb-cli/src/main.rs`.
+- Process plugins: independent external repositories (`voidb-plugin-<name>`),
+  installed on explicit user choice and discovered at runtime. The only in-tree
+  plugin crate is `crates/plugins/voidb-plugin-sync`.
+- Native Connection Manager app: `crates/voidb-tui/src/connection_manager_app/`.
+- Capability invocation registry: `crates/voidb-cli/src/builtin/invoke/`.
+- Plugin management and CLI dispatch: `crates/voidb-cli/src/builtin/` (external
+  plugins are discovered at runtime, not registered in-tree).
 
 ## Validation
 

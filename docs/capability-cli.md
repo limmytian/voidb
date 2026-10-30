@@ -12,10 +12,12 @@ capability discovery, and generic capability invocation. It complements:
 - [Agent-Friendly Execution Controls](agent-friendly-execution-controls.md)
 
 The design contract below is broader than the current implementation. Runtime
-plugin discovery and focused stdio process-plugin invocation now exist, while
-long-lived process pooling, installation commands, marketplace behavior, and
-full credential brokering remain future work. The current MVP status is
-documented next.
+plugin discovery, focused stdio process-plugin invocation, and the managed
+plugin lifecycle (`voidb-cli plugin install`, `install-default`, `update`,
+`search`, `uninstall`, and the `registry` subcommands over the signed registry
+index) now exist. Long-lived process pooling, hosted marketplace behavior
+beyond the static registry index, and full credential brokering remain future
+work. The current MVP status is documented next.
 
 ## Current Built-In MVP
 

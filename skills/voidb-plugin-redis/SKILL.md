@@ -1,40 +1,29 @@
 ---
 name: voidb-plugin-redis
-description: Guide for the VoidB Redis plugin. Use when modifying crates/plugins/voidb-plugin-redis, redis.* capabilities, Redis CLI commands, RedisService, RedisAgentSessionFactory, redis_ops integration, first protocol pair behavior, or key/value mutation policy.
+description: Guide for the VoidB Redis plugin. Use when working on the external VoidB Redis plugin repository, redis.* capabilities, Redis CLI commands, RedisService, RedisAgentSessionFactory, redis_ops integration, first protocol pair behavior, or key/value mutation policy.
 ---
 
 # VoidB Redis Plugin
 
-## Start Here
+## Where It Lives
 
-Primary crate: `crates/plugins/voidb-plugin-redis`.
+The Redis plugin is a decoupled process plugin that lives in its own
+independent repository (`voidb-plugin-redis`), not in this repository. Install
+it with `voidb-cli plugin install-default` and run it through
+`voidb-cli redis ...` or the `redis.*` capabilities.
 
-Inspect:
+## What It Does
 
-- `src/config.rs` for `RedisConfig`.
-- `src/redis_ops.rs` for low-level Redis operations.
-- `src/service/` for `RedisService`, `RedisCommand`, and `RedisEvent`.
-- `src/capabilities.rs` for `redis.*` metadata and invocation.
-- `src/cli_plugin.rs` for `voidb-cli redis ...`.
-- `src/agent_session.rs` for persistent agent sessions.
-- `docs/duckdb-redis-release-readiness.md` for release-readiness decisions.
+Redis key-value capability plugin for VoidB: `redis.keys`, `redis.get`,
+`redis.set`, `redis.del`, `redis.ttl`, `redis.info`, and `redis.exec`
+capabilities backed by `RedisService`, plus `voidb-cli redis` domain commands
+(`keys`, `get`, `set`, `del`, `ttl`, `type`, `info`, `exec`) and persistent
+agent sessions. Destructive operations sit behind mutation and dry-run gates.
 
-## Boundaries
+## Development Guidance
 
-- Keep `redis` crate usage inside this plugin crate.
-- Prefer the service facade over calling `redis_ops` from UI or CLI dispatch code.
-- Preserve deterministic target-error behavior for unavailable Redis services; tests should not require a real Redis server unless using an explicit fixture smoke.
-- Keep destructive operations (`del`, write-like `exec`) behind policy metadata and dry-run/mutation gates where applicable.
-- Redis and SQLite are the first protocol pair for generic invoke behavior; coordinate changes with `voidb-cli invoke`.
+Current development guidance lives in this repository:
 
-## CLI And Capabilities
-
-- CLI commands: `keys`, `get`, `set`, `del`, `ttl`, `type`, `info`, `exec`.
-- Capabilities: `redis.keys`, `redis.get`, `redis.set`, `redis.del`, `redis.ttl`, `redis.info`, `redis.exec`.
-
-## Validation
-
-- Focused gate: `cargo test -p voidb-plugin-redis`.
-- Add `cargo test -p voidb-plugin-sqlite` and `cargo test -p voidb-cli invoke` for first-pair or generic invoke changes.
-- Fixture gate when feasible: `scripts/redis-fixture-smoke.sh`.
-- Always run `git diff --check`.
+- `docs/process-plugin-development-guide.md` for the service-layer and
+  tri-modal (`test` / `tui` / `serve`) plugin contract.
+- `templates/process-plugin-template/` for the plugin skeleton to start from.

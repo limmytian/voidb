@@ -11,7 +11,6 @@ It complements:
 - [Agent and TUI Aggregate Release Gate](agent-tui-release-gate.md)
 - [CI Check Tiers](ci-checks.md)
 - [Security Release Checklist](security-release-checklist.md)
-- [Plugin Maturity and Release Gates](plugin-roadmap.md)
 - Release Plugin Smoke
 - Release Sync Smoke
 - Legacy TUI Removal Boundary

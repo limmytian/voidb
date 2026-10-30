@@ -176,7 +176,12 @@ capability, and standalone-TUI launch guidance without owning a plugin runtime.
 ### Security
 - Connection credentials stored in `plugin_config` JSON field of `ConnectionConfig`
 - Encrypted at rest using AES-256-GCM via `crates/voidb-core/src/crypto.rs`
-- Key derivation: Argon2 from optional master password. Current TUI saves without prompting for a master password, so config encryption falls back to a compiled default passphrase; see [Security Notes](security.md).
+- Key derivation: Argon2id from the active key source: the user master password
+  when configured (`user_passphrase` mode), otherwise a random per-installation
+  secret stored in the OS keyring (with a `0600` file fallback next to the
+  config when no keyring backend exists). The retired compiled default
+  passphrase remains a decrypt-only fallback for very old configs; see
+  [Security Notes](security.md).
 - Config file: `~/.config/voidb/config.toml` with encrypted `plugin_config` blobs
 
 ### Clipboard

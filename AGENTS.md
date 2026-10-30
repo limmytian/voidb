@@ -46,7 +46,10 @@ and `cargo clippy --workspace --all-targets --no-deps`.
 
 ## Important Notes for AI Assistants
 
-1. **Plugin Isolation**: Plugins go in separate crates under `crates/plugins/`, never in `voidb-core`
+1. **Plugin Isolation**: Official plugins live in independent external
+   repositories (`voidb-plugin-<name>`), not in this workspace; the only
+   in-tree plugin is `voidb-plugin-sync` under `crates/plugins/`. Never add
+   plugins or database drivers to `voidb-core`
 2. **Security Critical**: Credential handling uses AES-256-GCM — extra care required
 3. **Testing**: Run the relevant fast checks from `docs/ci-checks.md` after
    focused changes; run full workspace test and clippy tiers for broad,
@@ -60,5 +63,5 @@ and `cargo clippy --workspace --all-targets --no-deps`.
 - [Tech stack](docs/tech-stack.md) — all dependencies, configuration files, build system
 - [Conventions](docs/conventions.md) — naming, code style, error handling, derive patterns, anti-patterns
 - [Service layer design](docs/service-layer-design.md) — design decisions, invariants, TUI/CLI patterns, anti-patterns
-- [Plugin development guide](docs/plugin-development-guide.md) — service layer cookbook
+- [Process plugin development guide](docs/process-plugin-development-guide.md) — SDK contract, packaging, certification
 - [Sync plugin + server](docs/sync-plugin.md) — E2E encrypted config sync (opt-in, client-side keys)

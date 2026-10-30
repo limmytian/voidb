@@ -1,39 +1,30 @@
 ---
 name: voidb-plugin-sqlite
-description: Guide for the VoidB SQLite plugin. Use when modifying crates/plugins/voidb-plugin-sqlite, sqlite.* capabilities, SQLite CLI commands, SqliteService, SqliteAgentSessionFactory, SyncWorker-backed local database access, or first protocol pair capability behavior.
+description: Guide for the VoidB SQLite plugin. Use when working on the external VoidB SQLite plugin repository, sqlite.* capabilities, SQLite CLI commands, SqliteService, SqliteAgentSessionFactory, SyncWorker-backed local database access, or first protocol pair capability behavior.
 ---
 
 # VoidB SQLite Plugin
 
-## Start Here
+## Where It Lives
 
-Primary crate: `crates/plugins/voidb-plugin-sqlite`.
+The SQLite plugin is a decoupled process plugin that lives in its own
+independent repository (`voidb-plugin-sqlite`), not in this repository. Install
+it with `voidb-cli plugin install-default` and run it through
+`voidb-cli sqlite ...` or the `sqlite.*` capabilities.
 
-Inspect:
+## What It Does
 
-- `src/config.rs` for `SqliteConfig`.
-- `src/service/` for `SqliteService`, `SqliteCommand`, `SqliteEvent`, schema, CRUD, paging, and conversion.
-- `src/capabilities.rs` for `sqlite.*` metadata and invocation.
-- `src/cli_plugin.rs` for `voidb-cli sqlite ...`.
-- `src/agent_session.rs` for persistent agent sessions.
-- `docs/service-layer-design.md` for the `SyncWorker` pattern.
+SQLite capability plugin for VoidB: local-database SQL `query`, `explain`,
+`exec`, `tables`, and `describe_table` capabilities backed by `SqliteService`,
+plus `voidb-cli sqlite` domain commands (`query`, `tables`, `describe`) and
+persistent agent sessions. SQLite and Redis form the first protocol pair for
+generic invoke behavior.
 
-## Boundaries
+## Development Guidance
 
-- `rusqlite::Connection` is `!Send`; keep it on the dedicated `SyncWorker` thread.
-- Do not call SQLite driver APIs from TUI shell or generic CLI code.
-- Preserve the shared SQL capability contract: `query`, `explain`, `exec`, `tables`, `describe_table`.
-- Keep file-path validation, target errors, mutation gates, pagination, and redaction deterministic.
-- SQLite and Redis form the first protocol pair for generic invoke behavior; changes often need both pair and CLI invoke checks.
+Current development guidance lives in this repository:
 
-## CLI And Capabilities
-
-- CLI commands: `query`, `tables`, `describe`.
-- Capabilities: `sqlite.query`, `sqlite.explain`, `sqlite.exec`, `sqlite.tables`, `sqlite.describe_table`.
-
-## Validation
-
-- Focused gate: `cargo test -p voidb-plugin-sqlite`.
-- Add `cargo test -p voidb-plugin-redis` and `cargo test -p voidb-cli invoke` for first-pair or generic invoke changes.
-- Add `cargo test -p voidb-core sql_contract` for SQL contract behavior.
-- Always run `git diff --check`.
+- `docs/process-plugin-development-guide.md` for the service-layer and
+  tri-modal (`test` / `tui` / `serve`) plugin contract.
+- `templates/process-plugin-template/` for the plugin skeleton to start from.
+- `docs/sql-capability-contract.md` for the shared SQL capability contract.

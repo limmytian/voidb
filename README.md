@@ -21,7 +21,7 @@ Replicating Navicat-class multi-protocol power in your terminal with Vim-style n
 - 🤖 **Secure Gateway for AI Agents** — Purpose-built CLI & broker architecture that lets AI agents (Cursor, Claude Code, Goose, Antigravity) query databases, inspect containers, and manage infrastructure without handing over raw passwords or permanent privileges.
 - 🛡️ **Defensive Security & JIT Authorization** — Master passwords and credentials stored in AES-256-GCM encrypted vaults; agents request 15-minute time-bounded, read-only or explicit JIT authorization with mandatory human review for destructive calls.
 - 🔌 **Unified Multi-Protocol Ecosystem** — One tool across relational databases (MySQL, PostgreSQL, SQLite, DuckDB), in-memory stores (Redis), document/search engines (MongoDB, Elasticsearch), DevOps infrastructure (SSH, Docker, Kubernetes), and storage/collaboration plugins (S3, WebDAV, Email, Jenkins).
-- 🚀 **100% Decoupled & Blazing Fast** — Clean, lightweight core with zero heavy C++ or driver bloat. All 14 plugins run as first-class, independent process plugins with identical standing under `voidb-cli`.
+- 🚀 **100% Decoupled & Blazing Fast** — Clean, lightweight core with zero heavy C++ or driver bloat. All 14 official protocol plugins run as first-class, independent process plugins with identical standing under `voidb-cli`; the Connection Manager is native, and only the optional Sync client plugin remains in this repository.
 
 ---
 
@@ -101,7 +101,8 @@ voidb
 voidb --connection-manager
 voidb-cli connections tui
 
-# Optional shell compatibility/development surface
+# Deprecated compatibility alias: --shell prints a warning and then
+# launches the native Connection Manager (the embedded shell was removed)
 voidb --shell
 
 # In VoidB:
@@ -109,6 +110,27 @@ voidb --shell
 # 2. Press Enter on a profile for CLI/capability guidance
 # 3. Use voidb-cli or voidb invoke for plugin operations
 ```
+
+`voidb-cli` itself ships only the built-in command groups (`audit`,
+`connections`, `context`, `credential`, `invoke`, `plugin`, `profile`, plus the
+feature-gated `sync`). Plugin domain commands such as `voidb-cli mysql query`
+require that plugin to be installed first, for example with
+`voidb-cli plugin install-default` or `voidb-cli plugin install <plugin>`.
+
+CLI ergonomics:
+
+- **Shorter aliases**: `conn` (connections), `cred` (credential), `profiles`
+  (profile), and `re-encrypt` (`credential master reencrypt`) are visible
+  aliases shown in `--help`.
+- **Shell completions**: generate a completion script for your shell, for
+  example `voidb-cli completions fish >
+  ~/.config/fish/completions/voidb-cli.fish` (also supports `bash`, `zsh`,
+  `powershell`, and `elvish`).
+- **Interactive unlock**: in a terminal, commands that need credential
+  decryption prompt once for the master password (echo disabled, prompt on
+  stderr) instead of requiring `VOIDB_MASTER_PASSWORD` up front. Agents and
+  scripts without a terminal stay fail-closed and must set
+  `VOIDB_MASTER_PASSWORD`.
 
 When creating a profile, enter `Connection type`, `Name`, then optional
 `Display name`. The name is the stable CLI reference and must be unique within
@@ -158,9 +180,10 @@ Press `?` in the app for the current keybinding reference.
 ## 📚 Documentation
 
 - **Plugin Developers**
-  - [Plugin Development Guide](docs/plugin-development-guide.md) ⭐ Start here for v4.1 architecture
+  - [Process Plugin Development and Certification Guide](docs/process-plugin-development-guide.md) ⭐ Start here for the current process-plugin architecture
+  - [Process Plugin SDK](docs/process-plugin-sdk.md) - Rust SDK primitives over the stable stdio-jsonrpc protocol
   - [Plugin-Owned TUI Development Guide](docs/plugin-owned-tui-development-guide.md) - Standalone TUI command, terminal lifecycle, tests, and release gates
-  - Example plugins in `examples/` and the process-plugin template in `templates/process-plugin-template/`
+  - Minimal protocol examples in `examples/process-plugins/` and the cargo-generate template in `templates/process-plugin-template/`
 
 - **Core Contributors**
   - [CHANGELOG.md](CHANGELOG.md) - Version history and breaking changes
@@ -172,7 +195,7 @@ Press `?` in the app for the current keybinding reference.
 
 - **Users**
   - Quick Start: See [Quick Start](#-quick-start) section above
-  - Keybindings: Press `:help` in the app
+  - Keybindings: Press `?` in the app
   - Native profiles: the platform config directory's `voidb/profiles.json`
   - Encrypted plugin configuration: `voidb/credentials.json`
 
@@ -184,42 +207,47 @@ VoidB's plugin system allows support for any protocol or data source:
 
 ### Official Plugins
 
-| Plugin | Protocol / Role | Workspace Status | Location |
-|--------|------------------|------------------|----------|
+All 14 official protocol plugins are developed and released in independent
+`voidb-plugin-<name>` repositories outside this workspace and are distributed as
+signed packages through the plugin registry (`registry/index.json`). Only the
+optional Sync client plugin remains in this repository.
+
+| Plugin | Protocol / Role | Status | Location |
+|--------|------------------|--------|----------|
 | Connection Manager | Native profile and credential configuration | Default standalone TUI | `crates/voidb-tui/src/connection_manager_app.rs` |
-| MySQL | MySQL/MariaDB | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-mysql` |
-| PostgreSQL | PostgreSQL | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-postgres` |
-| SQLite | SQLite | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-sqlite` |
-| Redis | Redis | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-redis` |
-| DuckDB | DuckDB | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-duckdb` |
-| SSH | SSH/SFTP | Service, CLI, and capability crate | `crates/plugins/voidb-plugin-ssh` |
-| Elasticsearch | Elasticsearch | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-elasticsearch](https://github.com/limmytian/voidb-plugin-elasticsearch) |
-| MongoDB | MongoDB | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-mongodb](https://github.com/limmytian/voidb-plugin-mongodb) |
-| Docker | Docker Engine | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-docker](https://github.com/limmytian/voidb-plugin-docker) |
-| Kubernetes | Kubernetes API | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-kubernetes](https://github.com/limmytian/voidb-plugin-kubernetes) |
-| S3 | S3-compatible object storage | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-s3](https://github.com/limmytian/voidb-plugin-s3) |
-| WebDAV | WebDAV storage | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-webdav](https://github.com/limmytian/voidb-plugin-webdav) |
-| Email | IMAP/POP3 + SMTP | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-email](https://github.com/limmytian/voidb-plugin-email) |
-| Jenkins | Jenkins CI | External process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-jenkins](https://github.com/limmytian/voidb-plugin-jenkins) |
-| Sync | Encrypted config sync client | CLI client/server library surface | `crates/plugins/voidb-plugin-sync` |
+| MySQL | MySQL/MariaDB | Official process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-mysql](https://github.com/limmytian/voidb-plugin-mysql) |
+| PostgreSQL | PostgreSQL | Official process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-postgres](https://github.com/limmytian/voidb-plugin-postgres) |
+| SQLite | SQLite | Official process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-sqlite](https://github.com/limmytian/voidb-plugin-sqlite) |
+| Redis | Redis | Official process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-redis](https://github.com/limmytian/voidb-plugin-redis) |
+| DuckDB | DuckDB | Official process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-duckdb](https://github.com/limmytian/voidb-plugin-duckdb) |
+| SSH | SSH/SFTP | Official process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-ssh](https://github.com/limmytian/voidb-plugin-ssh) |
+| Elasticsearch | Elasticsearch | Official process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-elasticsearch](https://github.com/limmytian/voidb-plugin-elasticsearch) |
+| MongoDB | MongoDB | Official process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-mongodb](https://github.com/limmytian/voidb-plugin-mongodb) |
+| Docker | Docker Engine | Official process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-docker](https://github.com/limmytian/voidb-plugin-docker) |
+| Kubernetes | Kubernetes API | Official process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-kubernetes](https://github.com/limmytian/voidb-plugin-kubernetes) |
+| S3 | S3-compatible object storage | Official process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-s3](https://github.com/limmytian/voidb-plugin-s3) |
+| WebDAV | WebDAV storage | Official process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-webdav](https://github.com/limmytian/voidb-plugin-webdav) |
+| Email | IMAP/POP3 + SMTP | Official process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-email](https://github.com/limmytian/voidb-plugin-email) |
+| Jenkins | Jenkins CI | Official process plugin (stdio-jsonrpc) | [limmytian/voidb-plugin-jenkins](https://github.com/limmytian/voidb-plugin-jenkins) |
+| Sync | Encrypted config sync client | In-repo CLI plugin (feature-gated) | `crates/plugins/voidb-plugin-sync` |
 
 ### Create Your Own Plugin
 
-See the [Plugin Development Guide](docs/plugin-development-guide.md) for
-service-layer and plugin structure rules. Future interactive terminal apps must
-use the
+See the [Process Plugin Development and Certification Guide](docs/process-plugin-development-guide.md)
+and the [Process Plugin SDK](docs/process-plugin-sdk.md) for the stdio-jsonrpc
+contract, packaging, and certification rules. Start new plugins from the
+cargo-generate template in `templates/process-plugin-template/`. Future
+interactive terminal apps must use the
 [Plugin-Owned TUI Development Guide](docs/plugin-owned-tui-development-guide.md).
 
-Example plugin structure:
+Template structure:
 ```
-crates/plugins/voidb-plugin-yourname/
+templates/process-plugin-template/
 ├── Cargo.toml
-├── src/
-│   ├── lib.rs          # Plugin factory
-│   └── plugin.rs       # Plugin implementation
+├── plugin.toml      # Plugin manifest: identity, capabilities, runtime transport
+└── src/
+    └── main.rs      # stdio-jsonrpc entrypoint
 ```
-
-Reference existing plugins in `crates/plugins/` for complete examples.
 
 ---
 
@@ -231,14 +259,15 @@ VoidB uses independent frontend boundaries over a shared capability core:
   credential unlock, schema-driven interactive forms, diagnostics, and
   capability guidance. Authentication choices dynamically reveal their fields;
   advanced JSON is available with `F2`.
-- **Optional VoidB Shell**: retained behind `voidb --shell` for compatibility and
-  development; it is not used by the native Connection Manager.
+- **Deprecated `--shell` alias**: the embedded shell was removed in v0.3.6.
+  `voidb --shell` is accepted only as a deprecated alias that prints a warning
+  and then launches the native Connection Manager.
 
 - **Plugins**: Fully autonomous applications that:
   - Own their full-screen UI rendering
   - Handle their own events
   - Manage their own state
-  - Use ShellCapabilities for tab/connection operations
+  - Run as separate processes communicating over stdio-jsonrpc
 
 - **Communication**: profile IDs and CLI/capability contracts connect the
   manager to plugin services. Plugin TUIs run only through their own CLI command.
@@ -262,14 +291,32 @@ VoidB uses independent frontend boundaries over a shared capability core:
 
 ### Example Plugins
 
-See these for complete examples of autonomous plugins:
-- `crates/plugins/voidb-plugin-mysql/src/table_plugin.rs` - MySQL legacy table viewer/editor
-- `crates/plugins/voidb-plugin-postgres/src/table_plugin.rs` - PostgreSQL legacy table viewer/editor
-- `crates/plugins/voidb-plugin-redis/src/cli_plugin.rs` - Redis standalone TUI and CLI registration
+The official plugins no longer live in this repository. Complete plugin sources
+are in their independent repositories (for example
+[limmytian/voidb-plugin-mysql](https://github.com/limmytian/voidb-plugin-mysql)
+and [limmytian/voidb-plugin-redis](https://github.com/limmytian/voidb-plugin-redis)).
+In-repo starting points:
 
-See [Plugin Development Guide](docs/plugin-development-guide.md) and
-[Plugin-Owned TUI Development Guide](docs/plugin-owned-tui-development-guide.md)
+- `templates/process-plugin-template/` - cargo-generate template for a new process plugin
+- `examples/process-plugins/` - minimal Go, Python, and Rust protocol examples
+- `crates/plugins/voidb-plugin-sync/` - the in-tree Sync client plugin
+
+See the [Process Plugin Development and Certification Guide](docs/process-plugin-development-guide.md)
+and the [Plugin-Owned TUI Development Guide](docs/plugin-owned-tui-development-guide.md)
 for full details.
+
+---
+
+## 🔄 Sync Server
+
+The optional Sync client plugin (`crates/plugins/voidb-plugin-sync`) pairs with
+a standalone backend shipped in this repository under
+[voidb-sync-server/](voidb-sync-server/). The server stores only opaque,
+end-to-end encrypted sync objects and password verifiers; plaintext
+configuration and credentials never leave the client. Deployment files include
+a Dockerfile and a Kubernetes manifest. See
+[voidb-sync-server/README.md](voidb-sync-server/README.md) for setup and
+configuration.
 
 ---
 
@@ -340,9 +387,8 @@ Unsigned development requires `VOIDB_PLUGIN_PATH` plus
 This opt-in permits arbitrary developer code and access to credentials deliberately
 provided to it. Offline managed packages still require authenticated provenance;
 `--verify-key` only adds an archive signature check and does not add a runtime
-trust root. See [the trust contract](docs/plugin-trust-v0.3.5.md) for migration,
-key rotation and the residual path-to-execution race. Replacing the trusted core
-or a privileged host remains outside this protection.
+trust root. Replacing the trusted core or a privileged host remains outside this
+protection.
 
 Candidate validation can select a registry with `VOIDB_PLUGIN_REGISTRY_URL` or
 `--registry-url`. This changes the download location only; it never changes the

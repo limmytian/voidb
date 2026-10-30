@@ -5,11 +5,15 @@ VoidB is a terminal-based database management tool with vim-style keybindings an
 ## Documentation
 
 - [Architecture](architecture.md) - Router architecture, plugin equality, CLI dispatch, and human/machine operational boundaries
+- [Connection Manager TUI](connection-manager-tui.md) - Native configuration surface for saved profiles, credential state, diagnostics, plugin metadata, and CLI guidance
 - [Conventions](conventions.md) - Development conventions, code style, error handling, and guidelines
+- [Service Layer Design](service-layer-design.md) - Service-layer decisions, invariants, and known pitfalls from the plugin decoupling milestone
+- [Technology Stack](tech-stack.md) - Languages, runtime, dependencies, and build tooling inventory
 - [5 分钟开发一个 VoidB 插件](quickstart-process-plugin.md) - 快速上手：编写基于 stdio-jsonrpc 的多语言独立进程插件
 - [Process Plugin Development and Certification Guide](process-plugin-development-guide.md) - Specification, cargo-generate template, packaging tooling, and certification checklist
-- [Plugin Development Guide](plugin-development-guide.md) - Comprehensive guide: architecture, traits, service-layer convention, patterns, checklist
-- [Security Notes](security.md) - Credential encryption behavior, default-passphrase risk, and recommended UX surface
+- [Process Plugin Package Management](process-plugin-package-management.md) - Local package inputs, installation layout, and lifecycle boundaries for process plugins
+- [Plugin Conformance And Certification](plugin-conformance.md) - Deterministic conformance checks and certification maturity levels for process plugins
+- [Security Notes](security.md) - Credential encryption key sources, per-installation secret, legacy-config warnings, and recommended UX surface
 - [Master Password UX and Credential Protection State](master-password-ux.md) - CLI/TUI setup, unlock, forget, recovery, and protection-state rules
 - [Agent Authorization Broker](agent-authorization-broker.md) - short-lived profile-scoped grants, automatic expiry, and revocation
 - [Agent Operator, Migration, and Troubleshooting Guide](agent-operator-guide.md) - copyable adoption, compatibility, authorization, session cleanup, staging-root, TUI threshold, error, upgrade, and rollback workflows
@@ -35,9 +39,12 @@ VoidB is a terminal-based database management tool with vim-style keybindings an
 - [Local Path Authorization Policy](local-path-authorization-policy.md) - Allowed-root grants, canonical path resolution, staging, no-overwrite, bounded scans, redaction, and audit rules for agent-triggered local filesystem access
 - [Audit and Structured Error Schema](audit-and-error-schema.md) - Invocation audit fields, stable error categories, timing metadata, and target-system failure reporting
 - [Sync Boundary Under The Capability Model](sync-boundary.md) - Rules for syncing profile metadata, credential references, encrypted credential state, and device-local sync data
+- [VoidB Sync Architecture](sync-plugin.md) - End-to-end encrypted, opt-in sync plugin and server architecture
 - [Object-Level Sync Model](object-level-sync-model.md) - Object IDs, versions, redacted manifests, and device enrollment/recovery boundaries for stable sync
 - [Governed Team Profile Sharing](team-profile-sharing.md) - Team-scoped profile collections, import restrictions, local credential re-enrollment, and opaque share metadata
 - [Plugin Manifest Schema](plugin-manifest-schema.md) - Process-plugin manifest fields for identity, runtime transport, connection schemas, capabilities, and optional TUI declaration
+- [Plugin Package Signing and Verification](plugin-package-signing.md) - Ed25519 signing and verification architecture for distribution plugin packages
+- [Plugin Registry Index and Metadata Specification](plugin-registry-index-specification.md) - Schema, generation, and validation for the official plugin registry index
 - [Plugin Invocation Transport](plugin-invocation-transport.md) - First stdio JSON-RPC message contract for invocation, streaming, cancellation, timeout, health checks, and structured errors
 - [Runtime Plugin Discovery](runtime-plugin-discovery.md) - Installed plugin search paths, manifest validation, on-demand process startup, crash handling, and version compatibility
 - [Process Plugin SDK](process-plugin-sdk.md) - Rust SDK primitives, local example packages, and non-Rust SDK feasibility for external process plugins
@@ -45,8 +52,10 @@ VoidB is a terminal-based database management tool with vim-style keybindings an
 - [External Process Plugin Workflow](external-plugin-workflow.md) - End-to-end author flow for building, installing, testing, certifying, and invoking external process plugins
 - [Future Plugin Installation Model](plugin-installation-model.md) - Local package installation, manifest ownership, version compatibility, update, disable, and uninstall boundaries
 - [Migration Compatibility Notes](migration-compatibility-notes.md) - Compatibility risks for existing configs, TUI users, built-in plugin factories, and service direct mode
+- [Profile Migration](profile-migration.md) - Explicit, non-destructive migration from legacy `ConnectionConfig` entries to capability-first profile records
 - [Shared SQL Capability Contract](sql-capability-contract.md) - Canonical SQL query, exec, result, pagination, target-error, and metadata shapes for SQL plugins
 - [SQL Plugin Migration Guide](sql-plugin-migration-guide.md) - Steps and checks for moving SQLite, MySQL, PostgreSQL, and DuckDB onto the shared SQL contract
+- [SQL Agent Parity Matrix](sql-agent-parity.md) - Canonical Agent parity comparison for the PostgreSQL, MySQL, SQLite, and DuckDB surfaces
 - [SSH Plugin](ssh-plugin.md) - SSH terminal, SFTP, forwarding, agent capability surface, fixture smoke, and release gate
 - [Agent Capability Examples](agent-capability-examples.md) - Concrete schema discovery, invocation, structured error, and repeated runtime instance examples for agents
 - [TUI Workflow Classification](tui-workflow-classification.md) - Classification of which plugin workflows should retain TUI support versus move to CLI-first capabilities
@@ -55,13 +64,15 @@ VoidB is a terminal-based database management tool with vim-style keybindings an
 - [Plugin-Owned TUI Development Guide](plugin-owned-tui-development-guide.md) - Cookbook for building standalone plugin TUIs with CLI commands, service-layer usage, terminal lifecycle, tests, and release gates
 - [Plugin-Owned TUI Launch Contract](plugin-owned-tui-launch-contract.md) - Command shape, profile/credential handoff, terminal lifecycle, exit-code, and dependency rules for standalone plugin TUIs
 - [Standalone TUI UX Acceptance Criteria](standalone-tui-ux-acceptance.md) - Measurable startup, input, accessibility, safety, error recovery, and evidence gates for retained plugin TUIs
+- [TUI Interaction Performance Contract](tui-interaction-performance.md) - Real-PTY interaction performance targets for the Connection Manager and retained plugin TUIs
+- [TUI CI And Real-Terminal Coverage](tui-terminal-coverage.md) - Automated real-PTY CI gate plus manual real-terminal coverage matrix
 - [Plugin-Owned TUI UX Briefs](plugin-owned-tui-ux-briefs.md) - Per-plugin target users, workflows, keyboard models, safety states, non-goals, and promotion evidence for retained standalone TUIs
 - [Live Operations TUI Safety](live-operations-tui-safety.md) - Docker, Kubernetes, and Jenkins stream bounds, cancellation, exec/attach escapes, watch throttling, confirmations, and audit summaries
 - [Storage TUI Launch And Rollback](storage-tui-launch-and-rollback.md) - S3 and WebDAV standalone TUI commands, fixture evidence, unsupported terminals, rollback behavior, and CLI/capability equivalents
+- [Storage TUI UX Decisions](storage-tui-ux-decisions.md) - Requirement 80 design and safety decisions for plugin-owned S3 and WebDAV standalone browsers
 - [Data Inspector CLI-First Decisions](data-inspector-cli-first-decisions.md) - MySQL, PostgreSQL, SQLite, DuckDB, Redis, MongoDB, and Elasticsearch CLI-first evidence, Requirement 83 no-pilot decisions, and standalone TUI rebuild gates
 - [Readiness Documentation Map](readiness.md) - Canonical current documentation and historical evidence boundaries
 - [Agent Capability and Experience Matrix](agent-capability-matrix.md) - Generated built-in Agent and plugin experience inventory
-- [Plugin Maturity and Release Gates](plugin-roadmap.md) - Historical Req46-Req83 planning inventory
 - [Changelog](../CHANGELOG.md) - Version history
 
 ## Language Policy

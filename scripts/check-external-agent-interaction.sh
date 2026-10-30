@@ -45,7 +45,6 @@ fi
 active_docs=(
   docs/README.md
   docs/architecture.md
-  docs/plugin-development-guide.md
   docs/ssh-plugin.md
   docs/storage-tui-launch-and-rollback.md
   docs/email-tui.md

@@ -340,9 +340,7 @@ frontends after the protocol and CLI are stable.
 - Convert them to expose capability metadata and invocation handlers.
 - Validate direct CLI usage, agent usage, and audit logging.
 
-The selected first migration pair is SQLite plus Redis. The comparison and
-follow-up order are documented in
-[First Protocol Plugin Migration Pair](first-protocol-plugin-migration.md).
+The selected first migration pair is SQLite plus Redis.
 
 ### Phase 5: Runtime Plugin Loading
 

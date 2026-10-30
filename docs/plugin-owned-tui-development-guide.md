@@ -6,7 +6,7 @@ has already proven the workflow.
 
 It complements:
 
-- [Plugin Development Guide](plugin-development-guide.md) for service-layer
+- [Service Layer Design](service-layer-design.md) for service-layer
   conventions;
 - [ADR: Plugin-Owned CLI-Launched TUI Apps](adr-plugin-owned-cli-launched-tui.md);
 - [Plugin-Owned TUI Launch Contract](plugin-owned-tui-launch-contract.md);

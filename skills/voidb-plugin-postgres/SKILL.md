@@ -1,40 +1,30 @@
 ---
 name: voidb-plugin-postgres
-description: Guide for the VoidB PostgreSQL plugin. Use when modifying crates/plugins/voidb-plugin-postgres, postgres.* capabilities, PostgreSQL CLI commands, PostgresService, PostgresAgentSessionFactory, schema/table introspection, or SQL contract behavior with legacy postgresql profile compatibility.
+description: Guide for the VoidB PostgreSQL plugin. Use when working on the external VoidB PostgreSQL plugin repository, postgres.* capabilities, PostgreSQL CLI commands, PostgresService, PostgresAgentSessionFactory, schema/table introspection, or SQL contract behavior with legacy postgresql profile compatibility.
 ---
 
 # VoidB PostgreSQL Plugin
 
-## Start Here
+## Where It Lives
 
-Primary crate: `crates/plugins/voidb-plugin-postgres`.
+The PostgreSQL plugin is a decoupled process plugin that lives in its own
+independent repository (`voidb-plugin-postgres`), not in this repository.
+Install it with `voidb-cli plugin install-default` and run it through
+`voidb-cli postgres ...` or the `postgres.*` capabilities.
 
-Inspect:
+## What It Does
 
-- `src/lib.rs` for `PostgresPlugin`, adapter exports, and public re-exports.
-- `src/config.rs` for `PostgresConfig` and compatibility fields.
-- `src/service/` for `PostgresService`, channel/direct modes, schema, CRUD, paging, and value conversion.
-- `src/capabilities.rs` for `postgres.*` capability metadata and invocation.
-- `src/cli_plugin.rs` for `voidb-cli postgres ...` commands.
-- `src/agent_session.rs` for persistent agent sessions.
+PostgreSQL capability plugin for VoidB: SQL `query`, `explain`, `exec`,
+`tables`, and `describe_table` capabilities backed by `PostgresService` with
+schema-aware introspection, plus `voidb-cli postgres` domain commands
+(`query`, `databases`, `tables`, `describe`) and persistent agent sessions.
+Native descriptor protocols: `postgres`, `postgresql`.
 
-## Boundaries
+## Development Guidance
 
-- Keep `tokio-postgres`, TLS, and driver-specific types inside the plugin crate.
-- Preserve legacy protocol/profile compatibility for `postgresql` while current CLI/capability namespace is `postgres`.
-- Preserve the shared SQL capability contract: `query`, `explain`, `exec`, `tables`, `describe_table`.
-- Keep schema handling explicit. PostgreSQL table listing and describe paths usually need schema context.
-- Keep redaction, target errors, mutation gates, and dry-run behavior aligned with the SQL contract.
+Current development guidance lives in this repository:
 
-## CLI And Capabilities
-
-- CLI commands: `query`, `databases`, `tables`, `describe`.
-- Capabilities: `postgres.query`, `postgres.explain`, `postgres.exec`, `postgres.tables`, `postgres.describe_table`.
-- Native descriptor protocols: `postgres`, `postgresql`.
-
-## Validation
-
-- Focused gate: `cargo test -p voidb-plugin-postgres capabilities`.
-- Add `cargo test -p voidb-cli invoke` and `cargo test -p voidb-core sql_contract` for capability or contract changes.
-- Use `scripts/postgres-session-fixture-smoke.sh` when persistent session behavior or live fixture evidence changes.
-- Always run `git diff --check`.
+- `docs/process-plugin-development-guide.md` for the service-layer and
+  tri-modal (`test` / `tui` / `serve`) plugin contract.
+- `templates/process-plugin-template/` for the plugin skeleton to start from.
+- `docs/sql-capability-contract.md` for the shared SQL capability contract.

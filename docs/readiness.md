@@ -9,7 +9,7 @@ readiness, release, Agent, or TUI claim.
 | Area | Canonical source | Ownership |
 |---|---|---|
 | Architecture | [Architecture](architecture.md) and [Service Layer Design](service-layer-design.md) | Shell, Core, plugin, service, and live-handle boundaries. |
-| Plugin development | [Plugin Development Guide](plugin-development-guide.md) | Current plugin APIs, capability metadata, service modes, and validation patterns. |
+| Plugin development | [Process Plugin Development Guide](process-plugin-development-guide.md) | Process plugin contract, packaging, certification, and validation patterns. |
 | Agent capability inventory | [Agent Capability and Experience Matrix](agent-capability-matrix.md) | Generated built-in capability list, risk, mode, timeout, streaming, cancellation, sessions, standalone TUIs, context handoff, validation, and known limits. |
 | Agent interaction | [External-Agent Interaction Contract](assist-handoff.md) | Human-TUI context sharing, operation review, principal binding, replay, redaction, and ownership policy. |
 | Agent operations | [Agent Operator, Migration, and Troubleshooting Guide](agent-operator-guide.md) | Adoption, JSON compatibility, execution-mode migration, authorization presets, session cleanup, local staging, common errors, upgrade, and rollback. |
@@ -40,8 +40,6 @@ The following documents are evidence, not current product contracts:
   handoff, or readiness snapshot;
 - All-Plugin RC Readiness Matrix, which is
   the Req52 planning snapshot from 2026-07-05;
-- [Plugin Maturity and Release Gates](plugin-roadmap.md), whose detailed
-  inventory records the earlier Req46-Req83 planning program;
 - Cloud Operations Promotion Report
   and other requirement-specific promotion reports.
 

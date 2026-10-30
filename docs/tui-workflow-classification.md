@@ -8,8 +8,6 @@ It belongs to Requirement 05 and builds on:
 
 - [Capability-First CLI Architecture ADR](adr-capability-first-cli-architecture.md)
 - [Capability Discovery and Invocation CLI Contract](capability-cli.md)
-- [First Protocol Plugin Migration Pair](first-protocol-plugin-migration.md)
-- [Plugin Maturity and Release Gates](plugin-roadmap.md)
 - [TUI Adapter Boundary](tui-adapter-boundary.md)
 - Database TUI Downscoping Plan
 

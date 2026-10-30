@@ -7,8 +7,9 @@ and a Connection Manager setup/unlock/re-encrypt entry point.
 
 ## Goals
 
-- Replace silent default-passphrase saves with an explicit user-controlled master
-  password path.
+- Replace the retired compiled default passphrase with explicit key sources:
+  a user-controlled master password when configured, and a per-installation
+  secret (OS keyring, `0600` file fallback) otherwise.
 - Keep legacy configs readable until users choose to migrate or re-encrypt them.
 - Never persist plaintext master passwords or print decrypted credential
   material.
@@ -30,7 +31,7 @@ Modes are:
 
 | Mode | Meaning |
 | --- | --- |
-| `default_passphrase` | Credential material is protected only by VoidB's compiled fallback passphrase. This requires re-encryption before warnings can disappear. |
+| `default_passphrase` | Credential material is not protected by a user master password. Legacy configs in this mode were encrypted with the retired compiled default passphrase; current saves without a master password are encrypted with the per-installation secret (OS keyring, with a `0600` file fallback next to the config). This mode requires re-encryption before warnings can disappear. |
 | `user_passphrase` | Credential material was encrypted with a user-provided master password. |
 | `migrated` | The store contains migrated metadata or credential references, not plaintext credential material. |
 | `unknown` | VoidB cannot safely determine protection state, usually because a file cannot be parsed or decrypted. |
@@ -97,17 +98,22 @@ should behave as follows:
    for a follow-up; the current setup path is `reencrypt`.
 2. `voidb credential master reencrypt`
    Requires the current or newly confirmed master password, decrypts existing
-   default-passphrase credential blobs, writes them with the user passphrase, and
+   credential blobs (per-installation secret or legacy default passphrase),
+   writes them with the user passphrase, and
    leaves the original file untouched if any item fails. The implemented command
    is:
 
    ```bash
-   voidb-cli credential master reencrypt --new-password-env VOIDB_MASTER_PASSWORD --yes
+   voidb-cli credential master reencrypt --yes
    ```
 
-   Omit `--new-password-env` for an interactive hidden prompt. Add
-   `--current-password-env <VAR>` only when re-encrypting from an existing
-   user-passphrase config. Use `--dry-run` to inspect counts without writing.
+   In an interactive terminal the CLI prompts for the current master password
+   (echo disabled; the prompt goes to stderr so piped stdout stays parseable
+   JSON), then for the new password twice. Non-interactive sessions (agents,
+   scripts, CI) stay fail-closed: supply the current password with
+   `VOIDB_MASTER_PASSWORD` or `--current-password-env <VAR>`, and optionally
+   the new one with `--new-password-env <VAR>`. Use `--dry-run` to inspect
+   counts without writing. `re-encrypt` is a visible alias.
 3. `voidb credential master unlock`
    Prompts for the master password and unlocks only the current process. For
    short-lived CLI invocations this usually means the same command immediately
@@ -118,7 +124,9 @@ should behave as follows:
    CLI commands it should be a harmless no-op with a redacted status response.
 5. Commands that need credentials while locked must fail with a master-password
    required error instead of falling back to the default passphrase for new
-   writes.
+   writes. In an interactive terminal the CLI prompts for the master password
+   first (TTY-gated interactive unlock); the required-error path is reserved
+   for non-interactive sessions where prompting is impossible.
 6. Agent workflows should use a short-lived broker grant instead of exporting
    `VOIDB_MASTER_PASSWORD` into an agent process.
 
@@ -127,9 +135,10 @@ It must not report connection names, hosts, decrypted `plugin_config`, password
 checks, or passphrase-derived key material.
 
 After re-encryption, `AppConfig::save()` refuses to write user-passphrase config
-unless the process has `VOIDB_MASTER_PASSWORD` set. Legacy configs without
-master-password metadata remain readable and writable through the default
-passphrase path for backward compatibility.
+unless the process has `VOIDB_MASTER_PASSWORD` set. Configs without
+master-password metadata remain readable and writable without a user password:
+reads try the per-installation secret first, then the retired compiled default
+passphrase as a decrypt-only fallback for very old envelopes.
 
 ## TUI Flow
 

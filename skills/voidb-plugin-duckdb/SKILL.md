@@ -1,39 +1,29 @@
 ---
 name: voidb-plugin-duckdb
-description: Guide for the VoidB DuckDB plugin. Use when modifying crates/plugins/voidb-plugin-duckdb, duckdb.* capabilities, DuckDB CLI import/export/extensions, DuckDbService, DuckDbAgentSessionFactory, or SyncWorker-backed DuckDB table loading and SQL contract behavior.
+description: Guide for the VoidB DuckDB plugin. Use when working on the external VoidB DuckDB plugin repository, duckdb.* capabilities, DuckDB CLI import/export/extensions, DuckDbService, DuckDbAgentSessionFactory, or SyncWorker-backed DuckDB table loading and SQL contract behavior.
 ---
 
 # VoidB DuckDB Plugin
 
-## Start Here
+## Where It Lives
 
-Primary crate: `crates/plugins/voidb-plugin-duckdb`.
+The DuckDB plugin is a decoupled process plugin that lives in its own
+independent repository (`voidb-plugin-duckdb`), not in this repository. Install
+it with `voidb-cli plugin install-default` and run it through
+`voidb-cli duckdb ...` or the `duckdb.*` capabilities.
 
-Inspect:
+## What It Does
 
-- `src/config.rs` for `DuckDbConfig`.
-- `src/service/` for `DuckDbService`, `DuckDbCommand`, `DuckDbEvent`, schema, CRUD, data loading, and value conversion.
-- `src/capabilities.rs` for `duckdb.*` metadata and invocation.
-- `src/cli_plugin.rs` for query, import/export, extension, and test commands.
-- `src/agent_session.rs` for persistent agent sessions.
-- `docs/duckdb-redis-release-readiness.md` for release-readiness decisions.
+DuckDB analytics capability plugin for VoidB: SQL `query`, `explain`, `exec`,
+`tables`, and `describe_table` capabilities backed by `DuckDbService`, plus
+`voidb-cli duckdb` domain commands for query, import/export, extensions, and
+tests, and persistent agent sessions.
 
-## Boundaries
+## Development Guidance
 
-- DuckDB connections are `!Send`; keep live connections inside `SyncWorker`.
-- Expect slow clean builds because `libduckdb-sys` compiles native code.
-- Preserve the shared SQL capability contract: `query`, `explain`, `exec`, `tables`, `describe_table`.
-- Keep import/export/extension behavior explicit in CLI/service code, not hidden inside shell routing.
-- Keep pagination, mutation gates, target errors, and redaction consistent with other SQL plugins.
+Current development guidance lives in this repository:
 
-## CLI And Capabilities
-
-- CLI commands: `query`, `tables`, `describe`, `schemas`, `import`, `export`, `extensions`, `install-ext`, `test`.
-- Capabilities: `duckdb.query`, `duckdb.explain`, `duckdb.exec`, `duckdb.tables`, `duckdb.describe_table`.
-
-## Validation
-
-- Focused gate: `cargo test -p voidb-plugin-duckdb`.
-- Add `cargo test -p voidb-cli invoke` and `cargo test -p voidb-core sql_contract` for capability or SQL contract changes.
-- Add `cargo test -p voidb-plugin-redis` and `cargo test -p voidb-cli duckdb_and_redis_release_readiness_catalog` for DuckDB/Redis release-readiness decisions.
-- Always run `git diff --check`.
+- `docs/process-plugin-development-guide.md` for the service-layer and
+  tri-modal (`test` / `tui` / `serve`) plugin contract.
+- `templates/process-plugin-template/` for the plugin skeleton to start from.
+- `docs/sql-capability-contract.md` for the shared SQL capability contract.

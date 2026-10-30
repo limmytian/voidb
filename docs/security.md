@@ -7,17 +7,27 @@ master password is used.
 ## Credential Storage
 
 - Connection credentials are serialized into `ConnectionConfig.plugin_config`.
-- `AppConfig::save_with_password(Some(...))` encrypts those blobs with
-  AES-256-GCM and an Argon2id-derived key from the supplied master password.
-- The Connection Manager can now set, unlock, and re-encrypt with a user
-  master password from the TUI. Until the user completes that flow, legacy
-  saves can still use the compiled default passphrase in
-  `crates/voidb-core/src/crypto.rs`.
+- Blobs are encrypted with AES-256-GCM and an Argon2id-derived key. The key
+  source is resolved in `crates/voidb-core/src/crypto.rs`:
+  1. **User master password** — when a master password is configured
+     (`user_passphrase` mode), it is the sole key source. Protected saves and
+     loads require the password in-process (`VOIDB_MASTER_PASSWORD` or the
+     Connection Manager prompt).
+  2. **Per-installation secret** — when no master password is configured, VoidB
+     generates a random per-installation secret on first use and stores it in
+     the OS keyring (service `voidb`, account `config-install-key`). When no
+     usable keyring backend exists (headless machines, CI), a `0600`
+     `install-key` file next to the config is used instead.
+  3. **Legacy decrypt-only fallback** — the compiled default passphrase was
+     retired in v0.3.6 and is never used for new encryption. Very old envelopes
+     created by earlier versions remain readable through a decrypt-only
+     migration fallback.
 
-The default passphrase prevents casual plaintext reading of config files, but it
-is not strong protection against anyone who has access to the source code,
-binary, or this documentation. Treat credentials saved without a master password
-as weakly protected.
+The per-installation secret is machine-bound, not user-controlled: anyone who
+can read the keyring entry (or the fallback file) as the same OS user, or who
+can copy both the config and that key, can decrypt the config. A user master
+password remains the recommended protection for credentials that must survive
+machine compromise or configuration copying.
 
 ## File Permissions
 
@@ -32,16 +42,18 @@ strong credential encryption.
 The Connection Manager surfaces the master-password warning because that is
 where users create and edit credentials. The current flow is:
 
-1. Show a concise, count-based warning when saved credential material is still
-   protected by the default passphrase.
+1. Show a concise, count-based warning when saved credential material is not
+   protected by a user master password (`default_passphrase` mode: legacy
+   default-passphrase blobs, or configs relying on the per-installation
+   secret).
 2. Offer a master-password prompt with the `m` key.
 3. Re-encrypt existing connection configs with the user-provided master password.
 4. Avoid storing the master password; keep it in process memory only after entry.
 5. Prompt to unlock when the config is protected but the TUI session is locked.
 
-Documentation and release notes should still avoid claiming that default
-credential storage is strong security for users who have not completed
-re-encryption.
+Documentation and release notes should avoid claiming that
+per-installation-key storage is strong security against local compromise;
+only user-passphrase protection is.
 
 The detailed setup, unlock, forget, recovery, and state-transition rules are in
 [Master Password UX and Credential Protection State](master-password-ux.md).
@@ -52,10 +64,12 @@ for the current process.
 
 The profile CLI emits a machine-readable
 `security.default_passphrase_credential_risk` warning when saved profile
-configuration contains credential-shaped fields that are still protected only by
-the default passphrase path. The warning reports counts and plugin IDs only; it
+configuration contains credential-shaped fields that are not protected by a
+user master password (`default_passphrase` mode). The warning reports counts
+and plugin IDs only; it
 must not expose connection names, hosts, passwords, tokens, or decrypted
-`plugin_config`. The TUI warning is even narrower and shows counts only.
+`plugin_config`. The TUI header instead shows `DEFAULT KEY` for this state and
+the TUI warning is even narrower and shows counts only.
 
 ## Capability-First Boundary
 
