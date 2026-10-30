@@ -1,6 +1,6 @@
 [package]
 name = "voidb-tui"
-version = "0.3.6"
+version = "0.3.7"
 edition = "2024"
 license.workspace = true
 
@@ -14,10 +14,6 @@ path = "src/lib.rs"
 [[bin]]
 name = "voidb"
 path = "src/main.rs"
-
-[[example]]
-name = "test_channel_flow"
-path = "../../examples/test_channel_flow.rs"
 
 [dependencies]
 voidb-core = { path = "../voidb-core" }
