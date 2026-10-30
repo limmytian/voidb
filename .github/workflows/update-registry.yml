@@ -48,6 +48,11 @@ jobs:
       - name: Cache Cargo Dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libdbus-1-dev pkg-config
+
       - name: Download Verified Published Plugin Archives
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
