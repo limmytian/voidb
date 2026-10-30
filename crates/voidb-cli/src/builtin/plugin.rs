@@ -12,6 +12,7 @@ use serde::Serialize;
 use serde_json::{Value, json};
 use voidb_core::capability::{CapabilityErrorCategory, RedactionStatus};
 use voidb_core::plugin::cli::{CliContext, CliPlugin};
+use crate::builtin::json_output::print_json;
 use voidb_core::{
     DEFAULT_OFFICIAL_REGISTRY_URL, PluginCategory, PluginRegistryIndex, ProcessPluginCandidate,
     ProcessPluginCandidateState, ProcessPluginDiagnostic, ProcessPluginDiscovery,
@@ -2755,12 +2756,6 @@ fn print_plugin_error(error: PluginError) -> Result<(), VoidbError> {
     })
 }
 
-fn print_json(value: &impl Serialize) -> Result<(), VoidbError> {
-    let output = serde_json::to_string_pretty(value)
-        .map_err(|e| VoidbError::Plugin(format!("Failed to serialize JSON output: {}", e)))?;
-    println!("{}", output);
-    Ok(())
-}
 
 #[derive(Debug, Clone, Copy)]
 struct PluginListOptions {

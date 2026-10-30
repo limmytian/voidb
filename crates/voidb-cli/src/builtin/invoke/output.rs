@@ -12,6 +12,7 @@ use voidb_core::capability::{
 
 use super::INVOKE_CLI_SCHEMA_VERSION;
 use super::execution::InvokeRunData;
+use crate::builtin::json_output::print_json;
 
 pub(super) fn capability_error(
     category: CapabilityErrorCategory,
@@ -58,12 +59,6 @@ pub(super) fn success_envelope<T: Serialize>(data: T) -> JsonSuccessEnvelope<T> 
     }
 }
 
-pub(super) fn print_json(value: &impl Serialize) -> Result<(), VoidbError> {
-    let output = serde_json::to_string_pretty(value)
-        .map_err(|e| VoidbError::Plugin(format!("Failed to serialize JSON output: {}", e)))?;
-    println!("{}", output);
-    Ok(())
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum InvokeOutputFormat {

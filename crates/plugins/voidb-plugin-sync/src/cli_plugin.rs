@@ -184,10 +184,21 @@ impl CliPlugin for SyncCliPlugin {
     }
 }
 
+/// Fetch a required clap argument value.
+///
+/// Absence indicates a command-definition bug (the argument is declared
+/// `required(true)` or carries a default), which is reported as a validation
+/// error instead of a panic, per docs/conventions.md.
+fn required_arg<'a>(matches: &'a ArgMatches, id: &str) -> Result<&'a String, VoidbError> {
+    matches
+        .get_one::<String>(id)
+        .ok_or_else(|| VoidbError::Plugin(format!("missing required argument: {id}")))
+}
+
 impl SyncCliPlugin {
     async fn cmd_login(&self, matches: &ArgMatches) -> Result<(), VoidbError> {
-        let server = matches.get_one::<String>("server").unwrap().clone();
-        let email = matches.get_one::<String>("email").unwrap().clone();
+        let server = required_arg(matches, "server")?.clone();
+        let email = required_arg(matches, "email")?.clone();
         let device = matches
             .get_one::<String>("device")
             .cloned()
@@ -223,8 +234,8 @@ impl SyncCliPlugin {
     }
 
     async fn cmd_recover(&self, matches: &ArgMatches) -> Result<(), VoidbError> {
-        let server = matches.get_one::<String>("server").unwrap().clone();
-        let email = matches.get_one::<String>("email").unwrap().clone();
+        let server = required_arg(matches, "server")?.clone();
+        let email = required_arg(matches, "email")?.clone();
         let device = matches
             .get_one::<String>("device")
             .cloned()
@@ -282,7 +293,7 @@ impl SyncCliPlugin {
     }
 
     async fn cmd_push(&self, matches: &ArgMatches) -> Result<(), VoidbError> {
-        let kind = matches.get_one::<String>("kind").unwrap().clone();
+        let kind = required_arg(matches, "kind")?.clone();
         let session = self.login_session().await?;
         let cfg =
             SyncConfig::load().map_err(|e| VoidbError::Plugin(format!("load config: {e}")))?;
@@ -308,7 +319,7 @@ impl SyncCliPlugin {
     }
 
     async fn cmd_pull(&self, matches: &ArgMatches) -> Result<(), VoidbError> {
-        let kind = matches.get_one::<String>("kind").unwrap().clone();
+        let kind = required_arg(matches, "kind")?.clone();
         let session = self.login_session().await?;
         let cfg =
             SyncConfig::load().map_err(|e| VoidbError::Plugin(format!("load config: {e}")))?;

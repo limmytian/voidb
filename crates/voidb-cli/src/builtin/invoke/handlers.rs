@@ -19,6 +19,7 @@ use super::audit::{
     append_credential_grant_success_audit, append_invoke_error_audit, append_invoke_success_audit,
 };
 use super::discovery::supported_capabilities;
+use crate::builtin::json_output::print_json;
 use super::execution::{
     InvokeRunOptions, ParsedInvokeRunOptions, next_invocation_id, preview_effective_timeout_ms,
     resolve_capability, run_invocation_with_id,
@@ -26,7 +27,7 @@ use super::execution::{
 use super::output::{
     CapabilitySummary, InvokeCatalogOutputFormat, InvokeDescribeData, InvokeListData,
     InvokeOutputFormat, JsonErrorEnvelope, NdjsonEmitter, capability_description_table,
-    capability_error, capability_list_table, exit_code_for_error, print_json, print_run_error,
+    capability_error, capability_list_table, exit_code_for_error, print_run_error,
     print_run_success, run_output_format, success_envelope,
 };
 use super::{

@@ -8,6 +8,7 @@ use clap::{Arg, ArgMatches, Command};
 use serde::Serialize;
 use serde_json::Value;
 use voidb_core::plugin::cli::{CliContext, CliPlugin};
+use crate::builtin::json_output::print_json;
 use voidb_core::{
     ActorType, AuditEvent, AuditQuery, AuditQueryPage, AuditQueryResult, AuditSourceFile,
     CapabilityErrorCategory, LocalAuditStore, PolicyDecisionOutcome, RedactionStatus, VoidbError,
@@ -415,12 +416,6 @@ fn success_envelope<T: Serialize>(data: T) -> JsonSuccessEnvelope<T> {
     }
 }
 
-fn print_json(value: &impl Serialize) -> Result<(), VoidbError> {
-    let output = serde_json::to_string_pretty(value)
-        .map_err(|e| VoidbError::Plugin(format!("Failed to serialize JSON output: {}", e)))?;
-    println!("{}", output);
-    Ok(())
-}
 
 #[derive(Debug, Serialize)]
 struct JsonSuccessEnvelope<T> {

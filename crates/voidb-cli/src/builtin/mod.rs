@@ -5,5 +5,6 @@ pub mod connections;
 pub mod context;
 pub mod credential;
 pub mod invoke;
+pub(crate) mod json_output;
 pub mod plugin;
 pub mod profile;

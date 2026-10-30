@@ -2,9 +2,9 @@
 
 use std::time::Duration;
 
+use crate::builtin::json_output::print_json;
 use async_trait::async_trait;
 use clap::{Arg, ArgMatches, Command};
-use serde::Serialize;
 use voidb_core::plugin::cli::{CliContext, CliPlugin};
 use voidb_core::{
     AGENT_CONTEXT_CLIENT_ID_ENV, AGENT_CONTEXT_INSTANCE_ID_ENV, AGENT_CONTEXT_TASK_ID_ENV,
@@ -426,13 +426,6 @@ fn print_protocol_error(
     Err(VoidbError::CliExit { code })
 }
 
-fn print_json(value: &impl Serialize) -> Result<(), VoidbError> {
-    let output = serde_json::to_string_pretty(value).map_err(|error| {
-        VoidbError::Plugin(format!("Failed to serialize context output: {error}"))
-    })?;
-    println!("{output}");
-    Ok(())
-}
 
 #[cfg(test)]
 mod tests {
