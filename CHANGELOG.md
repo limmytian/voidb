@@ -5,6 +5,23 @@ All notable changes to VoidB will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.7] - 2026-10-30
+
+### Fixed
+- Invite-only sync-server registration now succeeds with a valid invite token: the token is stamped after the user row is inserted, instead of always failing the `used_by` foreign key with a 500.
+
+### Added
+- `voidb-cli completions <shell>` generates shell completion scripts (bash, zsh, fish, powershell, elvish).
+- Visible CLI aliases for faster typing: `conn` (connections), `cred` (credential), `profiles` (profile), and `re-encrypt` (`credential master reencrypt`).
+- TTY-gated interactive master-password unlock: in a terminal, commands that need credential decryption prompt once (echo disabled, prompt on stderr) instead of requiring `VOIDB_MASTER_PASSWORD`; non-interactive sessions stay fail-closed.
+- `VOIDB_DISABLE_KEYRING` opt-out skips the OS keyring for the per-installation secret and uses the 0600 file fallback, so tests and headless runs never trigger keychain authorization prompts.
+- `voidb-core::atomic_file::write_private_atomic` centralizes the temp-file + fsync + rename persistence pattern shared by the plugin install record, external context records, and JIT grant files (JIT writes now also clean up their temporary file on failure); covered by new unit tests.
+
+### Changed
+- Documentation aligned with the v0.3.6 architecture: README no longer points at in-tree plugin crates or the removed embedded shell, security docs describe the per-installation keyring secret, the docs index lists all current documents, `skills/` references current paths and external plugin repositories, and `config.example.toml` matches the profile-based configuration model.
+- CI runs the sync-server test suite, wires the filesystem-boundary, external-agent-interaction, data-search conformance, package smoke, and Docker fixture checks, and adds a weekly scheduled full-tier run; registry update no longer hardcodes archive counts or stale version fallbacks.
+- Non-test `unwrap` cleanups: capability-matrix rendering discards the infallible `writeln!` results explicitly, sync CLI argument access reports a validation error instead of panicking, and the six duplicated `print_json` helpers collapse into one shared module.
+
 ## [0.3.6] - 2026-10-29
 
 ### Security
@@ -20,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove the legacy embedded shell; the native Connection Manager is the only terminal app and the deprecated `--shell` flag launches it.
 - Decompose `agent_broker.rs` (9.9k lines), `builtin/invoke.rs` and `connection_manager_app.rs` into focused directory modules with byte-identical behavior.
 - Agent-facing waits gained async variants so long operation reviews no longer park the tokio executor; the Connection Manager backs off its background poll to 800 ms when idle.
-- The documented error model now describes the per-domain error-enum convention; docs refreshed to the v4.1 architecture and release evidence archived under `docs/releases/`.
+- The documented error model now describes the per-domain error-enum convention; docs refreshed to the v4.1 architecture.
 
 ### Removed
 - Dead database-driver declarations from the root manifest and unused `vt100`/`tar` dependencies from core.
@@ -171,7 +188,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **UI Widgets** (in voidb-core/widgets/)
   - Reusable tree, grid, editor components
   - Shared across plugins
-- Documentation: `docs/plugin-development-guide.md` with v4.0 guide
+- Documentation: v4.0 plugin development guide
 
 ### Removed
 
@@ -206,7 +223,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **For Plugin Developers**:
 
-Old plugins using the Component trait must be migrated to the new Plugin trait. See [docs/plugin-development-guide.md](docs/plugin-development-guide.md) for complete v4.0 migration guide.
+Old plugins using the Component trait must be migrated to the new Plugin trait. See the plugin development documentation for the complete v4.0 migration guide.
 
 **Key Changes**:
 - Replace `Component` trait with `Plugin` trait
