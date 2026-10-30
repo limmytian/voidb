@@ -1,5 +1,6 @@
 pub mod agent_authorization;
 pub mod assist;
+pub mod atomic_file;
 pub mod audit;
 pub mod autocomplete;
 pub mod capability;

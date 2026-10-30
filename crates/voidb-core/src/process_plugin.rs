@@ -8,7 +8,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fs::{self, File};
-use std::io::{self, Read, Write};
+use std::io::{self, Read};
 use std::path::{Component, Path, PathBuf};
 
 use chrono::{DateTime, Utc};
@@ -603,29 +603,9 @@ pub fn write_process_plugin_install_record(
             json!({ "message": error.to_string() }),
         )
     })?;
-    let temporary = path.with_extension(format!("tmp-{}", uuid::Uuid::new_v4()));
-    let result = (|| -> io::Result<()> {
-        let mut options = fs::OpenOptions::new();
-        options.write(true).create_new(true);
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::OpenOptionsExt;
-            options.mode(0o600);
-        }
-        let mut file = options.open(&temporary)?;
-        file.write_all(content.as_bytes())?;
-        file.sync_all()?;
-        fs::rename(&temporary, &path)?;
-        Ok(())
-    })();
-    if let Err(error) = result {
-        let _ = fs::remove_file(&temporary);
-        return Err(ProcessPluginPackageValidationError::io(
-            "atomically write install record",
-            &path,
-            error,
-        ));
-    }
+    crate::atomic_file::write_private_atomic(&path, content.as_bytes()).map_err(|error| {
+        ProcessPluginPackageValidationError::io("atomically write install record", &path, error)
+    })?;
     Ok(path)
 }
 

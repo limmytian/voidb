@@ -917,18 +917,8 @@ fn write_private_json<T: Serialize>(
     path: &Path,
     value: &T,
 ) -> Result<(), JitAuthorizationStoreError> {
-    let temporary = path.with_extension(format!("tmp-{}", Uuid::new_v4()));
     let content = serde_json::to_vec_pretty(value)?;
-    let mut options = OpenOptions::new();
-    options.create_new(true).write(true);
-    #[cfg(unix)]
-    options.mode(0o600);
-    let mut file = options.open(&temporary)?;
-    file.write_all(&content)?;
-    file.sync_all()?;
-    #[cfg(unix)]
-    fs::set_permissions(&temporary, fs::Permissions::from_mode(0o600))?;
-    fs::rename(&temporary, path)?;
+    voidb_core::atomic_file::write_private_atomic(path, &content)?;
     Ok(())
 }
 

@@ -6,17 +6,16 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, File};
-use std::io::{Read, Write};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::{Duration as StdDuration, Instant};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 #[cfg(unix)]
-use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+use std::os::unix::fs::PermissionsExt;
 
 use crate::agent_authorization::AgentPrincipal;
 use crate::assist::{
@@ -1232,26 +1231,7 @@ fn write_protocol_record(
         "{}.json",
         safe_assist_request_filename(&record.request.id)
     ));
-    let temporary = source.root.join(format!(
-        ".{}.{}.tmp",
-        safe_assist_request_filename(&record.request.id),
-        Uuid::new_v4()
-    ));
-    let result = (|| -> std::io::Result<()> {
-        let mut options = fs::OpenOptions::new();
-        options.write(true).create_new(true);
-        #[cfg(unix)]
-        options.mode(0o600);
-        let mut file = options.open(&temporary)?;
-        file.write_all(&bytes)?;
-        file.sync_data()?;
-        drop(file);
-        fs::rename(&temporary, path)
-    })();
-    if result.is_err() {
-        let _ = fs::remove_file(&temporary);
-    }
-    result.map_err(|_| {
+    crate::atomic_file::write_private_atomic(&path, &bytes).map_err(|_| {
         AgentContextProtocolError::new(
             AgentContextErrorCode::StoreUnavailable,
             "cannot persist the updated context record",

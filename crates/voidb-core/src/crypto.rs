@@ -122,6 +122,12 @@ fn installation_passphrase() -> Result<Zeroizing<String>, VoidbError> {
 /// Returns `Ok(None)` when no keyring backend is available so the caller can
 /// fall back to the file-based secret.
 fn install_passphrase_from_keyring() -> Result<Option<Zeroizing<String>>, VoidbError> {
+    // Explicit opt-out for test runs and sandboxed/headless environments:
+    // skip the OS keyring entirely so repeated invocations never trigger
+    // keychain access authorization, and use the file fallback instead.
+    if std::env::var_os("VOIDB_DISABLE_KEYRING").is_some_and(|v| !v.is_empty()) {
+        return Ok(None);
+    }
     let entry = match keyring::Entry::new(KEYRING_SERVICE, KEYRING_INSTALL_KEY_ACCOUNT) {
         Ok(entry) => entry,
         Err(_) => return Ok(None),
