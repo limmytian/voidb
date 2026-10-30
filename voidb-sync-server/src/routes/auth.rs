@@ -153,6 +153,10 @@ async fn register(
         let mut conn = state.db.get()?;
         let tx = conn.transaction()?;
 
+        // Deferred invite stamping: the token is marked used only after the
+        // user row exists (see the UPDATE below the users INSERT).
+        let mut invite_update: Option<(String, String, [u8; 32])> = None;
+
         if registration == RegistrationPolicy::InviteOnly {
             let Some(raw) = invite_token.as_ref().map(|s| s.trim()) else {
                 return Err(ApiError::Forbidden("invite token required".into()));
@@ -175,10 +179,8 @@ async fn register(
             if available == 0 {
                 return Err(ApiError::Forbidden("invalid or used invite token".into()));
             }
-            tx.execute(
-                "UPDATE invite_tokens SET used_at = ?1, used_by = ?2 WHERE token_hash = ?3",
-                params![now, user_id_for_db, &hash[..]],
-            )?;
+            let invite_hash_for_db = hash;
+            invite_update = Some((now.clone(), user_id_for_db.clone(), invite_hash_for_db));
         }
 
         let email_exists: i64 = tx.query_row(
@@ -223,6 +225,16 @@ async fn register(
                 now
             ],
         )?;
+
+        // Stamp the invite token only after the user row exists: the FK on
+        // `invite_tokens.used_by` resolves against `users.id`, and pooled
+        // connections run with `PRAGMA foreign_keys = ON`.
+        if let Some((stamp_now, stamp_user, stamp_hash)) = invite_update {
+            tx.execute(
+                "UPDATE invite_tokens SET used_at = ?1, used_by = ?2 WHERE token_hash = ?3",
+                params![stamp_now, stamp_user, &stamp_hash[..]],
+            )?;
+        }
 
         tx.execute(
             "INSERT INTO devices (id, user_id, name, token_hash, created_at, last_seen_at)
