@@ -24,11 +24,13 @@ def main():
     parser.add_argument('--legacy-cli', type=Path, required=True)
     parser.add_argument('--legacy-tui', type=Path, required=True)
     parser.add_argument('--report', type=Path, required=True)
+    parser.add_argument('--version', default='0.3.6', help='Release version under test')
+    parser.add_argument('--legacy-version', default='0.3.5', help='Previously installed version for the upgrade mode')
     parser.add_argument('--public-release', action='store_true', help='Fetch actual public GitHub core assets without transport routing')
     args = parser.parse_args()
     artifacts = args.artifacts.resolve()
     legacy_cli, legacy_tui = args.legacy_cli.resolve(), args.legacy_tui.resolve()
-    assert subprocess.check_output([str(legacy_cli), '--version'], text=True).strip() == 'voidb 0.3.4'
+    assert subprocess.check_output([str(legacy_cli), '--version'], text=True).strip() == f'voidb {args.legacy_version}'
     installer = Path(__file__).with_name('install.sh').resolve()
     report = {'transport': 'actual public GitHub Release and checksum HTTPS download' if args.public_release else 'actual curl and HTTP; only candidate GitHub download URLs routed to loopback',
               'installer': str(installer), 'checks': []}
@@ -36,7 +38,7 @@ def main():
         root = Path(temporary)
         served = root / 'served'
         served.mkdir()
-        archives = sorted(artifacts.glob('voidb-0.3.5-*.tar.gz'))
+        archives = sorted(artifacts.glob(f'voidb-{args.version}-*.tar.gz'))
         assert len(archives) == 4
         sums = ''
         for archive in archives:
@@ -49,7 +51,7 @@ def main():
         try:
             shim = root / 'shim'
             shim.mkdir()
-            prefix = 'https://github.com/limmytian/voidb/releases/download/v0.3.5/'
+            prefix = f'https://github.com/limmytian/voidb/releases/download/v{args.version}/'
             base = f'http://127.0.0.1:{server.server_address[1]}/'
             # Route transport only; the production installer and fetched payloads remain unchanged.
             (shim / 'curl').write_text(
@@ -59,7 +61,7 @@ def main():
                 'urls=[a for a in args if a.startswith("https://") or a.startswith("http://")]\n'
                 'assert len(urls)==1 and urls[0].startswith(prefix), "Unexpected installer request"\n'
                 'name=urls[0][len(prefix):]\n'
-                'assert "/" not in name and (name=="SHA256SUMS" or name.startswith("voidb-0.3.5-"))\n'
+                f'assert "/" not in name and (name=="SHA256SUMS" or name.startswith("voidb-{args.version}-"))\n'
                 'args=[base+name if a==urls[0] else a for a in args]\n'
                 'os.execv("/usr/bin/curl",["curl",*args])\n'
             )
@@ -77,7 +79,7 @@ def main():
                     (dest / 'voidb-cli').chmod(0o755)
                     (dest / 'voidb').chmod(0o755)
                 env = dict(os.environ, HOME=str(home), XDG_DATA_HOME=str(home / '.local/share'),
-                           XDG_CONFIG_HOME=str(home / '.config'), INSTALL_DIR=str(dest), VOIDB_VERSION='0.3.5',
+                           XDG_CONFIG_HOME=str(home / '.config'), INSTALL_DIR=str(dest), VOIDB_VERSION=args.version,
                            PATH=os.environ['PATH'] if args.public_release else str(shim) + os.pathsep + os.environ['PATH'])
                 for key in ['VOIDB_PLUGIN_PATH', 'VOIDB_BUNDLED_PLUGIN_ROOT', 'VOIDB_ALLOW_UNSIGNED_PLUGINS',
                             'VOIDB_MASTER_PASSWORD', 'VOIDB_PLUGIN_REGISTRY_URL']:
@@ -85,7 +87,7 @@ def main():
                 result = subprocess.run(['bash', str(installer)], env=env, capture_output=True, text=True, timeout=60)
                 assert result.returncode == 0, result.stderr
                 assert sorted(p.name for p in dest.iterdir()) == ['voidb', 'voidb-cli']
-                assert subprocess.check_output([str(dest / 'voidb-cli'), '--version'], env=env, text=True).strip() == 'voidb 0.3.5'
+                assert subprocess.check_output([str(dest / 'voidb-cli'), '--version'], env=env, text=True).strip() == f'voidb {args.version}'
                 plugins = subprocess.check_output([str(dest / 'voidb-cli'), 'plugin', 'list', '--format', 'json'], env=env, text=True)
                 assert json.loads(plugins)['data']['plugins'] == []
                 assert sentinel.read_bytes() == b'synthetic preserved user state'
@@ -102,7 +104,7 @@ def main():
             server.server_close()
     report['status'] = 'passed'
     args.report.write_text(json.dumps(report, indent=2) + '\n')
-    print('Core public clean install and v0.3.4 upgrade passed' if args.public_release else 'Core clean install, v0.3.4 upgrade and checksum rejection passed with actual CI assets')
+    print(f'Core public clean install and v{args.legacy_version} upgrade passed' if args.public_release else f'Core clean install, v{args.legacy_version} upgrade and checksum rejection passed with actual CI assets')
 
 
 if __name__ == '__main__':
