@@ -10,7 +10,7 @@ on:
         required: false
         default: ""
       version:
-        description: "Optional plugin version"
+        description: "Plugin release version to index (e.g. v0.3.5); required — there is no fallback default"
         required: false
         default: ""
 
@@ -29,6 +29,19 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Resolve Release Version
+        id: version
+        env:
+          REQUESTED_VERSION: ${{ inputs.version || github.event.client_payload.release || '' }}
+        run: |
+          version="${REQUESTED_VERSION}"
+          if [ -z "${version}" ]; then
+            echo "::error::No plugin release version provided. Pass the workflow_dispatch 'version' input or send repository_dispatch with client_payload.release. The former hardcoded 'v0.3.4' fallback was removed."
+            exit 1
+          fi
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+        shell: bash
+
       - name: Install Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
 
@@ -38,13 +51,23 @@ jobs:
       - name: Download Verified Published Plugin Archives
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_VERSION: ${{ inputs.version || github.event.client_payload.release || 'v0.3.4' }}
-        run: python3 scripts/download-release-plugins.py --all --version "$RELEASE_VERSION" --output target/registry-release
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: python3 scripts/download-release-plugins.py --all --version "${RELEASE_VERSION}" --output target/registry-release
 
       - name: Rebuild Registry From Published Archives
         run: |
           mapfile -t archives < <(find target/registry-release/.downloads -name '*.tar.gz' | sort)
-          test "${#archives[@]}" -eq 56
+          # Derive the expected archive count from the downloader itself
+          # (ALL plugins x TARGETS, 14 x 4 = 56 today) instead of a hardcoded
+          # magic number, so adding a plugin or target updates the
+          # expectation automatically. The download step above already fails
+          # if any expected archive is missing; this guards against staging
+          # drift (renamed or nested files).
+          expected="$(python3 -c "import importlib.util; spec=importlib.util.spec_from_file_location('download_release_plugins', 'scripts/download-release-plugins.py'); module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module); print(len(module.ALL) * len(module.TARGETS))")"
+          if [ "${#archives[@]}" -ne "${expected}" ]; then
+            echo "::error::Downloaded ${#archives[@]} plugin archives, expected ${expected} (ALL plugins x TARGETS in scripts/download-release-plugins.py)."
+            exit 1
+          fi
           cargo run -p voidb-cli -- plugin registry-index "${archives[@]}" --output registry/index.json --registry-name 'VoidB Official Plugin Registry' --format json
         shell: bash
 

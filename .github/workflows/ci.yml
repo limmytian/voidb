@@ -5,6 +5,12 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  schedule:
+    # Weekly full validation pass on the default branch. This realizes the
+    # "nightly" trigger from the docs/ci-checks.md "Suggested CI Layout"
+    # full-tier rows; the heavy gates below (data-search conformance,
+    # package smoke) additionally use it as their scheduled trigger.
+    - cron: '17 3 * * 1'
 
 env:
   CARGO_TERM_COLOR: always
@@ -96,3 +102,158 @@ jobs:
         run: cargo test -p voidb-core --lib plugin_signing
       - name: Test Process Plugin Cross-Platform Packaging and Gate
         run: cargo test -p voidb-cli package_sign_verify
+
+  sync-server-tests:
+    # voidb-sync-server is a standalone workspace excluded from the main
+    # Cargo workspace (own Cargo.lock), so its tests never run in the jobs
+    # above. This realizes the docs/ci-checks.md "Sync server" tier:
+    #   cargo test --manifest-path voidb-sync-server/Cargo.toml
+    # The tests are secret-free and need no services: they exercise an
+    # in-process HTTP server backed by a tempdir (see
+    # voidb-sync-server/README.md).
+    name: Sync Server Tests (Standalone Workspace)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: voidb-sync-server
+      - name: Tests (voidb-sync-server)
+        run: cargo test --manifest-path voidb-sync-server/Cargo.toml --no-fail-fast
+
+  boundary-conformance:
+    # Local filesystem boundary + external-agent interaction gates from
+    # docs/ci-checks.md ("Local filesystem boundary" and "External-agent
+    # interaction" tiers). Both scripts verify the capability-only plugin
+    # contract against the sibling voidb-plugin-<name> checkouts the
+    # architecture expects (the scripts resolve plugins relative to the
+    # repository parent directory), so each plugin repository is cloned and
+    # symlinked into place. The checkouts track each plugin's default
+    # branch; pin them to tags if upstream drift ever becomes a problem.
+    name: External-Agent Boundary Conformance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: limmytian/voidb-plugin-ssh
+          path: voidb-plugin-ssh
+      - uses: actions/checkout@v4
+        with:
+          repository: limmytian/voidb-plugin-mysql
+          path: voidb-plugin-mysql
+      - uses: actions/checkout@v4
+        with:
+          repository: limmytian/voidb-plugin-postgres
+          path: voidb-plugin-postgres
+      - uses: actions/checkout@v4
+        with:
+          repository: limmytian/voidb-plugin-sqlite
+          path: voidb-plugin-sqlite
+      - uses: actions/checkout@v4
+        with:
+          repository: limmytian/voidb-plugin-duckdb
+          path: voidb-plugin-duckdb
+      - uses: actions/checkout@v4
+        with:
+          repository: limmytian/voidb-plugin-mongodb
+          path: voidb-plugin-mongodb
+      - uses: actions/checkout@v4
+        with:
+          repository: limmytian/voidb-plugin-redis
+          path: voidb-plugin-redis
+      - uses: actions/checkout@v4
+        with:
+          repository: limmytian/voidb-plugin-elasticsearch
+          path: voidb-plugin-elasticsearch
+      - name: Expose Plugin Checkouts as Siblings
+        run: |
+          for plugin in ssh mysql postgres sqlite duckdb mongodb redis elasticsearch; do
+            ln -s "${GITHUB_WORKSPACE}/voidb-plugin-${plugin}" "${GITHUB_WORKSPACE}/../voidb-plugin-${plugin}"
+          done
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install System Dependencies
+        # ripgrep is used by the interaction scanner; install it explicitly
+        # instead of relying on the runner image.
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config ripgrep
+      - name: Local Filesystem Boundary Checks
+        run: bash scripts/check-local-filesystem-boundaries.sh
+      - name: External-Agent Interaction Checks
+        run: bash scripts/check-external-agent-interaction.sh
+
+  data-search-conformance:
+    # Deterministic tier of the "Data And Search Live-Session Gate"
+    # (docs/ci-checks.md): snapshots the Redis/MongoDB/Elasticsearch
+    # live-session contracts and runs the full external voidb-plugin-redis
+    # suite. Compiling the external plugin suite is too heavy for every pull
+    # request, so this runs on pushes to main (the only configured push
+    # branch) and on the weekly schedule. The `--live` Docker tier stays a
+    # release-time, operator-run gate.
+    name: Data/Search Live-Session Conformance (Deterministic Tier)
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: limmytian/voidb-plugin-redis
+          path: voidb-plugin-redis
+      - name: Expose Plugin Checkout as Sibling
+        run: ln -s "${GITHUB_WORKSPACE}/voidb-plugin-redis" "${GITHUB_WORKSPACE}/../voidb-plugin-redis"
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install System Dependencies
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+      - name: Deterministic Live-Session Conformance
+        run: bash scripts/check-data-search-live-session-conformance.sh
+
+  package-smoke:
+    # "Package smoke" tier from the docs/ci-checks.md "Suggested CI Layout":
+    # stage the default TUI, CLI, and sync-server artifacts, then verify
+    # checksums, manifest consistency, executable bits, and the CLI and
+    # sync-server entry points. The release-profile build of all three
+    # binaries is too heavy for every pull request, so this runs on pushes
+    # to main and on the weekly schedule.
+    name: Release Package Smoke
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            voidb-sync-server
+      - name: Install System Dependencies
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+      - name: Stage Release Artifacts
+        run: bash scripts/stage-release-artifacts.sh --build
+      - name: Package Smoke
+        run: |
+          artifact_root="$(ls -d target/package/voidb-*)"
+          bash scripts/package-smoke.sh --artifact-root "${artifact_root}"
+
+  docker-fixture-probe:
+    # "Local Docker Fixture Helper" tier from docs/ci-checks.md: exercise
+    # the shared fixture lifecycle (network creation, random port
+    # assignment, health waiting, redacted log capture, evidence writing,
+    # teardown) with the lightweight probe fixture. Docker and outbound
+    # registry access are preinstalled on GitHub-hosted ubuntu runners; the
+    # probe only uses the public redis:7-alpine image, so no secrets are
+    # involved. --pull lets the harness fetch that image on the clean
+    # runner.
+    name: Docker Fixture Harness Probe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Probe Fixture Lifecycle
+        run: |
+          bash scripts/local-fixture-smoke.sh run \
+            --fixture probe \
+            --pull \
+            --report target/tmp/local-fixture-probe-evidence.md
+      - name: Whitespace Check
+        run: git diff --check

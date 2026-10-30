@@ -19,6 +19,10 @@ on:
         type: boolean
         required: false
         default: false
+      plugin_archive_version:
+        description: Optional plugin release version (e.g. v0.3.5) to download, re-sign with the official key, and verify; leave empty to skip plugin signing
+        required: false
+        default: ''
 
 env:
   RELEASE_VERSION: ${{ inputs.release_version || github.ref_name }}
@@ -101,6 +105,121 @@ jobs:
           path: |
             dist/*.tar.gz
             dist/*.zip
+
+  sign-plugin-archives:
+    # Optional signing stage for OFFICIAL PLUGIN release archives.
+    #
+    # scripts/sign-release-artifacts.py consumes plugin archives
+    # ({plugin-id}-{version}-{target}.tar.gz containing a plugin.toml
+    # manifest, for the four release targets). The core `voidb`/`voidb-cli`
+    # archives built by build-release above are NOT plugin payloads (no
+    # plugin.toml, plus an unsupported Windows target), so the signer cannot
+    # run over them and this job never runs automatically on tag pushes:
+    # core releases ship SHA256SUMS only.
+    #
+    # To exercise the official signing flow, dispatch this workflow with
+    # `plugin_archive_version` set to a published, signed plugin release
+    # version. The job then:
+    #   1. downloads every published archive for that version with
+    #      scripts/download-release-plugins.py, which already verifies each
+    #      plugin SHA256SUMS, the embedded provenance.json, and the detached
+    #      archive signature against the official public key baked into
+    #      scripts/sign-plugin-provenance.py; any mismatch fails the job;
+    #   2. re-signs each archive with scripts/sign-release-artifacts.py.
+    #      The signer hard-fails unless the provisioned private key matches
+    #      that baked-in official public key (key_id official-2026-10), and
+    #      repacks .tar/.tar.gz/.tar.zst with detached .sig files plus a
+    #      refreshed SHA256SUMS;
+    #   3. runs scripts/verify-plugin-provenance.py over the final repacked
+    #      archives as a post-signing gate; any verification failure fails
+    #      the job;
+    #   4. uploads the signed outputs as a workflow artifact for the
+    #      operator to attach to the plugin releases. Nothing is published
+    #      automatically.
+    #
+    # Provisioning the signing key: add a repository secret named
+    # VOIDB_PLUGIN_SIGNING_KEY_PEM holding the official Ed25519 private key
+    # PEM whose public half is compiled into
+    # scripts/sign-plugin-provenance.py (PUBLIC_KEY, key_id
+    # official-2026-10). Restrict the secret to trusted maintainers; the
+    # script writes it to a 0600 temp file and never echoes it. Without the
+    # secret the job is skipped entirely (dispatches without
+    # plugin_archive_version) or fails loudly (dispatches that request
+    # signing without a provisioned key).
+    name: Sign Plugin Release Archives (optional)
+    needs: build-release
+    if: github.event_name == 'workflow_dispatch' && inputs.plugin_archive_version != ''
+    runs-on: ubuntu-latest
+    env:
+      PLUGIN_VERSION: ${{ inputs.plugin_archive_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref || github.ref }}
+
+      - name: Require Signing Key Secret
+        env:
+          VOIDB_PLUGIN_SIGNING_KEY_PEM: ${{ secrets.VOIDB_PLUGIN_SIGNING_KEY_PEM }}
+        run: |
+          if [ -z "${VOIDB_PLUGIN_SIGNING_KEY_PEM}" ]; then
+            echo "::error::Signing was requested (plugin_archive_version=${PLUGIN_VERSION}) but the VOIDB_PLUGIN_SIGNING_KEY_PEM secret is not configured on this repository."
+            echo "::error::Provision the official Ed25519 private key PEM (matching the PUBLIC_KEY in scripts/sign-plugin-provenance.py) as the VOIDB_PLUGIN_SIGNING_KEY_PEM secret, then re-run."
+            exit 1
+          fi
+
+      - name: Install Signing Tools
+        run: sudo apt-get update && sudo apt-get install -y zstd
+
+      - name: Download Published Plugin Archives
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/download-release-plugins.py --all --version "${PLUGIN_VERSION#v}" --output target/plugin-signing/downloaded
+
+      - name: Stage Archives For Signing
+        run: |
+          mkdir -p target/plugin-signing/unsigned
+          find target/plugin-signing/downloaded/.downloads -name '*.tar.gz' -exec cp -p {} target/plugin-signing/unsigned/ \;
+          count="$(find target/plugin-signing/unsigned -name '*.tar.gz' | wc -l | tr -d ' ')"
+          echo "staged ${count} plugin archives for signing"
+
+      - name: Sign Plugin Archives
+        env:
+          VOIDB_PLUGIN_SIGNING_KEY_PEM: ${{ secrets.VOIDB_PLUGIN_SIGNING_KEY_PEM }}
+        run: |
+          version="${PLUGIN_VERSION#v}"
+          plugin_ids="$(python3 -c "import importlib.util; spec=importlib.util.spec_from_file_location('download_release_plugins', 'scripts/download-release-plugins.py'); module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module); print(' '.join(module.ALL))")"
+          for plugin in ${plugin_ids}; do
+            python3 scripts/sign-release-artifacts.py target/plugin-signing/unsigned \
+              --plugin-id "${plugin}" \
+              --version "${version}"
+          done
+
+      - name: Verify Signed Archives (post-signing gate)
+        run: |
+          version="${PLUGIN_VERSION#v}"
+          pairs="$(python3 -c "import importlib.util; spec=importlib.util.spec_from_file_location('download_release_plugins', 'scripts/download-release-plugins.py'); module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module); print(chr(10).join(f'{plugin} {target}' for plugin in module.ALL for target in module.TARGETS))")"
+          while read -r plugin target; do
+            [ -n "${plugin}" ] || continue
+            stage="$(mktemp -d)"
+            tar -xzf "target/plugin-signing/unsigned/${plugin}-${version}-${target}.tar.gz" -C "${stage}"
+            python3 scripts/verify-plugin-provenance.py "${stage}" \
+              --target "${target}" \
+              --plugin-id "${plugin}" \
+              --version "${version}"
+            rm -rf "${stage}"
+          done <<< "${pairs}"
+
+      - name: Upload Signed Plugin Archives
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-plugin-archives-${{ inputs.plugin_archive_version }}
+          path: |
+            target/plugin-signing/unsigned/*.tar
+            target/plugin-signing/unsigned/*.tar.gz
+            target/plugin-signing/unsigned/*.tar.zst
+            target/plugin-signing/unsigned/*.sig
+            target/plugin-signing/unsigned/SHA256SUMS
+          if-no-files-found: error
 
   publish-release:
     if: github.event_name == 'push' || inputs.publish_release == true
