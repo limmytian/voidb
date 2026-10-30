@@ -24,6 +24,10 @@ impl CliPlugin for ConnectionsCliPlugin {
         "connections"
     }
 
+    fn visible_aliases(&self) -> Vec<&'static str> {
+        vec!["conn"]
+    }
+
     fn name(&self) -> &str {
         "Connection Management"
     }

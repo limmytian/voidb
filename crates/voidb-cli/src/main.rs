@@ -66,8 +66,17 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    let app = build_cli_app(&cli_manager, &discovery);
-    let matches = app.get_matches();
+    let mut app = build_cli_app(&cli_manager, &discovery);
+    let matches = app.get_matches_mut();
+
+    // Shell completions never touch config or credentials.
+    if let Some(("completions", sub_matches)) = matches.subcommand() {
+        let shell = sub_matches
+            .get_one::<clap_complete::shells::Shell>("shell")
+            .expect("shell is required");
+        clap_complete::aot::generate(*shell, &mut app, "voidb-cli", &mut std::io::stdout());
+        return Ok(());
+    }
 
     // Broker children receive the password through an anonymous pipe, never
     // through argv, grant files, socket messages, or their environment.
@@ -139,6 +148,17 @@ fn build_cli_app(
         app = app.subcommand(cmd);
     }
 
+    app = app.subcommand(
+        Command::new("completions")
+            .about("Generate shell completion scripts for voidb-cli (bash, zsh, fish, ...)")
+            .arg(
+                clap::Arg::new("shell")
+                    .required(true)
+                    .value_parser(clap::value_parser!(clap_complete::shells::Shell))
+                    .help("Target shell, for example bash, zsh, or fish"),
+            ),
+    );
+
     // Add discovered external plugins as subcommands for transparent help & discovery
     for candidate in &discovery.candidates {
         if !candidate.is_effective_available() {
@@ -194,7 +214,9 @@ fn load_config_for_command_at_path(
 
     let password = match master_password_from_env()? {
         Some(password) => password,
-        None if command_allows_interactive_master_password(matches) => {
+        None if std::io::stdin().is_terminal()
+            && command_allows_interactive_master_password(matches) =>
+        {
             prompt_master_password_for_tui()?
         }
         None => return Err(master_password_required_error()),
@@ -220,7 +242,21 @@ fn master_password_from_env() -> Result<Option<String>, VoidbError> {
 }
 
 fn prompt_master_password_for_tui() -> Result<String, VoidbError> {
-    let password = rpassword::prompt_password("VoidB master password: ")
+    prompt_master_password("VoidB master password: ")
+}
+
+/// Prompt for a secret on stderr with terminal echo disabled.
+///
+/// The prompt goes to stderr so piped stdout stays machine-readable JSON.
+pub(crate) fn prompt_master_password(prompt: &str) -> Result<String, VoidbError> {
+    use std::io::Write;
+
+    let mut stderr = std::io::stderr();
+    stderr
+        .write_all(prompt.as_bytes())
+        .and_then(|()| stderr.flush())
+        .map_err(|error| VoidbError::Config(format!("read master password: {}", error)))?;
+    let password = rpassword::read_password()
         .map_err(|error| VoidbError::Config(format!("read master password: {}", error)))?;
     if password.is_empty() {
         return Err(VoidbError::Config(
@@ -232,27 +268,31 @@ fn prompt_master_password_for_tui() -> Result<String, VoidbError> {
 
 fn master_password_required_error() -> VoidbError {
     VoidbError::Config(format!(
-        "Master password required; set {} for this process",
+        "Master password required; set {} for this process, or run the command \
+         interactively in a terminal to unlock",
         VOIDB_MASTER_PASSWORD_ENV
     ))
 }
 
+/// Whether the selected command shape may prompt for the master password.
+///
+/// The TTY check lives at the call site: agents, scripts, and other
+/// non-interactive processes stay fail-closed, while human terminals may
+/// unlock once. Explicit machine-output requests and fixture runs never
+/// prompt so their stdout stays parseable.
 fn command_allows_interactive_master_password(matches: &ArgMatches) -> bool {
-    let Some((plugin_id, command, command_matches)) = selected_cli_command(matches) else {
+    let Some((_plugin_id, command, command_matches)) = selected_cli_command(matches) else {
         return false;
     };
 
-    if (plugin_id == "connections" && matches!(command, "test" | "show"))
-        || (plugin_id == "profile" && matches!(command, "test" | "show"))
+    if tui_machine_output_requested(command_matches) || tui_fixture_without_target(command_matches)
     {
-        return std::io::stdin().is_terminal();
+        return false;
     }
 
-    command == "tui"
-        && plugin_id != "connections"
-        && tui_target_requested(command_matches)
-        && !tui_machine_output_requested(command_matches)
-        && !tui_fixture_without_target(command_matches)
+    // An incomplete `tui` invocation may still fail plugin validation; avoid
+    // prompting before that check.
+    command != "tui" || tui_target_requested(command_matches)
 }
 
 fn command_can_use_raw_config(matches: &ArgMatches) -> bool {
@@ -607,11 +647,49 @@ mod tests {
     }
 
     #[test]
-    fn non_tui_commands_keep_non_interactive_master_password_policy() {
+    fn credential_needing_commands_allow_interactive_unlock_by_shape() {
         let matches = parse_cli(&["ssh", "test", "--connection", "prod"]);
 
-        assert!(!command_allows_interactive_master_password(&matches));
+        assert!(command_allows_interactive_master_password(&matches));
         assert!(!command_can_use_raw_config(&matches));
+    }
+
+    #[test]
+    fn explicit_machine_output_stays_non_interactive() {
+        let matches = parse_cli(&["ssh", "test", "--connection", "prod", "--format", "json"]);
+
+        assert!(!command_allows_interactive_master_password(&matches));
+    }
+
+    #[test]
+    fn cli_aliases_resolve_to_canonical_builtins() {
+        let credential = parse_cli(&["cred", "master", "reencrypt"]);
+        assert_eq!(
+            credential.subcommand().expect("subcommand").0,
+            "credential"
+        );
+
+        let connections = parse_cli(&["conn", "list"]);
+        assert_eq!(
+            connections.subcommand().expect("subcommand").0,
+            "connections"
+        );
+
+        let profile = parse_cli(&["profiles", "list"]);
+        assert_eq!(profile.subcommand().expect("subcommand").0, "profile");
+    }
+
+    #[test]
+    fn completions_command_requires_a_shell_argument() {
+        let cli_manager = build_cli_manager();
+        let discovery = voidb_core::process_plugin::discover_process_plugins();
+        let app = build_cli_app(&cli_manager, &discovery);
+        assert!(app
+            .try_get_matches_from(vec!["voidb", "completions"])
+            .is_err());
+
+        let matches = parse_cli(&["completions", "fish"]);
+        assert_eq!(matches.subcommand().expect("subcommand").0, "completions");
     }
 
     #[test]

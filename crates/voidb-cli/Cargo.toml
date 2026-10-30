@@ -1,6 +1,6 @@
 [package]
 name = "voidb-cli"
-version = "0.3.6"
+version = "0.3.7"
 edition = "2024"
 license.workspace = true
 authors.workspace = true
@@ -15,6 +15,7 @@ voidb-core = { path = "../voidb-core" }
 voidb-plugin-sync = { path = "../plugins/voidb-plugin-sync", optional = true }
 
 clap = { workspace = true }
+clap_complete = { workspace = true }
 async-trait = { workspace = true }
 chrono = { workspace = true }
 jsonschema = { workspace = true }

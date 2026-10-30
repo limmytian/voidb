@@ -21,6 +21,7 @@ use voidb_core::{
 };
 
 use crate::builtin::connections::test_connection_by_plugin;
+use crate::builtin::json_output::print_json;
 
 const SUPPORTED_LEGACY_PROFILE_PLUGINS: &[&str] = &[
     "mysql",
@@ -53,6 +54,10 @@ impl ProfileCliPlugin {
 impl CliPlugin for ProfileCliPlugin {
     fn plugin_id(&self) -> &str {
         "profile"
+    }
+
+    fn visible_aliases(&self) -> Vec<&'static str> {
+        vec!["profiles"]
     }
 
     fn name(&self) -> &str {
@@ -672,12 +677,6 @@ fn security_warnings_for_config(config: &AppConfig) -> Vec<ProfileWarning> {
     }]
 }
 
-fn print_json(value: &impl Serialize) -> Result<(), VoidbError> {
-    let output = serde_json::to_string_pretty(value)
-        .map_err(|e| VoidbError::Plugin(format!("Failed to serialize JSON output: {}", e)))?;
-    println!("{}", output);
-    Ok(())
-}
 
 #[derive(Debug, Serialize)]
 struct JsonSuccessEnvelope<T> {

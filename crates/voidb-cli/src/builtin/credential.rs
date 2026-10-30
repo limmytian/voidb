@@ -5,6 +5,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use serde::Serialize;
 use serde_json::json;
 use voidb_core::plugin::cli::{CliContext, CliPlugin};
+use crate::builtin::json_output::print_json;
 use voidb_core::{
     AppConfig, CapabilityErrorCategory, ConfigReencryptResult, CredentialProtectionMode,
     LocalProfileStore, MasterPasswordSessionState, VOIDB_MASTER_PASSWORD_ENV, VoidbError,
@@ -24,6 +25,10 @@ impl CliPlugin for CredentialCliPlugin {
         "credential"
     }
 
+    fn visible_aliases(&self) -> Vec<&'static str> {
+        vec!["cred"]
+    }
+
     fn name(&self) -> &str {
         "Credentials"
     }
@@ -36,6 +41,7 @@ impl CliPlugin for CredentialCliPlugin {
                 .arg_required_else_help(true)
                 .subcommand(
                     Command::new("reencrypt")
+                        .visible_alias("re-encrypt")
                         .about("Re-encrypt saved credential material with a master password")
                         .arg(format_arg())
                         .arg(
@@ -191,10 +197,10 @@ fn new_master_password(matches: &ArgMatches) -> Result<String, VoidbError> {
         return validate_new_master_password(password);
     }
 
-    let password = rpassword::prompt_password("New master password: ")
+    let password = crate::prompt_master_password("New master password: ")
         .map_err(|error| VoidbError::Plugin(format!("read master password: {}", error)))?;
     let confirmation =
-        rpassword::prompt_password("Confirm master password: ").map_err(|error| {
+        crate::prompt_master_password("Confirm master password: ").map_err(|error| {
             VoidbError::Plugin(format!("read master password confirmation: {}", error))
         })?;
 
@@ -263,13 +269,6 @@ fn success_envelope<T: Serialize>(data: T) -> JsonSuccessEnvelope<T> {
     }
 }
 
-fn print_json(value: &impl Serialize) -> Result<(), VoidbError> {
-    let output = serde_json::to_string_pretty(value).map_err(|error| {
-        VoidbError::Plugin(format!("Failed to serialize JSON output: {}", error))
-    })?;
-    println!("{}", output);
-    Ok(())
-}
 
 #[derive(Debug, Serialize)]
 struct JsonSuccessEnvelope<T> {

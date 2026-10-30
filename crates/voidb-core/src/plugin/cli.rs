@@ -184,6 +184,14 @@ pub trait CliPlugin: Send + Sync {
     /// Plugins have full control over arguments, flags, subcommands, help text.
     fn commands(&self) -> Vec<clap::Command>;
 
+    /// Visible aliases for this plugin's top-level CLI command.
+    ///
+    /// Aliases appear in `--help` and resolve to the canonical plugin ID.
+    /// The default is no aliases.
+    fn visible_aliases(&self) -> Vec<&'static str> {
+        Vec::new()
+    }
+
     /// Execute a matched command.
     ///
     /// - `command`: the subcommand name that was matched
@@ -244,6 +252,9 @@ impl CliPluginManager {
                     .about(about)
                     .subcommand_required(true)
                     .arg_required_else_help(true);
+                for alias in plugin.visible_aliases() {
+                    cmd = cmd.visible_alias(alias);
+                }
                 for subcmd in plugin.commands() {
                     cmd = cmd.subcommand(subcmd);
                 }
