@@ -3,7 +3,7 @@
   "schema_version": 1,
   "registry_name": "VoidB Official Plugin Registry",
   "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
-  "updated_at": "2026-11-03T18:41:35.436815031Z",
+  "updated_at": "2026-11-03T18:50:36.660158581Z",
   "plugins": [
     {
       "id": "docker",
@@ -1079,7 +1079,7 @@
         "import_plan",
         "import_apply"
       ],
-      "latest_version": "0.3.4",
+      "latest_version": "0.3.5",
       "versions": [
         {
           "version": "0.3.3",
@@ -1171,6 +1171,55 @@
               "sha256": "sha256:cbf56959008324f11f3e2dea21a10cb9ff73b15d3f73863aa99221c9e9bec465",
               "size_bytes": 3259725,
               "signature": "4f2a8154845d2e9d3bcb09fc49fba067a638156e996c8ab63e3418a422bede7780db3aa0d7351f449e7be2dc6d41f9209bcfa1240036296fe9d1f073ca1df408"
+            }
+          ]
+        },
+        {
+          "version": "0.3.5",
+          "protocol_version": "1",
+          "released_at": "2026-11-03T18:50:34.959233467Z",
+          "voidb_core": ">=0.3.3",
+          "platforms": [
+            "darwin",
+            "linux"
+          ],
+          "signature_scheme": "ed25519",
+          "packages": [
+            {
+              "filename": "mysql-0.3.5-aarch64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-mysql/releases/download/v0.3.5/mysql-0.3.5-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:2049dad7f2de1ca4fa2bae3caffb5ed14a364374b1f735d0e0237298e4d14727",
+              "size_bytes": 3298647,
+              "signature": "6e8e278573e1906edf27c986ae2b81115928a5de78f8c365365954af24fbd9d365c28c3f048daade712d279e8171142132b6d5c317d5b5c1c7a1e541b33de706"
+            },
+            {
+              "filename": "mysql-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-mysql/releases/download/v0.3.5/mysql-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:a77728353b144cfb65e404c3a20e963dd223d710ec18bd6f4cb3200a3e255932",
+              "size_bytes": 4287776,
+              "signature": "8e40a40f827aa8e7825a99288a62bff166b81009b7684d5fc6879f509ff3c0b5eeb0841ac08d0912afa487c51b49e96ba313546690dcbed3235d001d9b822602"
+            },
+            {
+              "filename": "mysql-0.3.5-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-mysql/releases/download/v0.3.5/mysql-0.3.5-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:c5c33c391bd5dcf0f4d70f3ec141b81f9a1d7eb1058765e41ba8ebc13a0b87cc",
+              "size_bytes": 3491728,
+              "signature": "66802a7bc6cae9187a18628577948baff10eed02993f5451adecd30f3a5881a6dfd5d16f3521ff37456ae9a857919ceccd4777ebd807506c24348b0b3d49570f"
+            },
+            {
+              "filename": "mysql-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-mysql/releases/download/v0.3.5/mysql-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:c46998d8d4888f389927f10d2f3b6062ad369dd86e88b93a66f23ae64d0cce93",
+              "size_bytes": 4137674,
+              "signature": "855397860491dee906330eeb88d0da4780b586224e47bbde49eef891f9270d5923ae047f3be0ab4de094721c0b205276362757d8951d6bc71a28c71e02db6006"
             }
           ]
         }
