@@ -3,7 +3,7 @@
   "schema_version": 1,
   "registry_name": "VoidB Official Plugin Registry",
   "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
-  "updated_at": "2026-11-03T16:21:21.760169110Z",
+  "updated_at": "2026-11-03T16:23:03.593933689Z",
   "plugins": [
     {
       "id": "docker",
@@ -444,7 +444,7 @@
         "download_attachment",
         "idle"
       ],
-      "latest_version": "0.3.4",
+      "latest_version": "0.3.5",
       "versions": [
         {
           "version": "0.3.3",
@@ -536,6 +536,55 @@
               "sha256": "sha256:4bab0c4948c1aeee31f82b32ab963d7d0b41cebb745ad88c8eb2958a301f1676",
               "size_bytes": 2800030,
               "signature": "17ab01f52f968f27675901e583772d292cd274353f1aca88e354f618136d5087c41a5ac92cda263935e8eb1a7c04ea0ac8880e59b317fd29fe95b27ae0e7b20d"
+            }
+          ]
+        },
+        {
+          "version": "0.3.5",
+          "protocol_version": "1",
+          "released_at": "2026-11-03T16:23:01.227344492Z",
+          "voidb_core": ">=0.3.3",
+          "platforms": [
+            "darwin",
+            "linux"
+          ],
+          "signature_scheme": "ed25519",
+          "packages": [
+            {
+              "filename": "email-0.3.5-aarch64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-email/releases/download/v0.3.5/email-0.3.5-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:8a3fcda45bf3cc5e1f284d23d4ec8eaf8f155de0ecb9485155eed7f2554fc301",
+              "size_bytes": 2374976,
+              "signature": "15c757c3bda24fb4ed9c6de5cf19a1efb0e483c646edf003bcac75bd1b783c8b7981e76b3828470f0ea3f18aee8a05086cbc1491ba338fdc08de1ab939917b09"
+            },
+            {
+              "filename": "email-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-email/releases/download/v0.3.5/email-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:6b9468a163057763216c0c881e539521a5ee8519abb6765eee07719e223caa5d",
+              "size_bytes": 3294919,
+              "signature": "6c7ac14eefb4cb552e0763655e8985f77372a2f809cfe275ddb8e6976e9cc00c986a89f794184fc2294efb5d6d267ef97e2b05a3c0e06ee00e70b76a8a64110a"
+            },
+            {
+              "filename": "email-0.3.5-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-email/releases/download/v0.3.5/email-0.3.5-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:a76417d7ee0ca17d0c9d6dc16cb03f7dd66e9e42850ace7ad4bb40e8de4920bd",
+              "size_bytes": 2477280,
+              "signature": "27e557d524c1da356690f03afbb54492afed7b674f79991bc1e38589226fd98641b76964f4126a24535830cbee371bf1ae578fe202c16be5b1e656376d79dc05"
+            },
+            {
+              "filename": "email-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-email/releases/download/v0.3.5/email-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:e18742d83402c83c962aa01323468d1704c960f0c6346578a01c199fba9f3c7c",
+              "size_bytes": 3154356,
+              "signature": "b1b6e610490389e41163da789de9e8ebd439d148e0cc3ef82ca3401c272f7c21e74665f9f24ed588de62ed817ce4c2ab0f75958e90faa3c4c92fb222e2932a05"
             }
           ]
         }
