@@ -3,7 +3,7 @@
   "schema_version": 1,
   "registry_name": "VoidB Official Plugin Registry",
   "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
-  "updated_at": "2026-11-03T16:23:03.593933689Z",
+  "updated_at": "2026-11-03T17:40:50.863941819Z",
   "plugins": [
     {
       "id": "docker",
@@ -1317,7 +1317,7 @@
         "monitor_read",
         "stream_read"
       ],
-      "latest_version": "0.3.4",
+      "latest_version": "0.3.5",
       "versions": [
         {
           "version": "0.3.3",
@@ -1409,6 +1409,55 @@
               "sha256": "sha256:f3b19bc05579e052ab6e47a857b1d0337518b57714a2da8445f674e8ae4c3f8a",
               "size_bytes": 2097707,
               "signature": "9da3944e491c7a6cc854b0cab052a8c325b646aa2c068fc392655658727ebcf618549b50b0df0580280d836a84c716abe5e529fb26ed2acdd353013bf42bdc00"
+            }
+          ]
+        },
+        {
+          "version": "0.3.5",
+          "protocol_version": "1",
+          "released_at": "2026-11-03T17:40:49.662110511Z",
+          "voidb_core": ">=0.3.3",
+          "platforms": [
+            "darwin",
+            "linux"
+          ],
+          "signature_scheme": "ed25519",
+          "packages": [
+            {
+              "filename": "redis-0.3.5-aarch64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-redis/releases/download/v0.3.5/redis-0.3.5-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:ac54c215cd2bed3e3c8ef8a8ba7be7eda3356b33141b7f81aea0f73769943c3c",
+              "size_bytes": 2071792,
+              "signature": "6b9af549ccfed66e32ea4302a1cf531037cc2b15298d35e6fc13b16247502ca6d38219616691c05f068dfde9d7e591758e7f3fe3139542abd22fce35e75ddc0d"
+            },
+            {
+              "filename": "redis-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-redis/releases/download/v0.3.5/redis-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:8d0e467b76022cb1560dcce1714e4bd819e8c803e1ade35f1ad57771f817342c",
+              "size_bytes": 2942341,
+              "signature": "044fb3b8bd548be2e4c434edfdd9b18171338c14306c1ec27f6a3eeb84bc409789eb51335ab49c26c7ed5bba2aee66fb4f38808ca9c6eff4ae5418ea37a8d80c"
+            },
+            {
+              "filename": "redis-0.3.5-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-redis/releases/download/v0.3.5/redis-0.3.5-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:9a9ef55486e6aaec6541f7807718fd785bbf1c5c538ffcdd5160f9767ed5f8ef",
+              "size_bytes": 2183478,
+              "signature": "d1d0795f4a4a0fe88cc68a963b5ef460e28d7ec10bf82d10e32367011370f48415ffc15462067949746fe6c32d12756bd5f83b922c601b71cd93fea5216d710e"
+            },
+            {
+              "filename": "redis-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-redis/releases/download/v0.3.5/redis-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:41e75f58a3811739dc57ca6deb0486d2848e4dd6a408bc7bdc7d3d5745538a31",
+              "size_bytes": 2829444,
+              "signature": "09ec1f608d3d4a1777fcd6b6e6f49f88a845a9403c54a41c8dc41305ff054f3edb7f6f7fa3f8c52ad9412423a31a755db880d517b1757a1b6840b19e01cd3701"
             }
           ]
         }
