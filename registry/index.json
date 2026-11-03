@@ -3,7 +3,7 @@
   "schema_version": 1,
   "registry_name": "VoidB Official Plugin Registry",
   "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
-  "updated_at": "2026-11-03T18:50:36.660158581Z",
+  "updated_at": "2026-11-03T19:15:34.531989991Z",
   "plugins": [
     {
       "id": "docker",
@@ -1753,7 +1753,7 @@
         "import_plan",
         "import_apply"
       ],
-      "latest_version": "0.3.4",
+      "latest_version": "0.3.5",
       "versions": [
         {
           "version": "0.3.3",
@@ -1845,6 +1845,55 @@
               "sha256": "sha256:9baebef93aeb1ef9eddbfae99a258984bf7631ce73355de55e34c6c6e5b7a6b5",
               "size_bytes": 2844228,
               "signature": "d62aebd9750f987f95d307309dbcc6c60e63eed4f4b97493085eed8f4eb3c158f9ca3fb6fe89f236549a36e2eaed1f5b4bf4e70e5df9921ff7c1416792169101"
+            }
+          ]
+        },
+        {
+          "version": "0.3.5",
+          "protocol_version": "1",
+          "released_at": "2026-11-03T19:15:32.105771532Z",
+          "voidb_core": ">=0.3.3",
+          "platforms": [
+            "darwin",
+            "linux"
+          ],
+          "signature_scheme": "ed25519",
+          "packages": [
+            {
+              "filename": "sqlite-0.3.5-aarch64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-sqlite/releases/download/v0.3.5/sqlite-0.3.5-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:9f46c5f90c04f1fe463dda469e8ed306536cadf652cb9d56ec7bbe3deef7541b",
+              "size_bytes": 2655222,
+              "signature": "1bd7dc70c8bddd63f48ca2abf0dea85b2d2a9bfbabf0fb9ba894ee1ec67a810a918089c50bb6e159b98df3cb4a130631fc7801fedec8c28a67286c160a400d01"
+            },
+            {
+              "filename": "sqlite-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-sqlite/releases/download/v0.3.5/sqlite-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:71347a6f37af979db4c4eea9c6ea40e707e79a254354241488ad9502612c048d",
+              "size_bytes": 3653259,
+              "signature": "03039e983fd5aee606d1a623424a22ec91533b63c278988a29b51a44ea4d2e65c626b8250e850d515eafa8bf533301a47199936d486366a51d3e1b3b75144507"
+            },
+            {
+              "filename": "sqlite-0.3.5-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-sqlite/releases/download/v0.3.5/sqlite-0.3.5-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:4e1b8e4f42d12187c6a734d477471a279aa5b22d5af0449f5d07d126f716430a",
+              "size_bytes": 2819931,
+              "signature": "802c378e49ac4f552497b33916114aadabd3956c81ef142dc765709010bd373e26027202dec0057a9ae0fe9e39ab6a85ef5eb2d06aeb97ab4e2b29b72afd6101"
+            },
+            {
+              "filename": "sqlite-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-sqlite/releases/download/v0.3.5/sqlite-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:fd3d6a7efb381f89b50c1a38c138b6c189b12fd60e39cef35884ab5de2b9b603",
+              "size_bytes": 3529920,
+              "signature": "e3f8109180cbdb047af83c109ea2d2a555304dc72d2e4214a43baa22806bdc61003729313a475f8930ceefc27965048cf25cd6508b62d6d0626b7d8a244d7902"
             }
           ]
         }
