@@ -3,7 +3,7 @@
   "schema_version": 1,
   "registry_name": "VoidB Official Plugin Registry",
   "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
-  "updated_at": "2026-11-03T19:15:34.531989991Z",
+  "updated_at": "2026-11-03T19:55:25.852662329Z",
   "plugins": [
     {
       "id": "docker",
@@ -202,7 +202,7 @@
         "import_plan",
         "import_apply"
       ],
-      "latest_version": "0.3.4",
+      "latest_version": "0.3.5",
       "versions": [
         {
           "version": "0.3.3",
@@ -294,6 +294,55 @@
               "sha256": "sha256:a1c875fabcc3bc99564d6cd37503a4cf90620b2d8243ed703dcf077885e7c3db",
               "size_bytes": 16648479,
               "signature": "7063e21ce5a769aabc6f60ac7728c2fa52af3a10fe096f6a257de9c829f0d55be1131b19281e5016a75b2ab34ce9be873b7970d39d6cff7ef12b82275804f506"
+            }
+          ]
+        },
+        {
+          "version": "0.3.5",
+          "protocol_version": "1",
+          "released_at": "2026-11-03T19:55:12.959094717Z",
+          "voidb_core": ">=0.3.3",
+          "platforms": [
+            "darwin",
+            "linux"
+          ],
+          "signature_scheme": "ed25519",
+          "packages": [
+            {
+              "filename": "duckdb-0.3.5-aarch64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-duckdb/releases/download/v0.3.5/duckdb-0.3.5-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:40b8ef3dbce51b45c25cf696f397b47b70c01992411348877b669c2730bf8c3f",
+              "size_bytes": 13214768,
+              "signature": "1a7c01750892ea816a057fd34dffcae60e7bfc761249aee3d1c13470dc22b41b58a05bdd86fe3ed783bfcd349c1fa22b756c157918370fc0829771453e097609"
+            },
+            {
+              "filename": "duckdb-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-duckdb/releases/download/v0.3.5/duckdb-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:fe5eba49d8dd8e464f7e54db83c7afd938846fc9064088b72492dd9cb3a771e6",
+              "size_bytes": 16587854,
+              "signature": "6101371835687590d28d9491f90295f17a4914bee654ba297c09da74115b2d06e36b7f0ddaf94720429cf7346e69a61daab1d8c1a2f45d76a023293c3bdef209"
+            },
+            {
+              "filename": "duckdb-0.3.5-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-duckdb/releases/download/v0.3.5/duckdb-0.3.5-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:9c78503fa71ef7529dd30399e3f5db6a5138e063c7b5df3fccc1fb7adb7ae530",
+              "size_bytes": 14710876,
+              "signature": "8e612b41981acd2e0a7d2cab06e0f11055d367111fb2b713ab223ab40576ffedbbd0d4176f69e78f1511b0d7ba18233984381845539a2b7f64964d48a5011100"
+            },
+            {
+              "filename": "duckdb-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-duckdb/releases/download/v0.3.5/duckdb-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:b5765eadad1ddf235c58956cdee302fca403483d412455fa9b08af80d2d7a095",
+              "size_bytes": 17300361,
+              "signature": "202460f544dfcead45d1bf1f15a7ad7359b12b2aa7cb0d1c9a02eee53c3fdb979e2937a856bccffd42ec6fd2feb2abf9de8308e35fa074927cc556e3be16b507"
             }
           ]
         }
