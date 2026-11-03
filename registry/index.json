@@ -3,7 +3,7 @@
   "schema_version": 1,
   "registry_name": "VoidB Official Plugin Registry",
   "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
-  "updated_at": "2026-11-03T19:55:25.852662329Z",
+  "updated_at": "2026-11-03T20:16:14.215200436Z",
   "plugins": [
     {
       "id": "docker",
@@ -371,7 +371,7 @@
         "bulk",
         "raw_api"
       ],
-      "latest_version": "0.3.4",
+      "latest_version": "0.3.5",
       "versions": [
         {
           "version": "0.3.3",
@@ -463,6 +463,55 @@
               "sha256": "sha256:085b0efba77e7cccdbb6c4e126b775aa93dad702e57b92eb74ebc213fecd0b34",
               "size_bytes": 3654369,
               "signature": "6c2a41229e4b9dd2cd89cc5e7f639eba4948ca64e4f0b39acc9b3db7676a330c7379eddf43b8cd11f0a369c43e023cf09800dee1d1bc0a3b953bdc8597a0b608"
+            }
+          ]
+        },
+        {
+          "version": "0.3.5",
+          "protocol_version": "1",
+          "released_at": "2026-11-03T20:16:12.465371544Z",
+          "voidb_core": ">=0.3.3",
+          "platforms": [
+            "darwin",
+            "linux"
+          ],
+          "signature_scheme": "ed25519",
+          "packages": [
+            {
+              "filename": "elasticsearch-0.3.5-aarch64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-elasticsearch/releases/download/v0.3.5/elasticsearch-0.3.5-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:d7e110ef824fa23847ba3a3de79f2578a34fc9df41cbd17eb6af62de1f79dcb0",
+              "size_bytes": 3502029,
+              "signature": "fc5c60c8f44864272136940358e17848383b90e91675cfb649ff0b6fe4d89d758ead40ed1c5739c43d4474cad8b67c96c56cd65b3fbfcca368a8b7ed98c12703"
+            },
+            {
+              "filename": "elasticsearch-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-elasticsearch/releases/download/v0.3.5/elasticsearch-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:bc2a851651dcef0545a713a2db6994e0e80270ad8e3e1f480987c447db37257e",
+              "size_bytes": 4593383,
+              "signature": "ab765c47de2930c7c9b5dcc98f8748f960b7157aeafc0444e4ce4a03f3583be1d15fd2698b5233c446b3b2d8d9f96269d0d436e314f3ffd5fa8976f50721670b"
+            },
+            {
+              "filename": "elasticsearch-0.3.5-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-elasticsearch/releases/download/v0.3.5/elasticsearch-0.3.5-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:43609b28769c3544369e154221c8555b05a1ee8d76b3ac8ad751af30b9051045",
+              "size_bytes": 3648327,
+              "signature": "f37db6152fcd4b61951e51ba10a060fe2c190acf2ba3349ea27a8c74d87ef68026e52bb32ba6ffd327f64813c13e6289088df1c7751f1a3769125fcaa280a201"
+            },
+            {
+              "filename": "elasticsearch-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-elasticsearch/releases/download/v0.3.5/elasticsearch-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:1dcc6f2cfbaa856b292b5ff45f7653542633db82aefdedd3fde29ae412c56690",
+              "size_bytes": 4341909,
+              "signature": "a5491986f1faea6bc681d8026f9a36d2faca3db3226a8ed8a44c351af72a4bfd4bac01cb60fea8de9446d60753d556868156229613e27c78c2bf1daba2850704"
             }
           ]
         }
