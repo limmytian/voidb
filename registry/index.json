@@ -3,7 +3,7 @@
   "schema_version": 1,
   "registry_name": "VoidB Official Plugin Registry",
   "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
-  "updated_at": "2026-11-03T20:16:14.215200436Z",
+  "updated_at": "2026-11-03T20:41:10.160774045Z",
   "plugins": [
     {
       "id": "docker",
@@ -1059,7 +1059,7 @@
         "create_index",
         "run_command"
       ],
-      "latest_version": "0.3.4",
+      "latest_version": "0.3.5",
       "versions": [
         {
           "version": "0.3.3",
@@ -1151,6 +1151,55 @@
               "sha256": "sha256:533f974d7ca6f9202ec35d1f7cfaa4ae9b11f1cee697853ade68e9a015bcf517",
               "size_bytes": 6382914,
               "signature": "fd72294b73289caa10218719a3f532c0eea8275cd677b0e5d7634ca1670e0c9325fbd7b0d03350856f8f1f1f6340184378d8a6cbf7e6e4b61db3850013de7b04"
+            }
+          ]
+        },
+        {
+          "version": "0.3.5",
+          "protocol_version": "1",
+          "released_at": "2026-11-03T20:41:04.829566967Z",
+          "voidb_core": ">=0.3.3",
+          "platforms": [
+            "darwin",
+            "linux"
+          ],
+          "signature_scheme": "ed25519",
+          "packages": [
+            {
+              "filename": "mongodb-0.3.5-aarch64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-mongodb/releases/download/v0.3.5/mongodb-0.3.5-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:08ff653d2e5b04f5d02dae5090d993611529dd8db1cdf0adbdbc44574ea27465",
+              "size_bytes": 5912572,
+              "signature": "7abf2b2fd24ceb8ed9d2f49ccf50c6eea4007dd2692d2a879d561dad447335ebf46e5a4f93eb4d7079524a1377ca47ce84952ce93db1d1f25cc1dd3184655f0d"
+            },
+            {
+              "filename": "mongodb-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-mongodb/releases/download/v0.3.5/mongodb-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:56923a013652418bf86fb1e289569a76838588edfc63abfa32f084a0ced8690a",
+              "size_bytes": 7217194,
+              "signature": "d40367ec42ba1a641119b7ebe1d5715967ed2980fcac1aba4baca057b042cfdbf8b93c27ce4b3d664359d5897916b28876e30c560d81371c88b6590d8638610e"
+            },
+            {
+              "filename": "mongodb-0.3.5-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-mongodb/releases/download/v0.3.5/mongodb-0.3.5-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:f7a91eb95a167a45bd19701c4a4c93ff49d16769704e214879c7a988d0e1ce57",
+              "size_bytes": 6172671,
+              "signature": "0f80f416d6fa41031abd29f69aeca1432992583c98ad56853db43ae7abde83d3ba6881ef742da57c42abcaa3882ddc65de1ce45b33b530c341e15451cefd8509"
+            },
+            {
+              "filename": "mongodb-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-mongodb/releases/download/v0.3.5/mongodb-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:c8d11f16145b6d1faaf25868e583a2ce68199ff8333a9ee3f9b00271d489af31",
+              "size_bytes": 7127486,
+              "signature": "2a3c643695dab8232be40f97a865c7b000e94174fe565d411d574ef1163fd53c1c5182bb298c74a12f3f74cc2f5a6de0d491ed02a2556a907ca6226925b92302"
             }
           ]
         }
