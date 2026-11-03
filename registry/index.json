@@ -3,7 +3,7 @@
   "schema_version": 1,
   "registry_name": "VoidB Official Plugin Registry",
   "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
-  "updated_at": "2026-11-02T00:32:59.127925454Z",
+  "updated_at": "2026-11-03T15:16:49.860941188Z",
   "plugins": [
     {
       "id": "docker",
@@ -1583,7 +1583,7 @@
         "sftp_rm",
         "diagnostics"
       ],
-      "latest_version": "0.3.4",
+      "latest_version": "0.3.5",
       "versions": [
         {
           "version": "0.3.3",
@@ -1675,6 +1675,55 @@
               "sha256": "sha256:9eb3c69a085d73e7993184032f989a55561eccd6b02c7f6e2b7a33d3cbba2c01",
               "size_bytes": 4208400,
               "signature": "fc59e9e90da97836f88728877cce2ae759411d0af39970021b94e87e4294926f55d39c8ff398f4e013f3778a69710e854aefa848b79e7b5732bb968a2a8d830b"
+            }
+          ]
+        },
+        {
+          "version": "0.3.5",
+          "protocol_version": "1",
+          "released_at": "2026-11-03T15:16:47.874314497Z",
+          "voidb_core": ">=0.3.3",
+          "platforms": [
+            "darwin",
+            "linux"
+          ],
+          "signature_scheme": "ed25519",
+          "packages": [
+            {
+              "filename": "ssh-0.3.5-aarch64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-ssh/releases/download/v0.3.5/ssh-0.3.5-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:aca37dac41f23d3259077dd77fc13f2ea115097ad418475d5a3af2dbdee1f2e5",
+              "size_bytes": 3626939,
+              "signature": "58f853eb186123edcf277cf6ab8a0883a49ac4217524ba9ddabc523978a94688ea1305819321de42f519f003058fcd2cfc7ed7962f988b49dc820eb5c9f51102"
+            },
+            {
+              "filename": "ssh-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-ssh/releases/download/v0.3.5/ssh-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:e60b95d3c2468c08b89df59d3f9b9f4deb2dc439d2903f04408696ead6d888ea",
+              "size_bytes": 4683285,
+              "signature": "fd4610cb206f5fa69c4cfdbb0177f66b7f4587bb629b3c92a4011b5cfc80930dee05f5d2c06eb37beef7bcf398ee100c29d686defe8a325517611b0faaa52c0f"
+            },
+            {
+              "filename": "ssh-0.3.5-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-ssh/releases/download/v0.3.5/ssh-0.3.5-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:da557b6cfff6f7aa535160fb85a1c873447bf9846a9a5fac27d7d66e9762fa3b",
+              "size_bytes": 3804253,
+              "signature": "681ee756a3dc838c1e266cbecf9a7281376c92c7f39339614b36a69bd15ddb624b8b47f59e864b7170678c7de08057db658ed50e4a6a45b1e1193337fb371601"
+            },
+            {
+              "filename": "ssh-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-ssh/releases/download/v0.3.5/ssh-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:a119fb085fb75090f6c5521e9a0a107ff11203bed557ec500b0b925083efcf2c",
+              "size_bytes": 4505528,
+              "signature": "36bff440e0458b37e3d897035539b19a57a12c4dde6416f779e8a1fef542af77078cfef41258f06eb51d6ce4cce38c0edd1edd69d40120b6251bb2b45aec660e"
             }
           ]
         }
