@@ -3,7 +3,7 @@
   "schema_version": 1,
   "registry_name": "VoidB Official Plugin Registry",
   "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
-  "updated_at": "2026-11-03T16:12:24.722726692Z",
+  "updated_at": "2026-11-03T16:19:46.044033318Z",
   "plugins": [
     {
       "id": "docker",
@@ -1804,7 +1804,7 @@
         "lock_acquire",
         "lock_release"
       ],
-      "latest_version": "0.3.4",
+      "latest_version": "0.3.5",
       "versions": [
         {
           "version": "0.3.3",
@@ -1896,6 +1896,55 @@
               "sha256": "sha256:9c72895a48d38602f06a73d4a3c9642a6e1ed42c0acd1ead4a178bb215c48e8e",
               "size_bytes": 4997779,
               "signature": "4152bf1129d269b38937073859e6d6c133d0936eafb7d0c3a966cce579b5a47b5351e9bb55fa9304124fcc53d44b39d213db8ab374118eae5404f09a96dd6806"
+            }
+          ]
+        },
+        {
+          "version": "0.3.5",
+          "protocol_version": "1",
+          "released_at": "2026-11-03T16:19:43.231127064Z",
+          "voidb_core": ">=0.3.3",
+          "platforms": [
+            "darwin",
+            "linux"
+          ],
+          "signature_scheme": "ed25519",
+          "packages": [
+            {
+              "filename": "webdav-0.3.5-aarch64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-webdav/releases/download/v0.3.5/webdav-0.3.5-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:f6aee40c9554eaa77166f00203bb87d9ac3e696ec1925aab53f92c3a86bfb3f6",
+              "size_bytes": 4429434,
+              "signature": "a99b43002f128d292cf3ac2166ec911e531e1a87367a06dc69c3e9c4704a9bc6417b5550ed878e5868bb9d30d42bfee94340473cb451c90976044811942f460f"
+            },
+            {
+              "filename": "webdav-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-webdav/releases/download/v0.3.5/webdav-0.3.5-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:98c7c77f5674d5853d260126ba80b78a06fa25cc1babb7ec564ea94fcd885998",
+              "size_bytes": 5480801,
+              "signature": "dfe73c7518b0cc1249fc3786f9742dac69c10cc040777e89cb7995812dd9e39cec67c059cbd079da5d4963352962842a6e3a199cbed0705c22e80e2836f9f802"
+            },
+            {
+              "filename": "webdav-0.3.5-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-webdav/releases/download/v0.3.5/webdav-0.3.5-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:77b8184da0b590721533aa9e536c38ca227a80f51bcc33f373c432296c224e5a",
+              "size_bytes": 4674857,
+              "signature": "c6d7c70ba537583ff919eb514d70a5e3a22d4bc2b82542bfa3f6c4d2f63f77e6236b0e7f28bdea39023969b977041fb7458a9965108d3ead992f04315d87470b"
+            },
+            {
+              "filename": "webdav-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-webdav/releases/download/v0.3.5/webdav-0.3.5-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:09e1b6f7b5289df6821c4739a502546b2fe36f0167e5d259fba0adf08dd3663c",
+              "size_bytes": 5349585,
+              "signature": "f66f6ec660630e419a2a70f26d903819834a1b3989e6734e24938a1b1e804da152004b1c9171149e6f0e58c8c9924f2d8b5b235401ac79d28275618436a3a000"
             }
           ]
         }
