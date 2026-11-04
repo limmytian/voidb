@@ -297,25 +297,44 @@ fn render_input(
     value: &str,
     active: bool,
     secret: bool,
+    cursor: Option<usize>,
 ) {
     let rendered = if secret {
         "•".repeat(value.chars().count())
     } else {
         value.to_string()
     };
-    frame.render_widget(
-        Paragraph::new(rendered).block(
-            Block::default()
-                .title(format!(" {title} "))
-                .borders(Borders::ALL)
-                .border_style(if active {
-                    Style::default().fg(Color::Yellow)
-                } else {
-                    Style::default().fg(Color::DarkGray)
-                }),
-        ),
-        area,
-    );
+    let block = Block::default()
+        .title(format!(" {title} "))
+        .borders(Borders::ALL)
+        .border_style(if active {
+            Style::default().fg(Color::Yellow)
+        } else {
+            Style::default().fg(Color::DarkGray)
+        });
+    if let (true, Some(caret)) = (active, cursor) {
+        // Render an inverted caret cell at the edit position. Wide
+        // characters stay under the caret because the index is char-based.
+        let char_count = rendered.chars().count();
+        let caret = caret.min(char_count);
+        let before: String = rendered.chars().take(caret).collect();
+        let at: String = rendered.chars().skip(caret).take(1).collect();
+        let after: String = rendered.chars().skip(caret + 1).collect();
+        frame.render_widget(
+            Paragraph::new(Line::from(vec![
+                Span::raw(before),
+                Span::styled(
+                    if at.is_empty() { " ".to_string() } else { at },
+                    Style::default().add_modifier(Modifier::REVERSED),
+                ),
+                Span::raw(after),
+            ]))
+            .block(block),
+            area,
+        );
+    } else {
+        frame.render_widget(Paragraph::new(rendered).block(block), area);
+    }
 }
 
 fn detail_line(label: &str, value: &str) -> Line<'static> {

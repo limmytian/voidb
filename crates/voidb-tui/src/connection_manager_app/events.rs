@@ -8,8 +8,8 @@ use super::ConnectionManagerApp;
 use super::background::{can_install_missing_plugin, installed_plugin_states, run_plugin_install};
 use super::{
     AUTHORIZATION_TTL_OPTIONS, AUTHORIZATION_USE_OPTIONS, AgentAuthorizationPresetKind,
-    AuthorizationAction, EditorView, JitApprovalDialog, JitDecision, ProfileEditor, ScreenMode,
-    profile_list_inner_area, profile_row_index,
+    AuthorizationAction, EditorView, JitApprovalDialog, JitDecision, PROFILE_PAGE_STEP,
+    ProfileEditor, ScreenMode, profile_list_inner_area, profile_row_index, stepped_selection,
 };
 
 impl ConnectionManagerApp {
@@ -44,6 +44,10 @@ impl ConnectionManagerApp {
             KeyCode::Char('q') => self.should_quit = true,
             KeyCode::Down | KeyCode::Char('j') => self.move_selection(true),
             KeyCode::Up | KeyCode::Char('k') => self.move_selection(false),
+            KeyCode::PageDown => self.move_selection_by(PROFILE_PAGE_STEP),
+            KeyCode::PageUp => self.move_selection_by(-PROFILE_PAGE_STEP),
+            KeyCode::Home | KeyCode::Char('g') => self.select_first(),
+            KeyCode::End | KeyCode::Char('G') => self.select_last(),
             KeyCode::Char('/') => {
                 self.search.clear();
                 self.mode = ScreenMode::Search;
@@ -101,6 +105,10 @@ impl ConnectionManagerApp {
             }
             KeyCode::Down => self.move_selection(true),
             KeyCode::Up => self.move_selection(false),
+            KeyCode::PageDown => self.move_selection_by(PROFILE_PAGE_STEP),
+            KeyCode::PageUp => self.move_selection_by(-PROFILE_PAGE_STEP),
+            KeyCode::Home | KeyCode::Char('g') => self.select_first(),
+            KeyCode::End | KeyCode::Char('G') => self.select_last(),
             KeyCode::Char(character) if !character.is_control() => {
                 self.search.push(character);
                 self.refilter();
@@ -139,6 +147,8 @@ impl ConnectionManagerApp {
             return;
         }
         let field_count = editor.field_count().max(1);
+        let text_field = matches!(editor.active_field, 1 | 2);
+        let json_field = editor.view == EditorView::Json && editor.active_field == 3;
         match key.code {
             KeyCode::Tab => editor.active_field = (editor.active_field + 1) % field_count,
             KeyCode::BackTab => {
@@ -152,25 +162,31 @@ impl ConnectionManagerApp {
             KeyCode::Right if editor.active_field == 0 => editor.cycle_plugin(true),
             KeyCode::Up if editor.active_field == 0 => editor.cycle_plugin(false),
             KeyCode::Down if editor.active_field == 0 => editor.cycle_plugin(true),
-            KeyCode::Left if editor.view == EditorView::Json && editor.active_field == 3 => {
-                editor.cursor_col = editor.cursor_col.saturating_sub(1)
-            }
-            KeyCode::Right if editor.view == EditorView::Json && editor.active_field == 3 => {
+            // Text fields carry a caret: arrows and Home/End move it, chars
+            // insert at it.
+            KeyCode::Left if text_field => editor.caret_left(),
+            KeyCode::Right if text_field => editor.caret_right(),
+            KeyCode::Home if text_field => editor.caret_home(),
+            KeyCode::End if text_field => editor.caret_end(),
+            KeyCode::Delete if text_field => editor.delete_text_forward(),
+            // ↑/↓ walk the identity fields the same way Tab does.
+            KeyCode::Up if editor.active_field == 2 => editor.active_field = 1,
+            KeyCode::Up if text_field => editor.active_field = 0,
+            KeyCode::Down if text_field => editor.active_field += 1,
+            KeyCode::Left if json_field => editor.cursor_col = editor.cursor_col.saturating_sub(1),
+            KeyCode::Right if json_field => {
                 editor.cursor_col = (editor.cursor_col + 1)
                     .min(editor.config_lines[editor.cursor_line].chars().count())
             }
-            KeyCode::Up if editor.view == EditorView::Json && editor.active_field == 3 => {
-                editor.move_vertical(false)
+            KeyCode::Home if json_field => editor.cursor_col = 0,
+            KeyCode::End if json_field => {
+                editor.cursor_col = editor.config_lines[editor.cursor_line].chars().count()
             }
-            KeyCode::Down if editor.view == EditorView::Json && editor.active_field == 3 => {
-                editor.move_vertical(true)
-            }
-            KeyCode::Enter if editor.view == EditorView::Json && editor.active_field == 3 => {
-                editor.insert_newline()
-            }
-            KeyCode::Backspace if editor.view == EditorView::Json && editor.active_field == 3 => {
-                editor.backspace()
-            }
+            KeyCode::Up if json_field => editor.move_vertical(false),
+            KeyCode::Down if json_field => editor.move_vertical(true),
+            KeyCode::Enter if json_field => editor.insert_newline(),
+            KeyCode::Backspace if json_field => editor.backspace(),
+            KeyCode::Delete if json_field => editor.delete_forward(),
             KeyCode::Left | KeyCode::Right | KeyCode::Enter
                 if editor.view == EditorView::Form && editor.active_field >= 3 =>
             {
@@ -185,18 +201,11 @@ impl ConnectionManagerApp {
             KeyCode::Backspace if editor.view == EditorView::Form && editor.active_field >= 3 => {
                 editor.backspace_form_value()
             }
-            KeyCode::Backspace => {
-                if editor.active_field == 1 {
-                    editor.name.pop();
-                } else if editor.active_field == 2 {
-                    editor.display_name.pop();
-                }
-            }
+            KeyCode::Backspace if text_field => editor.backspace_text(),
             KeyCode::Char(character) if !character.is_control() => match editor.active_field {
-                1 => editor.name.push(character),
-                2 => editor.display_name.push(character),
+                1 | 2 => editor.insert_text_char(character),
                 3.. if editor.view == EditorView::Form => editor.append_form_character(character),
-                3 if editor.view == EditorView::Json => editor.insert_char(character),
+                3 => editor.insert_char(character),
                 _ => {}
             },
             _ => {}
@@ -273,10 +282,29 @@ impl ConnectionManagerApp {
             KeyCode::Esc | KeyCode::Char('q') => self.mode = ScreenMode::Browse,
             KeyCode::Down | KeyCode::Char('j') => {
                 self.capability_selected =
-                    (self.capability_selected + 1).min(self.capabilities.len().saturating_sub(1));
+                    stepped_selection(self.capability_selected, self.capabilities.len(), 1);
             }
             KeyCode::Up | KeyCode::Char('k') => {
-                self.capability_selected = self.capability_selected.saturating_sub(1);
+                self.capability_selected =
+                    stepped_selection(self.capability_selected, self.capabilities.len(), -1);
+            }
+            KeyCode::PageDown => {
+                self.capability_selected = stepped_selection(
+                    self.capability_selected,
+                    self.capabilities.len(),
+                    PROFILE_PAGE_STEP,
+                );
+            }
+            KeyCode::PageUp => {
+                self.capability_selected = stepped_selection(
+                    self.capability_selected,
+                    self.capabilities.len(),
+                    -PROFILE_PAGE_STEP,
+                );
+            }
+            KeyCode::Home | KeyCode::Char('g') => self.capability_selected = 0,
+            KeyCode::End | KeyCode::Char('G') => {
+                self.capability_selected = self.capabilities.len().saturating_sub(1)
             }
             KeyCode::Enter => {
                 if let (Some(profile), Some(capability)) = (
@@ -337,11 +365,30 @@ impl ConnectionManagerApp {
             KeyCode::Left if dialog.advanced => dialog.cycle_preset(false),
             KeyCode::Right if dialog.advanced => dialog.cycle_preset(true),
             KeyCode::Down | KeyCode::Char('j') if dialog.advanced => {
-                dialog.capability_selected = (dialog.capability_selected + 1)
-                    .min(dialog.capabilities.len().saturating_sub(1));
+                dialog.capability_selected =
+                    stepped_selection(dialog.capability_selected, dialog.capabilities.len(), 1);
             }
             KeyCode::Up | KeyCode::Char('k') if dialog.advanced => {
-                dialog.capability_selected = dialog.capability_selected.saturating_sub(1);
+                dialog.capability_selected =
+                    stepped_selection(dialog.capability_selected, dialog.capabilities.len(), -1);
+            }
+            KeyCode::PageDown if dialog.advanced => {
+                dialog.capability_selected = stepped_selection(
+                    dialog.capability_selected,
+                    dialog.capabilities.len(),
+                    PROFILE_PAGE_STEP,
+                );
+            }
+            KeyCode::PageUp if dialog.advanced => {
+                dialog.capability_selected = stepped_selection(
+                    dialog.capability_selected,
+                    dialog.capabilities.len(),
+                    -PROFILE_PAGE_STEP,
+                );
+            }
+            KeyCode::Home if dialog.advanced => dialog.capability_selected = 0,
+            KeyCode::End | KeyCode::Char('G') if dialog.advanced => {
+                dialog.capability_selected = dialog.capabilities.len().saturating_sub(1)
             }
             KeyCode::Char(' ')
                 if dialog.advanced && dialog.preset == AgentAuthorizationPresetKind::Custom =>
@@ -476,12 +523,37 @@ impl ConnectionManagerApp {
         match key.code {
             KeyCode::Esc | KeyCode::Char('q') => self.mode = ScreenMode::Browse,
             KeyCode::Down | KeyCode::Char('j') => {
-                self.authorization_inbox_selected = (self.authorization_inbox_selected + 1)
-                    .min(self.pending_authorization_requests.len().saturating_sub(1));
+                self.authorization_inbox_selected = stepped_selection(
+                    self.authorization_inbox_selected,
+                    self.pending_authorization_requests.len(),
+                    1,
+                );
             }
             KeyCode::Up | KeyCode::Char('k') => {
+                self.authorization_inbox_selected = stepped_selection(
+                    self.authorization_inbox_selected,
+                    self.pending_authorization_requests.len(),
+                    -1,
+                );
+            }
+            KeyCode::PageDown => {
+                self.authorization_inbox_selected = stepped_selection(
+                    self.authorization_inbox_selected,
+                    self.pending_authorization_requests.len(),
+                    PROFILE_PAGE_STEP,
+                );
+            }
+            KeyCode::PageUp => {
+                self.authorization_inbox_selected = stepped_selection(
+                    self.authorization_inbox_selected,
+                    self.pending_authorization_requests.len(),
+                    -PROFILE_PAGE_STEP,
+                );
+            }
+            KeyCode::Home | KeyCode::Char('g') => self.authorization_inbox_selected = 0,
+            KeyCode::End | KeyCode::Char('G') => {
                 self.authorization_inbox_selected =
-                    self.authorization_inbox_selected.saturating_sub(1);
+                    self.pending_authorization_requests.len().saturating_sub(1)
             }
             KeyCode::Char('r') => {
                 self.next_authorization_refresh = Instant::now();
@@ -528,15 +600,15 @@ impl ConnectionManagerApp {
                 }
             }
             ScreenMode::AuthorizationInbox => {
-                if let Some(dialog) = &mut self.jit_approval_dialog {
-                    if dialog.editing_constraints {
-                        // The constraints field is single-line (Enter closes
-                        // it); pasted JSON stays valid when line breaks are
-                        // dropped, so control characters never enter the value.
-                        dialog
-                            .constraints_json
-                            .extend(text.chars().filter(|character| !character.is_control()));
-                    }
+                if let Some(dialog) = &mut self.jit_approval_dialog
+                    && dialog.editing_constraints
+                {
+                    // The constraints field is single-line (Enter closes
+                    // it); pasted JSON stays valid when line breaks are
+                    // dropped, so control characters never enter the value.
+                    dialog
+                        .constraints_json
+                        .extend(text.chars().filter(|character| !character.is_control()));
                 }
             }
             _ => {}
@@ -631,8 +703,7 @@ pub(super) fn paste_into_editor(editor: &mut ProfileEditor, text: &str) {
         match character {
             '\n' if json_text => editor.insert_newline(),
             character if !character.is_control() => match editor.active_field {
-                1 => editor.name.push(character),
-                2 => editor.display_name.push(character),
+                1 | 2 => editor.insert_text_char(character),
                 3.. if editor.view == EditorView::Form => editor.append_form_character(character),
                 3 => editor.insert_char(character),
                 _ => {}

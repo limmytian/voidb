@@ -138,6 +138,63 @@ fn editor_paste_drops_line_breaks_outside_json_text() {
 }
 
 #[test]
+fn display_col_accounts_for_wide_characters() {
+    assert_eq!(display_col("abc", 2), 2);
+    // Each CJK char occupies two display columns.
+    assert_eq!(display_col("你好", 1), 2);
+    assert_eq!(display_col("你好", 2), 4);
+    // Mixed text: prefix width, not char count.
+    assert_eq!(display_col("a你b", 3), 4);
+    // Out-of-range index saturates to the full line width.
+    assert_eq!(display_col("ab", 10), 2);
+}
+
+#[test]
+fn stepped_selection_wraps_and_pages() {
+    let len = 12;
+    assert_eq!(stepped_selection(0, len, 1), 1);
+    // Wraps from the last item back to the first.
+    assert_eq!(stepped_selection(len - 1, len, 1), 0);
+    // Wraps backwards from the first item to the last.
+    assert_eq!(stepped_selection(0, len, -1), len - 1);
+    // Page steps wrap around the ends.
+    assert_eq!(stepped_selection(5, len, 10), 3);
+    assert_eq!(stepped_selection(5, len, -10), 7);
+    // Empty lists stay at zero.
+    assert_eq!(stepped_selection(0, 0, 1), 0);
+}
+
+#[test]
+fn editor_text_caret_inserts_and_deletes_at_position() {
+    let mut editor = ProfileEditor::new();
+    editor.active_field = 1;
+    for character in "abc".chars() {
+        editor.insert_text_char(character);
+    }
+    assert_eq!(editor.name, "abc");
+    // Move in front of 'b' and insert there.
+    editor.caret_left();
+    editor.insert_text_char('X');
+    assert_eq!(editor.name, "abXc");
+    assert_eq!(editor.name_cursor, 3);
+    // Backspace removes the char before the caret.
+    editor.backspace_text();
+    assert_eq!(editor.name, "abc");
+    // Home/Delete operate relative to the caret.
+    editor.caret_home();
+    editor.delete_text_forward();
+    assert_eq!(editor.name, "bc");
+    assert_eq!(editor.name_cursor, 0);
+    editor.caret_end();
+    assert_eq!(editor.name_cursor, 2);
+    // The two fields keep independent carets.
+    editor.active_field = 2;
+    editor.insert_text_char('d');
+    assert_eq!(editor.display_name, "d");
+    assert_eq!(editor.name, "bc");
+}
+
+#[test]
 fn contextual_install_only_accepts_missing_official_plugins() {
     assert!(can_install_missing_plugin("mysql", None));
     assert!(!can_install_missing_plugin("../mysql", None));

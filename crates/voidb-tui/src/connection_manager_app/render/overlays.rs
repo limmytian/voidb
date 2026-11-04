@@ -155,6 +155,7 @@ impl ConnectionManagerApp {
             &dialog.password,
             dialog.active_field == 0,
             true,
+            None,
         );
         if dialog.mode == CredentialMode::Set {
             render_input(
@@ -164,6 +165,7 @@ impl ConnectionManagerApp {
                 &dialog.confirmation,
                 dialog.active_field == 1,
                 true,
+                None,
             );
         }
         let message_area = rows[rows.len() - 1];

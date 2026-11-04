@@ -38,6 +38,8 @@ const MIN_HEIGHT: u16 = 20;
 /// Idle backoff buckets for the background poll cadence (100/200/400/800 ms).
 const POLL_INTERVAL_STEPS: u32 = 4;
 const NATIVE_PROFILE_SOURCE: &str = "native_profile_store";
+/// Items jumped by PageUp/PageDown, matching the plugin-owned TUI family.
+const PROFILE_PAGE_STEP: isize = 10;
 /// Cadence for the agent authorization snapshot while an authorization
 /// surface is on screen; short enough to keep TTL badges live while the user
 /// reviews presets or the JIT inbox.
@@ -148,6 +150,24 @@ fn profile_row_index(inner: Rect, offset: usize, total: usize, row: u16) -> Opti
     (index < total).then_some(index)
 }
 
+/// Display column of a character index inside `line`, accounting for
+/// double-width characters so the caret stays under the edited character.
+fn display_col(line: &str, col_chars: usize) -> u16 {
+    line.chars()
+        .take(col_chars)
+        .map(|character| unicode_width::UnicodeWidthChar::width(character).unwrap_or(0))
+        .sum::<usize>() as u16
+}
+
+/// New selection index after stepping by `delta` (negative = up) over `len`
+/// items, wrapping around both ends.
+fn stepped_selection(current: usize, len: usize, delta: isize) -> usize {
+    if len == 0 {
+        return 0;
+    }
+    (current as isize + delta).rem_euclid(len as isize) as usize
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CredentialMode {
     Unlock,
@@ -202,6 +222,9 @@ struct ProfileEditor {
     existing_profile_id: Option<String>,
     name: String,
     display_name: String,
+    /// Caret position (character index) inside the name / display name fields.
+    name_cursor: usize,
+    display_cursor: usize,
     plugin_index: usize,
     config: Value,
     schema: ProfileFormSchema,
@@ -227,6 +250,8 @@ impl ProfileEditor {
             existing_profile_id: None,
             name: String::new(),
             display_name: String::new(),
+            name_cursor: 0,
+            display_cursor: 0,
             plugin_index: 0,
             config_lines: pretty_json_lines(config.clone()),
             config,
@@ -254,6 +279,13 @@ impl ProfileEditor {
             existing_profile_id: Some(profile.id.clone()),
             name: profile.name.clone(),
             display_name: profile.display_name.clone().unwrap_or_default(),
+            name_cursor: profile.name.chars().count(),
+            display_cursor: profile
+                .display_name
+                .clone()
+                .unwrap_or_default()
+                .chars()
+                .count(),
             plugin_index,
             config_lines: pretty_json_lines(config.clone()),
             config,
@@ -307,6 +339,71 @@ impl ProfileEditor {
             self.cursor_col = 0;
             self.active_field = 0;
             self.message = None;
+        }
+    }
+
+    /// Mutable (value, caret) pair for the active single-line text field.
+    fn active_text_field(&mut self) -> Option<(&mut String, &mut usize)> {
+        match self.active_field {
+            1 => Some((&mut self.name, &mut self.name_cursor)),
+            2 => Some((&mut self.display_name, &mut self.display_cursor)),
+            _ => None,
+        }
+    }
+
+    fn caret_left(&mut self) {
+        if let Some((value, cursor)) = self.active_text_field() {
+            *cursor = cursor.saturating_sub(1).min(value.chars().count());
+        }
+    }
+
+    fn caret_right(&mut self) {
+        if let Some((value, cursor)) = self.active_text_field() {
+            *cursor = (*cursor + 1).min(value.chars().count());
+        }
+    }
+
+    fn caret_home(&mut self) {
+        if let Some((_, cursor)) = self.active_text_field() {
+            *cursor = 0;
+        }
+    }
+
+    fn caret_end(&mut self) {
+        if let Some((value, cursor)) = self.active_text_field() {
+            *cursor = value.chars().count();
+        }
+    }
+
+    fn insert_text_char(&mut self, character: char) {
+        if let Some((value, cursor)) = self.active_text_field() {
+            let index = (*cursor).min(value.chars().count());
+            let byte = byte_index(value, index);
+            value.insert(byte, character);
+            *cursor = index + 1;
+        }
+    }
+
+    fn backspace_text(&mut self) {
+        if let Some((value, cursor)) = self.active_text_field() {
+            let index = (*cursor).min(value.chars().count());
+            if index > 0 {
+                let end = byte_index(value, index);
+                let start = byte_index(value, index - 1);
+                value.replace_range(start..end, "");
+                *cursor = index - 1;
+            }
+        }
+    }
+
+    fn delete_text_forward(&mut self) {
+        if let Some((value, cursor)) = self.active_text_field() {
+            let index = (*cursor).min(value.chars().count());
+            if index < value.chars().count() {
+                let start = byte_index(value, index);
+                let end = byte_index(value, index + 1);
+                value.replace_range(start..end, "");
+            }
         }
     }
 
@@ -544,8 +641,14 @@ impl ProfileEditor {
 
     fn clear_active_value(&mut self) {
         match self.active_field {
-            1 => self.name.clear(),
-            2 => self.display_name.clear(),
+            1 => {
+                self.name.clear();
+                self.name_cursor = 0;
+            }
+            2 => {
+                self.display_name.clear();
+                self.display_cursor = 0;
+            }
             3.. if self.view == EditorView::Form => {
                 let Some(field) = self.active_form_field().cloned() else {
                     return;
@@ -618,6 +721,18 @@ impl ProfileEditor {
             let tail = self.config_lines.remove(self.cursor_line);
             self.cursor_line -= 1;
             self.cursor_col = self.config_lines[self.cursor_line].chars().count();
+            self.config_lines[self.cursor_line].push_str(&tail);
+        }
+    }
+
+    fn delete_forward(&mut self) {
+        let line_chars = self.config_lines[self.cursor_line].chars().count();
+        if self.cursor_col < line_chars {
+            self.cursor_col += 1;
+            self.backspace();
+        } else if self.cursor_line + 1 < self.config_lines.len() {
+            // At end of line: join the next line into this one.
+            let tail = self.config_lines.remove(self.cursor_line + 1);
             self.config_lines[self.cursor_line].push_str(&tail);
         }
     }
@@ -1152,15 +1267,34 @@ impl ConnectionManagerApp {
             .and_then(|index| self.profiles.get(*index))
     }
 
+    /// Move the selection one step, wrapping around both ends.
     fn move_selection(&mut self, down: bool) {
+        self.move_selection_by(if down { 1 } else { -1 });
+    }
+
+    /// Move the selection by `delta` items, wrapping around both ends, and
+    /// keep the render list state in sync.
+    fn move_selection_by(&mut self, delta: isize) {
         if self.filtered_indices.is_empty() {
             return;
         }
-        self.selected = if down {
-            (self.selected + 1).min(self.filtered_indices.len() - 1)
-        } else {
-            self.selected.saturating_sub(1)
-        };
+        self.selected = stepped_selection(self.selected, self.filtered_indices.len(), delta);
+        self.list_state.select(Some(self.selected));
+    }
+
+    fn select_first(&mut self) {
+        if self.filtered_indices.is_empty() {
+            return;
+        }
+        self.selected = 0;
+        self.list_state.select(Some(self.selected));
+    }
+
+    fn select_last(&mut self) {
+        if self.filtered_indices.is_empty() {
+            return;
+        }
+        self.selected = self.filtered_indices.len() - 1;
         self.list_state.select(Some(self.selected));
     }
 }

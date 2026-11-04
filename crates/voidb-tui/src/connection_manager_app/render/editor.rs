@@ -50,6 +50,7 @@ impl ConnectionManagerApp {
             &format!("{} · {}", editor.plugin_id(), editor.plugin_label()),
             editor.active_field == 0,
             false,
+            None,
         );
         render_input(
             frame,
@@ -58,6 +59,7 @@ impl ConnectionManagerApp {
             &editor.name,
             editor.active_field == 1,
             false,
+            Some(editor.name_cursor),
         );
         render_input(
             frame,
@@ -66,6 +68,7 @@ impl ConnectionManagerApp {
             &editor.display_name,
             editor.active_field == 2,
             false,
+            Some(editor.display_cursor),
         );
         let default_message = match editor.view {
             EditorView::Form => {
@@ -141,26 +144,32 @@ impl ConnectionManagerApp {
                     .cloned()
                     .collect::<Vec<_>>()
                     .join("\n");
+                // No Wrap: long lines truncate instead of reflowing, so the
+                // cursor row always matches cursor_line and the caret column
+                // stays aligned with the edited character (wide chars incl.).
                 frame.render_widget(
-                    Paragraph::new(config)
-                        .block(
-                            Block::default()
-                                .title(" Advanced plugin configuration JSON · F2 form ")
-                                .borders(Borders::ALL)
-                                .border_style(if editor.active_field == 3 {
-                                    Style::default().fg(Color::Yellow)
-                                } else {
-                                    Style::default().fg(Color::DarkGray)
-                                }),
-                        )
-                        .wrap(Wrap { trim: false }),
+                    Paragraph::new(config).block(
+                        Block::default()
+                            .title(" Advanced plugin configuration JSON · F2 form ")
+                            .borders(Borders::ALL)
+                            .border_style(if editor.active_field == 3 {
+                                Style::default().fg(Color::Yellow)
+                            } else {
+                                Style::default().fg(Color::DarkGray)
+                            }),
+                    ),
                     rows[3],
                 );
                 if editor.active_field == 3 {
+                    let line = editor
+                        .config_lines
+                        .get(editor.cursor_line)
+                        .map(String::as_str)
+                        .unwrap_or_default();
                     let x = rows[3]
                         .x
                         .saturating_add(1)
-                        .saturating_add(editor.cursor_col as u16)
+                        .saturating_add(super::super::display_col(line, editor.cursor_col))
                         .min(rows[3].right().saturating_sub(2));
                     let y = rows[3]
                         .y
