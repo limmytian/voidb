@@ -1337,20 +1337,49 @@ fn render_batch_authorization_review(
             .as_str()
             .unwrap_or("custom")
             .to_string();
+        // Risk rollup: a boolean says nothing about which calls can break
+        // things; flag the destructive capability ids inline.
+        let mut risk_by_id = std::collections::BTreeMap::new();
+        for capability in resolved_authorization_capabilities(Some(&plan.plugin_id))
+            .map_err(anyhow::Error::msg)?
+        {
+            risk_by_id.insert(capability.qualified_id(), capability.effective_risk());
+        }
+        let mut read_only = 0usize;
+        let mut mutating = 0usize;
+        let mut destructive = Vec::new();
+        for capability in &plan.capabilities {
+            let risk = risk_by_id
+                .get(capability)
+                .map(|risk| capability_risk_name(*risk))
+                .unwrap_or("read_only");
+            match risk {
+                "destructive" | "external_side_effect" => destructive.push(capability),
+                "mutating" => mutating += 1,
+                _ => read_only += 1,
+            }
+        }
         println!(
-            "{}. {} ({}) preset={} mode={} destructive={}{}",
+            "{}. {} ({}) preset={} mode={} risk: read_only={}, mutating={}, destructive={}{}",
             index + 1,
             sanitize_terminal_text(&plan.profile.name),
             sanitize_terminal_text(&plan.plugin_id),
             preset,
             execution_mode_name(plan.execution_mode),
-            plan.allow_destructive,
+            read_only,
+            mutating,
+            destructive.len(),
             if plan.existing.is_empty() {
                 ""
             } else {
                 " replacing-existing-grant"
             }
         );
+        if !destructive.is_empty() {
+            let destructive: Vec<String> =
+                destructive.into_iter().map(|id| (*id).clone()).collect();
+            println!("   destructive capabilities: {}", destructive.join(", "));
+        }
         println!(
             "   purpose: {}",
             sanitize_terminal_text(plan.purpose.trim())
