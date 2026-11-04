@@ -883,12 +883,18 @@ pub(super) fn print_jit_store_error(error: JitAuthorizationStoreError) -> anyhow
     match error {
         JitAuthorizationStoreError::RateLimited { retry_after_ms }
         | JitAuthorizationStoreError::QueueFull { retry_after_ms }
-        | JitAuthorizationStoreError::DenialCooldown { retry_after_ms } => print_jit_error(
-            JIT_EXIT_RATE_LIMITED,
-            "rate_limited",
-            "authorization request is temporarily throttled",
-            Some(retry_after_ms),
-        ),
+        | JitAuthorizationStoreError::DenialCooldown { retry_after_ms } => {
+            eprintln!(
+                "throttled: try again in {}s (retry_after_ms={retry_after_ms})",
+                (retry_after_ms / 1000).max(1)
+            );
+            print_jit_error(
+                JIT_EXIT_RATE_LIMITED,
+                "rate_limited",
+                "authorization request is temporarily throttled",
+                Some(retry_after_ms),
+            )
+        }
         JitAuthorizationStoreError::Io(_) | JitAuthorizationStoreError::Corrupt(_) => {
             print_jit_error(
                 JIT_EXIT_BROKER_OFFLINE,

@@ -43,9 +43,21 @@ impl Default for JitAuthorizationPolicy {
             rate_limit_requests: 8,
             rate_limit_window: Duration::minutes(1),
             denial_cooldown: Duration::seconds(60),
-            max_wait: StdDuration::from_secs(30),
+            max_wait: effective_max_wait(),
         }
     }
+}
+
+/// The configured human-approval wait ceiling. Defaults to 30 s (agents
+/// almost never out-wait a human at that length) and can be raised for
+/// TTY-attached agents through VOIDB_AGENT_MAX_WAIT_SECONDS (1..=3600 s).
+pub fn effective_max_wait() -> StdDuration {
+    let seconds = std::env::var("VOIDB_AGENT_MAX_WAIT_SECONDS")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .map(|seconds| seconds.clamp(1, 3600))
+        .unwrap_or(30);
+    StdDuration::from_secs(seconds)
 }
 
 #[derive(Debug, Clone)]

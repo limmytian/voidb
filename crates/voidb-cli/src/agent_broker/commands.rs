@@ -2105,11 +2105,27 @@ async fn exec_capability(matches: &ArgMatches) -> anyhow::Result<i32> {
         "{}",
         agent_exec_review_prompt(plugin_id, &profile.name, &created.review_command)
     );
-    let wait_timeout = Duration::from_millis(
+    let requested_wait = Duration::from_millis(
         *matches
             .get_one::<u64>("wait-timeout-ms")
             .expect("defaulted by clap"),
     );
+    let ceiling =
+        Duration::from_millis(crate::jit_authorization::effective_max_wait().as_millis() as u64);
+    let wait_timeout = requested_wait.min(ceiling);
+    // Be honest about the wait: a silently clamped timeout makes humans and
+    // agents believe a longer wait was honored.
+    let human_seconds = wait_timeout.as_secs();
+    eprintln!(
+        "The human has {human_seconds}s to approve; this command continues automatically on a decision. Review: {}",
+        created.review_command
+    );
+    if requested_wait > ceiling {
+        eprintln!(
+            "note: --wait-timeout-ms was capped to {}s; raise the ceiling with VOIDB_AGENT_MAX_WAIT_SECONDS if your approval loop needs longer",
+            ceiling.as_secs()
+        );
+    }
     let waited = match store
         .wait_for_principal(&created.request.id, &principal, wait_timeout)
         .await
