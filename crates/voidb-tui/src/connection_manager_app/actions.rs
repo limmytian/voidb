@@ -13,8 +13,8 @@ use super::background::{
     run_profile_test,
 };
 use super::{
-    AUTHORIZATION_REFRESH_INTERVAL, AuthorizationAction, AuthorizationDialog, CredentialDialog,
-    CredentialMode, EditorView, ProfileEditor, ScreenMode,
+    AuthorizationAction, AuthorizationDialog, CredentialDialog, CredentialMode, EditorView,
+    ProfileEditor, ScreenMode, authorization_refresh_interval,
 };
 
 impl ConnectionManagerApp {
@@ -392,7 +392,8 @@ impl ConnectionManagerApp {
         }
         let (tx, rx) = mpsc::channel();
         self.authorization_status_rx = Some(rx);
-        self.next_authorization_refresh = Instant::now() + AUTHORIZATION_REFRESH_INTERVAL;
+        self.next_authorization_refresh =
+            Instant::now() + authorization_refresh_interval(self.mode);
         std::thread::spawn(move || {
             let result = run_authorization_snapshot();
             let _ = tx.send(result);

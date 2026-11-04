@@ -37,7 +37,15 @@ const MIN_HEIGHT: u16 = 20;
 /// Idle backoff buckets for the background poll cadence (100/200/400/800 ms).
 const POLL_INTERVAL_STEPS: u32 = 4;
 const NATIVE_PROFILE_SOURCE: &str = "native_profile_store";
+/// Cadence for the agent authorization snapshot while an authorization
+/// surface is on screen; short enough to keep TTL badges live while the user
+/// reviews presets or the JIT inbox.
 const AUTHORIZATION_REFRESH_INTERVAL: Duration = Duration::from_secs(2);
+/// Cadence for the same snapshot when no authorization surface is visible.
+/// Browse badges tolerate minute-level staleness, and each snapshot spawns
+/// three sequential `voidb-cli` subprocesses, so the idle budget in
+/// docs/tui-interaction-performance.md is only spent while the data is shown.
+const AUTHORIZATION_IDLE_REFRESH_INTERVAL: Duration = Duration::from_secs(60);
 const AUTHORIZATION_TTL_OPTIONS: &[u64] = &[5, 15, 30, 60];
 const AUTHORIZATION_USE_OPTIONS: &[Option<u32>] = &[None, Some(1), Some(10), Some(25), Some(100)];
 
@@ -72,6 +80,22 @@ enum ScreenMode {
     Capabilities,
     Authorization,
     AuthorizationInbox,
+}
+
+impl ScreenMode {
+    fn shows_authorization_data(self) -> bool {
+        matches!(self, ScreenMode::Authorization | ScreenMode::AuthorizationInbox)
+    }
+}
+
+/// Refresh cadence for the authorization snapshot given the active screen:
+/// short while authorization data is visible, minute-level otherwise.
+fn authorization_refresh_interval(mode: ScreenMode) -> Duration {
+    if mode.shows_authorization_data() {
+        AUTHORIZATION_REFRESH_INTERVAL
+    } else {
+        AUTHORIZATION_IDLE_REFRESH_INTERVAL
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

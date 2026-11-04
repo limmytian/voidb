@@ -32,6 +32,33 @@ fn poll_interval_backs_off_and_caps_at_eight_hundred_ms() {
 }
 
 #[test]
+fn authorization_snapshot_refresh_is_short_only_while_authorization_is_visible() {
+    assert_eq!(
+        authorization_refresh_interval(ScreenMode::Authorization),
+        AUTHORIZATION_REFRESH_INTERVAL
+    );
+    assert_eq!(
+        authorization_refresh_interval(ScreenMode::AuthorizationInbox),
+        AUTHORIZATION_REFRESH_INTERVAL
+    );
+    for mode in [
+        ScreenMode::Browse,
+        ScreenMode::Search,
+        ScreenMode::Edit,
+        ScreenMode::ConfirmDelete,
+        ScreenMode::ConfirmPluginInstall,
+        ScreenMode::Help,
+        ScreenMode::Credentials,
+        ScreenMode::Capabilities,
+    ] {
+        assert_eq!(
+            authorization_refresh_interval(mode),
+            AUTHORIZATION_IDLE_REFRESH_INTERVAL
+        );
+    }
+}
+
+#[test]
 fn contextual_install_only_accepts_missing_official_plugins() {
     assert!(can_install_missing_plugin("mysql", None));
     assert!(!can_install_missing_plugin("../mysql", None));
