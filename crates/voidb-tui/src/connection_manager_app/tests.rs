@@ -1,3 +1,6 @@
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+use ratatui::backend::TestBackend;
+
 use super::actions::create_profile_editor;
 use super::background::{
     AgentAuthorizeRequest, agent_authorize_args, can_install_missing_plugin, capability_list_args,
@@ -671,4 +674,356 @@ fn jit_review_dialog_never_crosses_agent_revision_history() {
     let b = JitApprovalDialog::new(request("agent-principal:b"), &revisions);
     assert_eq!(a.grant_id.as_deref(), Some("agent-grant:a"));
     assert_eq!(b.grant_id.as_deref(), Some("agent-grant:b"));
+}
+
+// ---------------------------------------------------------------------------
+// Headless interaction driver: real key/paste/mouse events into the app,
+// plus TestBackend render assertions.
+// ---------------------------------------------------------------------------
+
+fn plain_key(code: KeyCode) -> KeyEvent {
+    KeyEvent::new(code, KeyModifiers::NONE)
+}
+
+fn char_key(character: char) -> KeyEvent {
+    KeyEvent::new(KeyCode::Char(character), KeyModifiers::NONE)
+}
+
+fn ctrl_s() -> KeyEvent {
+    KeyEvent::new(KeyCode::Char('s'), KeyModifiers::CONTROL)
+}
+
+fn press(app: &mut ConnectionManagerApp, code: KeyCode) {
+    app.handle_key(plain_key(code));
+}
+
+fn temp_store(label: &str) -> LocalProfileStore {
+    let dir = std::env::temp_dir().join(format!("voidb-tui-tests-{}-{label}", std::process::id()));
+    let _ = std::fs::create_dir_all(&dir);
+    LocalProfileStore::new(dir.join("profiles.json"), dir.join("credentials.json"))
+}
+
+/// App with an isolated store, no master password, and no background workers.
+/// Credential encryption falls back to the 0600 file secret instead of the OS
+/// keyring so tests never trigger keychain authorization prompts.
+fn test_app(label: &str) -> ConnectionManagerApp {
+    // SAFETY: single-threaded env mutation during test setup; `set_var` is
+    // unsafe since Rust 1.87 (same pattern as the sync plugin e2e harness).
+    unsafe {
+        std::env::set_var("VOIDB_DISABLE_KEYRING", "1");
+    }
+    ConnectionManagerApp::from_parts(AppConfig::default(), temp_store(label), None)
+        .expect("test app")
+}
+
+/// App seeded with profiles created through the real editor flow.
+fn seeded_app(label: &str, names: &[&str]) -> ConnectionManagerApp {
+    let mut app = test_app(label);
+    for name in names {
+        press(&mut app, KeyCode::Char('n'));
+        press(&mut app, KeyCode::Tab);
+        for character in name.chars() {
+            app.handle_key(char_key(character));
+        }
+        app.handle_key(ctrl_s());
+    }
+    app
+}
+
+fn render_app(app: &mut ConnectionManagerApp, width: u16, height: u16) -> ratatui::buffer::Buffer {
+    let mut terminal = ratatui::Terminal::new(TestBackend::new(width, height)).expect("terminal");
+    terminal.draw(|frame| app.render(frame)).expect("draw");
+    terminal.backend().buffer().clone()
+}
+
+fn buffer_text(buffer: &ratatui::buffer::Buffer) -> String {
+    let width = buffer.area.width as usize;
+    let mut lines: Vec<String> = vec![String::new(); buffer.area.height as usize];
+    for (index, cell) in buffer.content.iter().enumerate() {
+        lines[index / width].push_str(cell.symbol());
+    }
+    lines.join("\n")
+}
+
+fn mouse_event(kind: MouseEventKind, column: u16, row: u16) -> MouseEvent {
+    MouseEvent {
+        kind,
+        column,
+        row,
+        modifiers: KeyModifiers::NONE,
+    }
+}
+
+#[test]
+fn browse_navigation_wraps_pages_and_jumps() {
+    let mut app = seeded_app("nav", &["alpha", "beta", "gamma"]);
+    // Saving selects the most recently saved profile.
+    assert_eq!(app.selected, 2);
+    press(&mut app, KeyCode::Char('g'));
+    assert_eq!(app.selected, 0);
+    press(&mut app, KeyCode::Char('k')); // wrap backwards to the last item
+    assert_eq!(app.selected, 2);
+    press(&mut app, KeyCode::Char('j')); // wrap forwards to the first item
+    assert_eq!(app.selected, 0);
+    press(&mut app, KeyCode::End);
+    assert_eq!(app.selected, 2);
+    press(&mut app, KeyCode::Char('g'));
+    assert_eq!(app.selected, 0);
+    press(&mut app, KeyCode::Char('G'));
+    assert_eq!(app.selected, 2);
+    press(&mut app, KeyCode::Home);
+    assert_eq!(app.selected, 0);
+    // Page steps wrap within the 3-item list: +10 lands on 10 % 3 = 1.
+    press(&mut app, KeyCode::PageDown);
+    assert_eq!(app.selected, 1);
+    press(&mut app, KeyCode::PageUp);
+    assert_eq!(app.selected, 0);
+    press(&mut app, KeyCode::Char('q'));
+    assert!(app.should_quit);
+}
+
+#[test]
+fn search_filters_esc_clears_then_exits() {
+    let mut app = seeded_app("search", &["alpha", "beta"]);
+    press(&mut app, KeyCode::Char('/'));
+    assert_eq!(app.mode, ScreenMode::Search);
+    app.handle_key(char_key('b'));
+    assert_eq!(app.filtered_indices.len(), 1);
+    // Esc clears the non-empty filter and stays in search mode.
+    press(&mut app, KeyCode::Esc);
+    assert_eq!(app.mode, ScreenMode::Search);
+    assert!(app.search.is_empty());
+    assert_eq!(app.filtered_indices.len(), 2);
+    // Esc from an empty filter returns to Browse.
+    press(&mut app, KeyCode::Esc);
+    assert_eq!(app.mode, ScreenMode::Browse);
+    // Pasted text filters with control characters stripped.
+    press(&mut app, KeyCode::Char('/'));
+    app.handle_paste("al\n");
+    assert_eq!(app.search, "al");
+    press(&mut app, KeyCode::Enter);
+    assert_eq!(app.mode, ScreenMode::Browse);
+    assert_eq!(app.filtered_indices.len(), 1);
+}
+
+#[test]
+fn delete_confirmation_requires_explicit_y() {
+    let mut app = seeded_app("delete", &["alpha", "beta"]);
+    press(&mut app, KeyCode::Char('g')); // select the first profile (alpha)
+    press(&mut app, KeyCode::Char('d'));
+    assert_eq!(app.mode, ScreenMode::ConfirmDelete);
+    // Enter is the safe default: it keeps the profile.
+    press(&mut app, KeyCode::Enter);
+    assert_eq!(app.mode, ScreenMode::Browse);
+    assert_eq!(app.profiles.len(), 2);
+    press(&mut app, KeyCode::Char('d'));
+    press(&mut app, KeyCode::Char('y'));
+    assert_eq!(app.mode, ScreenMode::Browse);
+    assert_eq!(app.profiles.len(), 1);
+    assert_eq!(app.profiles[0].name, "beta");
+    assert_eq!(app.status_kind, StatusKind::Success);
+}
+
+#[test]
+fn plugin_install_declines_on_enter_without_spawning() {
+    let mut app = seeded_app("install", &["alpha"]);
+    // The offer path rescans the real plugin directory, so drive the confirm
+    // state directly to keep the test environment-independent.
+    app.plugin_install_target = Some("mysql".into());
+    app.mode = ScreenMode::ConfirmPluginInstall;
+    press(&mut app, KeyCode::Enter);
+    assert_eq!(app.mode, ScreenMode::Browse);
+    assert!(app.plugin_install_rx.is_none());
+    assert!(app.plugin_install_target.is_none());
+}
+
+#[test]
+fn editor_esc_with_unsaved_work_confirms_discard() {
+    let mut app = test_app("discard");
+    press(&mut app, KeyCode::Char('n'));
+    assert_eq!(app.mode, ScreenMode::Edit);
+    press(&mut app, KeyCode::Tab);
+    for character in "draft".chars() {
+        app.handle_key(char_key(character));
+    }
+    press(&mut app, KeyCode::Esc);
+    assert_eq!(app.mode, ScreenMode::ConfirmDiscard);
+    // Enter keeps editing and preserves the work.
+    press(&mut app, KeyCode::Enter);
+    assert_eq!(app.mode, ScreenMode::Edit);
+    assert_eq!(app.editor.as_ref().expect("editor").name, "draft");
+    // Explicit y discards everything.
+    press(&mut app, KeyCode::Esc);
+    app.handle_key(char_key('y'));
+    assert_eq!(app.mode, ScreenMode::Browse);
+    assert!(app.editor.is_none());
+    assert!(app.profiles.is_empty());
+}
+
+#[test]
+fn editor_paste_lands_at_caret_and_ctrl_s_saves() {
+    let mut app = test_app("paste-save");
+    press(&mut app, KeyCode::Char('n'));
+    press(&mut app, KeyCode::Tab);
+    app.handle_paste("pro");
+    app.handle_paste("d\nx"); // line break is dropped outside the JSON field
+    assert_eq!(app.editor.as_ref().expect("editor").name, "prodx");
+    app.handle_key(ctrl_s());
+    assert_eq!(app.mode, ScreenMode::Browse);
+    assert_eq!(app.profiles.len(), 1);
+    assert_eq!(app.profiles[0].name, "prodx");
+    assert_eq!(app.status_kind, StatusKind::Success);
+}
+
+#[test]
+fn capability_overlay_navigates_and_wraps() {
+    let mut app = seeded_app("caps", &["alpha"]);
+    app.capabilities = vec![
+        CapabilityItem {
+            id: "cap-a".into(),
+            description: "A".into(),
+            risk: "low".into(),
+            interactive_execute: false,
+            capability_wide_allowed: false,
+            approval_fields: vec![],
+        },
+        CapabilityItem {
+            id: "cap-b".into(),
+            description: "B".into(),
+            risk: "low".into(),
+            interactive_execute: false,
+            capability_wide_allowed: false,
+            approval_fields: vec![],
+        },
+    ];
+    app.mode = ScreenMode::Capabilities;
+    press(&mut app, KeyCode::Char('j'));
+    assert_eq!(app.capability_selected, 1);
+    press(&mut app, KeyCode::Char('j')); // wrap
+    assert_eq!(app.capability_selected, 0);
+    press(&mut app, KeyCode::PageUp);
+    assert_eq!(app.capability_selected, 0);
+    // Enter closes the overlay with guidance in the status line.
+    press(&mut app, KeyCode::Enter);
+    assert_eq!(app.mode, ScreenMode::Browse);
+}
+
+#[test]
+fn inbox_navigation_wraps_without_background_work() {
+    let mut app = test_app("inbox");
+    app.pending_authorization_requests = vec![
+        PendingAuthorizationView {
+            id: "req-1".into(),
+            principal_fingerprint: "fp-1".into(),
+            profile_id: "p1".into(),
+            plugin_id: "mysql".into(),
+            scope: json!({}),
+            risk: "low".into(),
+            purpose: "triage".into(),
+            status: "pending".into(),
+            created_at: "2026-11-04T00:00:00Z".into(),
+            decision_reason: None,
+            expires_at: "2026-11-04T01:00:00Z".into(),
+            timed_out: false,
+        },
+        PendingAuthorizationView {
+            id: "req-2".into(),
+            principal_fingerprint: "fp-2".into(),
+            profile_id: "p2".into(),
+            plugin_id: "redis".into(),
+            scope: json!({}),
+            risk: "low".into(),
+            purpose: "triage".into(),
+            status: "pending".into(),
+            created_at: "2026-11-04T00:00:00Z".into(),
+            decision_reason: None,
+            expires_at: "2026-11-04T01:00:00Z".into(),
+            timed_out: false,
+        },
+    ];
+    app.mode = ScreenMode::AuthorizationInbox;
+    press(&mut app, KeyCode::Char('j'));
+    assert_eq!(app.authorization_inbox_selected, 1);
+    press(&mut app, KeyCode::Char('j')); // wrap
+    assert_eq!(app.authorization_inbox_selected, 0);
+    press(&mut app, KeyCode::Char('k')); // wrap backwards
+    assert_eq!(app.authorization_inbox_selected, 1);
+    press(&mut app, KeyCode::Esc);
+    assert_eq!(app.mode, ScreenMode::Browse);
+    assert!(app.authorization_status_rx.is_none());
+}
+
+#[test]
+fn credentials_dialog_opens_pastes_and_closes() {
+    let mut app = seeded_app("creds", &["alpha"]);
+    press(&mut app, KeyCode::Char('m'));
+    assert!(app.credential_dialog.is_some());
+    app.handle_paste("pw");
+    press(&mut app, KeyCode::Esc);
+    assert!(app.credential_dialog.is_none());
+    assert_eq!(app.mode, ScreenMode::Browse);
+}
+
+#[test]
+fn help_overlay_lists_core_bindings_and_mouse() {
+    let mut app = test_app("help");
+    press(&mut app, KeyCode::Char('?'));
+    assert_eq!(app.mode, ScreenMode::Help);
+    let text = buffer_text(&render_app(&mut app, 100, 30));
+    for needle in [
+        "Mouse",
+        "Copy CLI guidance",
+        "Ctrl+C / Ctrl+Q",
+        "Esc clears",
+    ] {
+        assert!(text.contains(needle), "help overlay is missing '{needle}'");
+    }
+    // Any of the documented close keys returns to Browse.
+    press(&mut app, KeyCode::Char('?'));
+    assert_eq!(app.mode, ScreenMode::Browse);
+}
+
+#[test]
+fn browse_render_shows_profiles_details_and_guidance() {
+    let mut app = seeded_app("render", &["alpha", "beta"]);
+    let text = buffer_text(&render_app(&mut app, 100, 30));
+    assert!(text.contains("alpha"));
+    assert!(text.contains("beta"));
+    assert!(text.contains("Profile details"));
+    assert!(text.contains("voidb-cli mysql tui --profile"));
+    assert!(text.contains("Enter copies these commands to the clipboard"));
+    assert!(text.contains("Saved native profile"));
+}
+
+#[test]
+fn small_terminal_renders_the_size_notice() {
+    let mut app = test_app("small");
+    let text = buffer_text(&render_app(&mut app, 40, 10));
+    assert!(text.contains("Terminal too small"));
+    assert!(text.contains("Minimum: 72x20"));
+}
+
+#[test]
+fn mouse_click_selects_and_wheel_navigates() {
+    let mut app = seeded_app("mouse", &["alpha", "beta", "gamma"]);
+    // A real render seeds the hit-test geometry.
+    let _ = render_app(&mut app, 100, 30);
+    // The list viewport starts at y=4 (header rows + top border): row 5 is
+    // the second visible profile.
+    assert!(app.handle_mouse(mouse_event(MouseEventKind::Down(MouseButton::Left), 10, 5)));
+    assert_eq!(app.selected, 1);
+    // Motion never changes state.
+    assert!(!app.handle_mouse(mouse_event(MouseEventKind::Moved, 30, 6)));
+    assert_eq!(app.selected, 1);
+    assert!(app.handle_mouse(mouse_event(MouseEventKind::ScrollDown, 10, 5)));
+    assert_eq!(app.selected, 2);
+    assert!(app.handle_mouse(mouse_event(MouseEventKind::ScrollUp, 10, 5)));
+    assert_eq!(app.selected, 1);
+}
+
+#[test]
+fn quit_keys_terminate_the_app() {
+    let mut app = test_app("quit");
+    app.handle_key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL));
+    assert!(app.should_quit);
 }

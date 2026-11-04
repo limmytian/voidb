@@ -1111,6 +1111,19 @@ impl ConnectionManagerApp {
         } else {
             (config, None)
         };
+        let mut app = Self::from_parts(config, store, active_master_password)?;
+        app.start_authorization_status_refresh();
+        Ok(app)
+    }
+
+    /// Shared construction path that loads profiles from `store` but spawns
+    /// no background work, so tests can drive the app headlessly without
+    /// subprocess side effects.
+    fn from_parts(
+        config: AppConfig,
+        store: LocalProfileStore,
+        active_master_password: Option<String>,
+    ) -> Result<Self> {
         let mut app = Self {
             store,
             config,
@@ -1154,11 +1167,10 @@ impl ConnectionManagerApp {
         };
         app.refresh_profiles()?;
         if app.config.requires_master_password() && app.active_master_password.is_none() {
-            app.status = "Profile credentials are locked; press m to unlock".to_string();
+            app.set_status("Profile credentials are locked; press m to unlock");
         } else if app.profiles.is_empty() {
-            app.status = "No native profiles yet; press n to create one".to_string();
+            app.set_status("No native profiles yet; press n to create one");
         }
-        app.start_authorization_status_refresh();
         Ok(app)
     }
 
