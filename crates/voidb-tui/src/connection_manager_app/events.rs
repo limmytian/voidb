@@ -227,7 +227,9 @@ impl ConnectionManagerApp {
 
     fn handle_delete_key(&mut self, key: KeyEvent) {
         match key.code {
-            KeyCode::Char('y') | KeyCode::Enter => {
+            // Deliberately non-default: deleting requires the explicit `y`
+            // (docs/standalone-tui-ux-acceptance.md), Enter keeps the profile.
+            KeyCode::Char('y') => {
                 if let Some(profile) = self.selected_profile().cloned() {
                     match self.store.delete_profile(&profile.id) {
                         Ok(true) => {
@@ -240,7 +242,7 @@ impl ConnectionManagerApp {
                 }
                 self.mode = ScreenMode::Browse;
             }
-            KeyCode::Char('n') | KeyCode::Esc => self.mode = ScreenMode::Browse,
+            KeyCode::Enter | KeyCode::Char('n') | KeyCode::Esc => self.mode = ScreenMode::Browse,
             _ => {}
         }
     }
@@ -661,11 +663,13 @@ impl ConnectionManagerApp {
 
     fn handle_plugin_install_key(&mut self, key: KeyEvent) {
         match key.code {
-            KeyCode::Esc | KeyCode::Char('n') => {
+            KeyCode::Enter | KeyCode::Esc | KeyCode::Char('n') => {
+                // Non-default affirmative: installing starts a download, so
+                // Enter declines and only `y` proceeds.
                 self.plugin_install_target = None;
                 self.mode = ScreenMode::Browse;
             }
-            KeyCode::Enter | KeyCode::Char('y') => {
+            KeyCode::Char('y') => {
                 let Some(plugin_id) = self.plugin_install_target.take() else {
                     self.mode = ScreenMode::Browse;
                     return;

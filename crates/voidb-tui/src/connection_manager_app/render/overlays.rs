@@ -17,7 +17,7 @@ impl ConnectionManagerApp {
         frame.render_widget(Clear, popup);
         frame.render_widget(
             Paragraph::new(format!(
-                "Download and install official plugin '{plugin_id}' from the registry?\n\nOnly this plugin will be installed in your user plugin directory.\nConnection settings and credentials stay unchanged.\n\nEnter/y install · n/Esc cancel"
+                "Download and install official plugin '{plugin_id}' from the registry?\n\nOnly this plugin will be installed in your user plugin directory.\nConnection settings and credentials stay unchanged.\n\ny install · Enter/n/Esc cancel"
             ))
             .alignment(Alignment::Center)
             .wrap(Wrap { trim: true })
@@ -54,7 +54,7 @@ impl ConnectionManagerApp {
             .unwrap_or("selected profile");
         frame.render_widget(
             Paragraph::new(format!(
-                "Delete native profile '{name}' and its encrypted configuration?\n\nEnter/y confirm · n/Esc cancel"
+                "Delete native profile '{name}' and its encrypted configuration?\n\ny confirm delete · Enter/n/Esc keep the profile"
             ))
             .alignment(Alignment::Center)
             .wrap(Wrap { trim: true })
