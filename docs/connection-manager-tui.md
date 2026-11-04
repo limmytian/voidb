@@ -119,7 +119,7 @@ Keyboard vocabulary:
 |---|---|
 | `j` / `k` or arrows | Move through profiles. |
 | `/` | Filter profiles. |
-| `Enter` | Show CLI/capability guidance for the selected profile. |
+| `Enter` | Copy CLI/capability guidance for the selected profile to the clipboard and show it in the status line. |
 | `c` | Open the capability browser for the selected profile's plugin. |
 | `n` | Create a profile. |
 | `e` | Edit the selected profile. |

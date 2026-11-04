@@ -31,5 +31,4 @@ unicode-width = "0.2"
 futures = "0.3"
 tokio-util = "0.7"
 dirs = "6.0"
-arboard = "3.4"  # Clipboard support
 tui-textarea = "0.7"  # Multi-line text editor

@@ -3816,7 +3816,6 @@ name = "voidb-tui"
 version = "0.3.7"
 dependencies = [
  "anyhow",
- "arboard",
  "chrono",
  "crossterm",
  "dirs",

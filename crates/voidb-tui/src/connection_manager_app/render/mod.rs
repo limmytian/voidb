@@ -211,6 +211,10 @@ impl ConnectionManagerApp {
                     "TUI:  voidb-cli {} tui --profile id:{}",
                     profile.plugin_id, profile.id
                 )),
+                Line::styled(
+                    "Enter copies these commands to the clipboard",
+                    Style::default().fg(Color::DarkGray),
+                ),
                 Line::raw(
                     if can_install_missing_plugin(
                         &profile.plugin_id,

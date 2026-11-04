@@ -333,11 +333,27 @@ impl ConnectionManagerApp {
     }
 
     pub(super) fn show_guidance(&mut self) {
-        if let Some(profile) = self.selected_profile() {
-            self.status = format!(
-                "Profile id:{} | test: voidb-cli profile test id:{} --plugin {} | capabilities: c",
-                profile.id, profile.id, profile.plugin_id
-            );
+        let Some(profile) = self.selected_profile() else {
+            self.status = "No profile selected".to_string();
+            return;
+        };
+        let guidance = format!(
+            "voidb-cli profile test id:{} --plugin {}\nvoidb-cli {} tui --profile id:{}",
+            profile.id, profile.plugin_id, profile.plugin_id, profile.id
+        );
+        match voidb_core::clipboard::copy_to_clipboard(&guidance) {
+            Ok(()) => {
+                self.status = format!(
+                    "Copied CLI guidance · test: voidb-cli profile test id:{} --plugin {}",
+                    profile.id, profile.plugin_id
+                );
+            }
+            Err(error) => {
+                self.status = format!(
+                    "Clipboard unavailable ({error}) · test: voidb-cli profile test id:{} --plugin {}",
+                    profile.id, profile.plugin_id
+                );
+            }
         }
     }
 

@@ -94,7 +94,7 @@ impl ConnectionManagerApp {
             Line::raw("Advanced access Presets, TTL, uses, capabilities, renew/revoke"),
             Line::raw("m               Unlock or set master password"),
             Line::raw("r               Reload profile store"),
-            Line::raw("Enter           Show copyable CLI guidance"),
+            Line::raw("Enter           Copy CLI guidance to the clipboard"),
             Line::raw("Esc             Close overlay or cancel"),
             Line::raw("q               Quit (profile list)"),
             Line::raw("Ctrl+C / Ctrl+Q Quit"),
