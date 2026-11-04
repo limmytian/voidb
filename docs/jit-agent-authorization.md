@@ -127,6 +127,18 @@ Run the broker-provided command in a local interactive terminal:
 voidb-cli agent request review auth-request:<uuid>
 ```
 
+For a quick machine-or-human glance at everything pending, the canonical
+approval inbox is also a standalone command and accepts the same
+`--format json|table` split as `agent list` and `agent catalog`:
+
+```bash
+voidb-cli agent request inbox --format table
+```
+
+The table view lists each request's short id, status, risk, plugin, profile,
+truncated purpose, and relative expiry; `--format json` (the default) stays
+stable for agents and scripting.
+
 The CLI is the preferred review surface. It fetches canonical state, displays
 the principal fingerprint, profile, plugin, purpose, risk, requested scope, and
 expiry, then offers time-bounded (recommended), once, add-to-grant, or deny.

@@ -557,7 +557,7 @@ fn grant_status_label(status: AgentGrantStatus) -> &'static str {
 }
 
 /// Relative expiry for humans: "in 12m", "in 1h05m", or "expired 5m ago".
-fn relative_expiry(expires_at: DateTime<Utc>, now: DateTime<Utc>) -> String {
+pub(super) fn relative_expiry(expires_at: DateTime<Utc>, now: DateTime<Utc>) -> String {
     let delta = expires_at - now;
     if delta.num_seconds() <= 0 {
         return format!("expired {}m ago", (-delta).num_minutes().max(0));
@@ -591,11 +591,11 @@ pub(super) fn authorization_catalog_table(definitions: &[&CapabilityDefinition])
     lines.join("\n")
 }
 
-fn sanitize_table_cell(value: &str) -> String {
+pub(super) fn sanitize_table_cell(value: &str) -> String {
     value.replace(['\t', '\n', '\r'], " ")
 }
 
-fn capability_risk_name(risk: voidb_core::CapabilityRiskLevel) -> &'static str {
+pub(super) fn capability_risk_name(risk: voidb_core::CapabilityRiskLevel) -> &'static str {
     match risk {
         voidb_core::CapabilityRiskLevel::ReadOnly => "read_only",
         voidb_core::CapabilityRiskLevel::Mutating => "mutating",

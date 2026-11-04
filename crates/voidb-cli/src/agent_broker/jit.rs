@@ -5,7 +5,7 @@ use crate::jit_authorization::{
     CreateAuthorizationRequest, JitAuthorizationStore, JitAuthorizationStoreError,
 };
 use anyhow::{Context, anyhow, bail};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -97,7 +97,14 @@ pub(super) fn jit_request_command() -> Command {
         ))
         .subcommand(
             Command::new("inbox")
-                .about("List the canonical secret-free local approval inbox and grant revisions"),
+                .about("List the canonical secret-free local approval inbox and grant revisions")
+                .arg(
+                    Arg::new("format")
+                        .long("format")
+                        .default_value("json")
+                        .value_parser(["json", "table"])
+                        .help("Output format; json is stable for agents, table is human-readable"),
+                ),
         )
         .subcommand(
             Command::new("decide")
@@ -214,7 +221,7 @@ pub(super) async fn run_jit_request_command(matches: &ArgMatches) -> anyhow::Res
         Err(error) => return print_jit_store_error(error),
     };
     if operation == "inbox" {
-        return print_jit_review_inbox(&store);
+        return print_jit_review_inbox(&store, matches);
     }
     if operation == "decide" {
         return decide_jit_request(&store, matches).await;
@@ -288,7 +295,62 @@ pub(super) async fn run_jit_request_command(matches: &ArgMatches) -> anyhow::Res
     }
 }
 
-fn print_jit_review_inbox(store: &JitAuthorizationStore) -> anyhow::Result<i32> {
+/// Human-readable request table for `agent request inbox --format table`.
+fn jit_inbox_table(
+    requests: &[voidb_core::FrontendAuthorizationRequest],
+    now: DateTime<Utc>,
+) -> String {
+    let mut lines = vec!["ID\tSTATUS\tRISK\tPLUGIN\tPROFILE\tPURPOSE\tEXPIRES".to_string()];
+    for request in requests {
+        lines.push(format!(
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}",
+            short_request_id(&request.id),
+            request_status_label(&request.status),
+            crate::agent_broker::commands::capability_risk_name(request.risk),
+            crate::agent_broker::commands::sanitize_table_cell(&request.plugin_id),
+            crate::agent_broker::commands::sanitize_table_cell(&request.profile_id),
+            truncate_cell(&request.purpose, 48),
+            crate::agent_broker::commands::relative_expiry(request.expires_at, now),
+        ));
+    }
+    lines.join("\n")
+}
+
+/// Short request id for humans: the segment after the prefix, truncated.
+fn short_request_id(id: &str) -> String {
+    let tail = id.rsplit(':').next().unwrap_or(id);
+    let mut tail = tail.to_string();
+    if tail.len() > 13 {
+        tail.truncate(13);
+        tail.push('\u{2026}');
+    }
+    tail
+}
+
+fn truncate_cell(value: &str, max: usize) -> String {
+    let mut value: String = value.chars().take(max).collect();
+    if value.chars().count() >= max {
+        value.push('\u{2026}');
+    }
+    crate::agent_broker::commands::sanitize_table_cell(&value)
+}
+
+fn request_status_label(status: &voidb_core::AgentAuthorizationRequestStatus) -> &'static str {
+    use voidb_core::AgentAuthorizationRequestStatus as Status;
+    match status {
+        Status::Pending => "PENDING",
+        Status::Approved => "APPROVED",
+        Status::Denied => "DENIED",
+        Status::Expired => "EXPIRED",
+        Status::Cancelled => "CANCELLED",
+        Status::Superseded => "SUPERSEDED",
+    }
+}
+
+fn print_jit_review_inbox(
+    store: &JitAuthorizationStore,
+    matches: &ArgMatches,
+) -> anyhow::Result<i32> {
     let requests = match store.list_for_review(Utc::now()) {
         Ok(requests) => requests,
         Err(error) => return print_jit_store_error(error),
@@ -301,6 +363,10 @@ fn print_jit_review_inbox(store: &JitAuthorizationStore) -> anyhow::Result<i32> 
         .iter()
         .filter(|request| request.status == voidb_core::AgentAuthorizationRequestStatus::Pending)
         .count();
+    if matches.get_one::<String>("format").map(String::as_str) == Some("table") {
+        println!("{}", jit_inbox_table(&requests, Utc::now()));
+        return Ok(0);
+    }
     println!(
         "{}",
         serde_json::to_string_pretty(&json!({
