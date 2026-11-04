@@ -19,7 +19,8 @@ impl UserSession {
 
     /// Type a single key.
     fn press(&mut self, code: KeyCode) -> &mut Self {
-        self.key_sequence.push(KeyEvent::new(code, KeyModifiers::NONE));
+        self.key_sequence
+            .push(KeyEvent::new(code, KeyModifiers::NONE));
         self
     }
 
@@ -130,7 +131,12 @@ fn test_scenario_toggle_sort() {
         .type_char('s'); // Clear sort
 
     assert_eq!(session.keys().len(), 4);
-    assert!(session.keys().iter().all(|k| matches!(k.code, KeyCode::Char('l' | 's'))));
+    assert!(
+        session
+            .keys()
+            .iter()
+            .all(|k| matches!(k.code, KeyCode::Char('l' | 's')))
+    );
 }
 
 /// Test scenario: Filter data.
@@ -211,7 +217,12 @@ fn test_scenario_page_navigation() {
         .ctrl('b'); // Full page backward
 
     assert_eq!(session.keys().len(), 4);
-    assert!(session.keys().iter().all(|k| k.modifiers.contains(KeyModifiers::CONTROL)));
+    assert!(
+        session
+            .keys()
+            .iter()
+            .all(|k| k.modifiers.contains(KeyModifiers::CONTROL))
+    );
 }
 
 /// Test scenario: Tab management.

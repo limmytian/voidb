@@ -26,6 +26,25 @@ impl ConnectionManagerApp {
         );
     }
 
+    pub(super) fn render_discard_confirmation(&self, frame: &mut Frame, area: Rect) {
+        let popup = centered_rect(66, 24, area);
+        frame.render_widget(Clear, popup);
+        frame.render_widget(
+            Paragraph::new(
+                "Discard unsaved changes to this profile?\n\nThe editor keeps your edits if you continue.\n\ny discard · Enter/n keep editing · Esc keep editing",
+            )
+            .alignment(Alignment::Center)
+            .wrap(Wrap { trim: true })
+            .block(
+                Block::default()
+                    .title(" Discard edits ")
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(Color::Yellow)),
+            ),
+            popup,
+        );
+    }
+
     pub(super) fn render_delete_confirmation(&self, frame: &mut Frame, area: Rect) {
         let popup = centered_rect(58, 24, area);
         frame.render_widget(Clear, popup);

@@ -38,6 +38,7 @@ impl ConnectionManagerApp {
 
         match self.mode {
             ScreenMode::Edit => self.render_editor(frame, area),
+            ScreenMode::ConfirmDiscard => self.render_discard_confirmation(frame, area),
             ScreenMode::ConfirmDelete => self.render_delete_confirmation(frame, area),
             ScreenMode::ConfirmPluginInstall => {
                 self.render_plugin_install_confirmation(frame, area)

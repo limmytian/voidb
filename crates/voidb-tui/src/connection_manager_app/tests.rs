@@ -4,6 +4,7 @@ use super::background::{
     parse_agent_statuses, parse_agent_supported_plugins, parse_capabilities, parse_grant_revisions,
     parse_pending_authorizations, parse_plugin_install_response,
 };
+use super::events::paste_into_editor;
 use super::*;
 
 #[test]
@@ -72,7 +73,10 @@ fn profile_list_inner_area_respects_minimal_terminal_size() {
     let (_, main, _) = terminal_layout(Rect::new(0, 0, 100, 30));
     let (profiles, _) = main_columns(main);
     let expected = Block::default().borders(Borders::ALL).inner(profiles);
-    assert_eq!(profile_list_inner_area(Rect::new(0, 0, 100, 30)), Some(expected));
+    assert_eq!(
+        profile_list_inner_area(Rect::new(0, 0, 100, 30)),
+        Some(expected)
+    );
 }
 
 #[test]
@@ -90,6 +94,47 @@ fn profile_row_index_maps_visible_rows_and_rejects_off_list_rows() {
     assert_eq!(profile_row_index(inner, 4, 8, 8), None);
     // Empty list never maps.
     assert_eq!(profile_row_index(inner, 0, 0, 4), None);
+}
+
+#[test]
+fn editor_is_dirty_tracks_unsaved_changes_only() {
+    let mut editor = ProfileEditor::new();
+    assert!(!editor.is_dirty());
+    editor.name.push('x');
+    assert!(editor.is_dirty());
+
+    // Toggling the Form/JSON view changes no profile data.
+    let mut editor = ProfileEditor::new();
+    editor.toggle_view();
+    assert!(!editor.is_dirty());
+
+    // Cycling the plugin on a new profile replaces the whole config.
+    let mut editor = ProfileEditor::new();
+    editor.cycle_plugin(true);
+    assert!(editor.is_dirty());
+}
+
+#[test]
+fn editor_paste_drops_line_breaks_outside_json_text() {
+    // Name field: pasted newlines are dropped instead of hitting Enter.
+    let mut editor = ProfileEditor::new();
+    editor.active_field = 1;
+    paste_into_editor(&mut editor, "prod\ndb");
+    assert_eq!(editor.name, "proddb");
+
+    // A bare newline must not cycle a form select field value.
+    let mut editor = ProfileEditor::new();
+    editor.active_field = 3;
+    let before = editor.config.clone();
+    paste_into_editor(&mut editor, "\n");
+    assert_eq!(editor.config, before);
+
+    // JSON text field: newlines are content and split the line.
+    let mut editor = ProfileEditor::new();
+    editor.toggle_view();
+    let lines_before = editor.config_lines.len();
+    paste_into_editor(&mut editor, "x\ny");
+    assert_eq!(editor.config_lines.len(), lines_before + 1);
 }
 
 #[test]

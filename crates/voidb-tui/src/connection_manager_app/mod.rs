@@ -74,6 +74,7 @@ enum ScreenMode {
     Browse,
     Search,
     Edit,
+    ConfirmDiscard,
     ConfirmDelete,
     ConfirmPluginInstall,
     Help,
@@ -85,7 +86,10 @@ enum ScreenMode {
 
 impl ScreenMode {
     fn shows_authorization_data(self) -> bool {
-        matches!(self, ScreenMode::Authorization | ScreenMode::AuthorizationInbox)
+        matches!(
+            self,
+            ScreenMode::Authorization | ScreenMode::AuthorizationInbox
+        )
     }
 }
 
@@ -207,6 +211,12 @@ struct ProfileEditor {
     cursor_col: usize,
     active_field: usize,
     message: Option<String>,
+    /// Snapshot of the values the editor opened with, used to detect unsaved
+    /// changes when Esc is pressed.
+    original_name: String,
+    original_display_name: String,
+    original_plugin_id: String,
+    original_config: Value,
 }
 
 impl ProfileEditor {
@@ -226,6 +236,10 @@ impl ProfileEditor {
             cursor_col: 0,
             active_field: 0,
             message: None,
+            original_name: String::new(),
+            original_display_name: String::new(),
+            original_plugin_id: plugin_id.to_string(),
+            original_config: default_plugin_config(plugin_id),
         }
     }
 
@@ -235,6 +249,7 @@ impl ProfileEditor {
             .position(|(id, _)| *id == profile.plugin_id)
             .unwrap_or(0);
         let config = connection.plugin_config.unwrap_or_else(|| json!({}));
+        let original_config = config.clone();
         Self {
             existing_profile_id: Some(profile.id.clone()),
             name: profile.name.clone(),
@@ -248,7 +263,19 @@ impl ProfileEditor {
             cursor_col: 0,
             active_field: 0,
             message: None,
+            original_name: profile.name.clone(),
+            original_display_name: profile.display_name.clone().unwrap_or_default(),
+            original_plugin_id: profile.plugin_id.clone(),
+            original_config,
         }
+    }
+
+    /// Whether any editable value differs from what the editor opened with.
+    fn is_dirty(&self) -> bool {
+        self.name != self.original_name
+            || self.display_name != self.original_display_name
+            || self.plugin_id() != self.original_plugin_id
+            || self.config != self.original_config
     }
 
     fn plugin_id(&self) -> &'static str {

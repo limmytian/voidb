@@ -8,7 +8,7 @@ use super::ConnectionManagerApp;
 use super::background::{can_install_missing_plugin, installed_plugin_states, run_plugin_install};
 use super::{
     AUTHORIZATION_TTL_OPTIONS, AUTHORIZATION_USE_OPTIONS, AgentAuthorizationPresetKind,
-    AuthorizationAction, EditorView, JitApprovalDialog, JitDecision, ScreenMode,
+    AuthorizationAction, EditorView, JitApprovalDialog, JitDecision, ProfileEditor, ScreenMode,
     profile_list_inner_area, profile_row_index,
 };
 
@@ -24,6 +24,7 @@ impl ConnectionManagerApp {
             ScreenMode::Browse => self.handle_browse_key(key),
             ScreenMode::Search => self.handle_search_key(key),
             ScreenMode::Edit => self.handle_editor_key(key),
+            ScreenMode::ConfirmDiscard => self.handle_discard_edit_key(key),
             ScreenMode::ConfirmDelete => self.handle_delete_key(key),
             ScreenMode::ConfirmPluginInstall => self.handle_plugin_install_key(key),
             ScreenMode::Help => {
@@ -100,9 +101,15 @@ impl ConnectionManagerApp {
 
     fn handle_editor_key(&mut self, key: KeyEvent) {
         if key.code == KeyCode::Esc {
-            self.editor = None;
-            self.mode = ScreenMode::Browse;
-            self.status = "Edit cancelled".to_string();
+            let dirty = self.editor.as_ref().is_some_and(ProfileEditor::is_dirty);
+            if dirty {
+                // Unsaved work must not vanish silently; confirm the discard.
+                self.mode = ScreenMode::ConfirmDiscard;
+            } else {
+                self.editor = None;
+                self.mode = ScreenMode::Browse;
+                self.status = "Edit cancelled".to_string();
+            }
             return;
         }
         if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('s') {
@@ -182,6 +189,19 @@ impl ConnectionManagerApp {
                 3 if editor.view == EditorView::Json => editor.insert_char(character),
                 _ => {}
             },
+            _ => {}
+        }
+    }
+
+    fn handle_discard_edit_key(&mut self, key: KeyEvent) {
+        match key.code {
+            // Deliberately non-default: Enter keeps editing, y discards.
+            KeyCode::Char('y') => {
+                self.editor = None;
+                self.mode = ScreenMode::Browse;
+                self.status = "Edit cancelled".to_string();
+            }
+            KeyCode::Esc | KeyCode::Enter | KeyCode::Char('n') => self.mode = ScreenMode::Edit,
             _ => {}
         }
     }
@@ -486,12 +506,8 @@ impl ConnectionManagerApp {
                 self.refilter();
             }
             ScreenMode::Edit => {
-                for character in text.chars() {
-                    let key = match character {
-                        '\n' => KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
-                        character => KeyEvent::new(KeyCode::Char(character), KeyModifiers::NONE),
-                    };
-                    self.handle_editor_key(key);
+                if let Some(editor) = &mut self.editor {
+                    paste_into_editor(editor, text);
                 }
             }
             ScreenMode::Credentials => {
@@ -499,6 +515,18 @@ impl ConnectionManagerApp {
                     dialog
                         .value_mut()
                         .extend(text.chars().filter(|character| !character.is_control()));
+                }
+            }
+            ScreenMode::AuthorizationInbox => {
+                if let Some(dialog) = &mut self.jit_approval_dialog {
+                    if dialog.editing_constraints {
+                        // The constraints field is single-line (Enter closes
+                        // it); pasted JSON stays valid when line breaks are
+                        // dropped, so control characters never enter the value.
+                        dialog
+                            .constraints_json
+                            .extend(text.chars().filter(|character| !character.is_control()));
+                    }
                 }
             }
             _ => {}
@@ -578,6 +606,27 @@ impl ConnectionManagerApp {
                     let _ = tx.send(run_plugin_install(&plugin_id));
                 });
             }
+            _ => {}
+        }
+    }
+}
+
+/// Route pasted text into the profile editor. Newlines are content only in
+/// the JSON text field; in every other field they would cycle select values
+/// or trigger navigation (the old paste path dispatched them as Enter keys),
+/// so they are dropped along with other control characters.
+pub(super) fn paste_into_editor(editor: &mut ProfileEditor, text: &str) {
+    for character in text.chars() {
+        let json_text = editor.view == EditorView::Json && editor.active_field == 3;
+        match character {
+            '\n' if json_text => editor.insert_newline(),
+            character if !character.is_control() => match editor.active_field {
+                1 => editor.name.push(character),
+                2 => editor.display_name.push(character),
+                3.. if editor.view == EditorView::Form => editor.append_form_character(character),
+                3 => editor.insert_char(character),
+                _ => {}
+            },
             _ => {}
         }
     }
