@@ -62,7 +62,7 @@ impl ConnectionManagerApp {
         } else {
             Span::styled("DEFAULT KEY", Style::default().fg(Color::Yellow))
         };
-        let title = Line::from(vec![
+        let mut title = Line::from(vec![
             Span::styled(
                 " VoidB · Native Connection Manager ",
                 Style::default()
@@ -76,6 +76,22 @@ impl ConnectionManagerApp {
             )),
             protection,
         ]);
+        // Pending JIT requests are fetched for Browse badges already; make
+        // them impossible to miss so approval never depends on remembering p.
+        let pending_count = self
+            .pending_authorization_requests
+            .iter()
+            .filter(|request| request.is_pending())
+            .count();
+        if pending_count > 0 {
+            title.spans.push(Span::raw("  ·  "));
+            title.spans.push(Span::styled(
+                format!("{pending_count} PENDING"),
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ));
+        }
         frame.render_widget(
             Paragraph::new(title).block(Block::default().borders(Borders::ALL)),
             area,
@@ -257,7 +273,7 @@ impl ConnectionManagerApp {
         let help = match self.mode {
             ScreenMode::Search => "Type to filter · Esc clears · Enter applies · ↑↓ navigate",
             _ => {
-                "n/e/d profile · i install plugin · t test · c capabilities · a manage agent access · x review revoke-all · m credentials · ? help"
+                "n/e/d profile · p approvals · a agent access · t test · c capabilities · x revoke-all · m credentials · ? help"
             }
         };
         let status_style = match self.status_kind {

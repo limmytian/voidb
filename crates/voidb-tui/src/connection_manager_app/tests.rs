@@ -1025,6 +1025,37 @@ fn help_overlay_lists_core_bindings_and_mouse() {
 }
 
 #[test]
+fn browse_header_shows_pending_request_count() {
+    let mut app = test_app("pending-badge");
+    let request = |id: &str| PendingAuthorizationView {
+        id: format!("auth-request:{id}"),
+        principal_fingerprint: "agent-principal:abc".into(),
+        profile_id: "profile:ssh".into(),
+        plugin_id: "ssh".into(),
+        scope: json!({}),
+        risk: "low".into(),
+        purpose: "triage".into(),
+        status: "pending".into(),
+        created_at: "2026-11-04T00:00:00Z".into(),
+        expires_at: "2026-11-04T01:00:00Z".into(),
+        timed_out: false,
+        decision_reason: None,
+    };
+    let text = buffer_text(&render_app(&mut app, 100, 30));
+    assert!(!text.contains("PENDING"));
+
+    app.pending_authorization_requests = vec![request("a"), request("b")];
+    let text = buffer_text(&render_app(&mut app, 100, 30));
+    assert!(
+        text.contains("2 PENDING"),
+        "header must surface pending JIT requests"
+    );
+
+    // Footer help lists the approvals key.
+    assert!(text.contains("p approvals"));
+}
+
+#[test]
 fn browse_render_shows_profiles_details_and_guidance() {
     let mut app = seeded_app("render", &["alpha", "beta"]);
     let text = buffer_text(&render_app(&mut app, 100, 30));
