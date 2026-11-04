@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 
 use super::{
     AgentAuthorizationPresetKind, AuthorizationStatusView, CapabilityItem, ConnectionProfile,
-    GrantRevisionView, JitDecision, PLUGINS, PendingAuthorizationView, ScreenMode,
+    GrantRevisionView, JitDecision, PLUGINS, PendingAuthorizationView, ScreenMode, StatusKind,
     format_use_limit,
 };
 use voidb_core::process_plugin::{ProcessPluginCandidateState, discover_process_plugins};
@@ -18,6 +18,7 @@ use super::ConnectionManagerApp;
 impl ConnectionManagerApp {
     pub(super) fn poll_background(&mut self) -> bool {
         let mut changed = false;
+
         if let Some((plugin_id, rx)) = &self.plugin_install_rx {
             let finished = match rx.try_recv() {
                 Ok(result) => Some(result),
@@ -26,44 +27,62 @@ impl ConnectionManagerApp {
                 }
                 Err(mpsc::TryRecvError::Empty) => None,
             };
+
             if let Some(result) = finished {
                 let plugin_id = plugin_id.clone();
+
                 self.plugin_states = installed_plugin_states();
-                self.status = match result {
+
+                let (kind, message) = match result {
                     Ok(message)
                         if self.plugin_states.get(&plugin_id)
                             == Some(&ProcessPluginCandidateState::Available) =>
                     {
-                        message
+                        (StatusKind::Success, message)
                     }
-                    Ok(_) => format!(
-                        "Plugin '{plugin_id}' was installed but is unavailable; inspect with voidb-cli plugin describe {plugin_id}"
+                    Ok(_) => (
+                        StatusKind::Error,
+                        format!(
+                            "Plugin '{plugin_id}' was installed but is unavailable; inspect with voidb-cli plugin describe {plugin_id}"
+                        ),
                     ),
-                    Err(error) => {
-                        format!("Install '{plugin_id}' failed: {error} · press i to retry")
-                    }
+                    Err(error) => (
+                        StatusKind::Error,
+                        format!("Install '{plugin_id}' failed: {error} · press i to retry"),
+                    ),
                 };
+
+                self.status_kind = kind;
+
+                self.status = message;
+
                 self.plugin_install_rx = None;
+
                 self.next_authorization_refresh = Instant::now();
+
                 changed = true;
             }
         }
         self.start_authorization_status_refresh();
+
         if let Some(rx) = &self.test_rx {
             match rx.try_recv() {
                 Ok(Ok(message)) => {
-                    self.status = message;
+                    self.set_status_success(message);
                     self.test_rx = None;
+
                     changed = true;
                 }
                 Ok(Err(message)) => {
-                    self.status = format!("Test failed: {message}");
+                    self.set_status_error(format!("Test failed: {message}"));
                     self.test_rx = None;
+
                     changed = true;
                 }
                 Err(mpsc::TryRecvError::Disconnected) => {
-                    self.status = "Profile test worker stopped".to_string();
+                    self.set_status_error("Profile test worker stopped".to_string());
                     self.test_rx = None;
+
                     changed = true;
                 }
                 Err(mpsc::TryRecvError::Empty) => {}
@@ -73,18 +92,25 @@ impl ConnectionManagerApp {
             match rx.try_recv() {
                 Ok(Ok(payload)) => {
                     self.capabilities = parse_capabilities(&payload);
-                    self.status = format!("Loaded {} capabilities", self.capabilities.len());
+
+                    self.set_status_success(format!(
+                        "Loaded {} capabilities",
+                        self.capabilities.len()
+                    ));
                     self.capability_rx = None;
+
                     changed = true;
                 }
                 Ok(Err(message)) => {
-                    self.status = format!("Capability discovery failed: {message}");
+                    self.set_status_error(format!("Capability discovery failed: {message}"));
                     self.capability_rx = None;
+
                     changed = true;
                 }
                 Err(mpsc::TryRecvError::Disconnected) => {
-                    self.status = "Capability discovery worker stopped".to_string();
+                    self.set_status_error("Capability discovery worker stopped".to_string());
                     self.capability_rx = None;
+
                     changed = true;
                 }
                 Err(mpsc::TryRecvError::Empty) => {}
@@ -94,6 +120,7 @@ impl ConnectionManagerApp {
             match rx.try_recv() {
                 Ok(Ok(payload)) => {
                     let capabilities = parse_capabilities(&payload);
+
                     if let Some(dialog) = &mut self.authorization_dialog {
                         dialog.capabilities = capabilities;
                         dialog.loading = false;
@@ -104,6 +131,7 @@ impl ConnectionManagerApp {
                         };
                     }
                     self.authorization_catalog_rx = None;
+
                     changed = true;
                 }
                 Ok(Err(message)) => {
@@ -112,6 +140,7 @@ impl ConnectionManagerApp {
                         dialog.message = Some(format!("Capability catalog unavailable: {message}"));
                     }
                     self.authorization_catalog_rx = None;
+
                     changed = true;
                 }
                 Err(mpsc::TryRecvError::Disconnected) => {
@@ -120,6 +149,7 @@ impl ConnectionManagerApp {
                         dialog.message = Some("Capability catalog worker stopped".into());
                     }
                     self.authorization_catalog_rx = None;
+
                     changed = true;
                 }
                 Err(mpsc::TryRecvError::Empty) => {}
@@ -128,15 +158,21 @@ impl ConnectionManagerApp {
         if let Some(rx) = &self.authorization_operation_rx {
             match rx.try_recv() {
                 Ok(Ok(message)) => {
-                    self.status = message;
+                    self.set_status_success(message);
+
                     self.authorization_operation_rx = None;
+
                     self.authorization_dialog = None;
+
                     self.jit_approval_dialog = None;
+
                     if self.mode != ScreenMode::AuthorizationInbox {
                         self.mode = ScreenMode::Browse;
                     }
                     self.next_authorization_refresh = Instant::now();
+
                     self.start_authorization_status_refresh();
+
                     changed = true;
                 }
                 Ok(Err(message)) => {
@@ -149,6 +185,7 @@ impl ConnectionManagerApp {
                         dialog.message = Some(format!("Authorization decision failed: {message}"));
                     }
                     self.authorization_operation_rx = None;
+
                     changed = true;
                 }
                 Err(mpsc::TryRecvError::Disconnected) => {
@@ -161,6 +198,7 @@ impl ConnectionManagerApp {
                         dialog.message = Some("Authorization decision worker stopped".into());
                     }
                     self.authorization_operation_rx = None;
+
                     changed = true;
                 }
                 Err(mpsc::TryRecvError::Empty) => {}
@@ -170,30 +208,43 @@ impl ConnectionManagerApp {
             match rx.try_recv() {
                 Ok(Ok(payload)) => {
                     self.authorization_statuses = parse_agent_statuses(&payload);
+
                     self.authorization_supported_plugins = parse_agent_supported_plugins(&payload);
+
                     self.authorization_capability_catalog = parse_capabilities(&payload)
                         .into_iter()
                         .map(|capability| (capability.id.clone(), capability))
                         .collect();
+
                     self.pending_authorization_requests = parse_pending_authorizations(&payload);
+
                     self.grant_revisions = parse_grant_revisions(&payload);
+
                     self.authorization_observed_at = parse_authorization_observed_at(&payload);
+
                     self.authorization_snapshot_error = None;
+
                     self.authorization_inbox_selected = self
                         .authorization_inbox_selected
                         .min(self.pending_authorization_requests.len().saturating_sub(1));
+
                     self.authorization_status_rx = None;
+
                     changed = true;
                 }
                 Ok(Err(message)) => {
                     self.authorization_snapshot_error = Some(message);
+
                     self.authorization_status_rx = None;
+
                     changed = true;
                 }
                 Err(mpsc::TryRecvError::Disconnected) => {
                     self.authorization_snapshot_error =
                         Some("authorization snapshot worker stopped".into());
+
                     self.authorization_status_rx = None;
+
                     changed = true;
                 }
                 Err(mpsc::TryRecvError::Empty) => {}
@@ -230,6 +281,7 @@ pub(super) fn run_plugin_install(plugin_id: &str) -> std::result::Result<String,
         .stdin(std::process::Stdio::null())
         .output()
         .map_err(|error| format!("could not launch voidb-cli: {error}"))?;
+
     if !output.status.success() {
         return Err(format!("Plugin installer exited with {}", output.status));
     }
@@ -274,6 +326,7 @@ fn resolve_voidb_cli_binary() -> PathBuf {
         } else {
             "voidb-cli"
         });
+
         if sibling.exists() {
             return sibling;
         }
@@ -295,14 +348,17 @@ pub(super) fn run_profile_test(
         "--format",
         "json",
     ]);
+
     if let Some(password) = master_password {
         command.env(voidb_core::VOIDB_MASTER_PASSWORD_ENV, password);
     }
     let output = command
         .output()
         .map_err(|error| format!("could not launch voidb-cli: {error}"))?;
+
     let value: Value = serde_json::from_slice(&output.stdout)
         .map_err(|_| "voidb-cli did not return structured JSON".to_string())?;
+
     if value.get("ok").and_then(Value::as_bool) == Some(true) {
         let message = value
             .pointer("/data/message")
@@ -336,6 +392,7 @@ pub(super) fn run_agent_authorize(
     request: AgentAuthorizeRequest,
 ) -> std::result::Result<String, String> {
     let password = master_password.ok_or_else(|| "credentials are locked".to_string())?;
+
     if request.capabilities.is_empty() {
         return Err("authorization capability scope is empty".into());
     }
@@ -346,6 +403,7 @@ pub(super) fn run_agent_authorize(
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
+
     let mut child = command
         .spawn()
         .map_err(|error| format!("could not launch voidb-cli: {error}"))?;
@@ -355,11 +413,14 @@ pub(super) fn run_agent_authorize(
         .ok_or_else(|| "could not open the authorization password pipe".to_string())?
         .write_all(password.as_bytes())
         .map_err(|error| format!("could not send the authorization password: {error}"))?;
+
     let output = child
         .wait_with_output()
         .map_err(|error| format!("could not wait for voidb-cli: {error}"))?;
+
     let value: Value = serde_json::from_slice(&output.stdout)
         .map_err(|_| String::from_utf8_lossy(&output.stderr).into_owned())?;
+
     if value.get("ok").and_then(Value::as_bool) == Some(true) {
         let grant_id = value
             .pointer("/data/grant/id")
@@ -404,6 +465,7 @@ pub(super) fn agent_authorize_args(
         },
         "--password-stdin".into(),
     ];
+
     if let Some(uses) = request.uses {
         args.extend(["--uses".into(), uses.to_string()]);
     }
@@ -428,14 +490,17 @@ pub(super) fn run_agent_renew(
     command
         .args(["agent", "renew", grant_id, "--ttl-minutes"])
         .arg(ttl_minutes.to_string());
+
     if let Some(uses) = uses {
         command.arg("--uses").arg(uses.to_string());
     }
     let output = command
         .output()
         .map_err(|error| format!("could not launch voidb-cli: {error}"))?;
+
     let value: Value = serde_json::from_slice(&output.stdout)
         .map_err(|_| String::from_utf8_lossy(&output.stderr).into_owned())?;
+
     if value.get("ok").and_then(Value::as_bool) == Some(true) {
         Ok(format!(
             "Renewed {grant_id} for {ttl_minutes} minutes with {}",
@@ -459,6 +524,7 @@ pub(super) fn run_agent_revoke_profile(
         .args(["--plugin", &profile.plugin_id])
         .output()
         .map_err(|error| format!("could not launch voidb-cli: {error}"))?;
+
     let value: Value = serde_json::from_slice(&output.stdout)
         .map_err(|_| String::from_utf8_lossy(&output.stderr).into_owned())?;
     value
@@ -480,6 +546,7 @@ pub(super) fn run_agent_revoke_all() -> std::result::Result<usize, String> {
         .args(["agent", "revoke", "--all"])
         .output()
         .map_err(|error| format!("could not launch voidb-cli: {error}"))?;
+
     let value: Value = serde_json::from_slice(&output.stdout)
         .map_err(|_| String::from_utf8_lossy(&output.stderr).into_owned())?;
     value
@@ -494,6 +561,7 @@ fn run_agent_list() -> std::result::Result<String, String> {
         .args(["agent", "list"])
         .output()
         .map_err(|error| format!("could not launch voidb-cli: {error}"))?;
+
     if !output.status.success() && output.stdout.is_empty() {
         return Err(format!("voidb-cli exited with {}", output.status));
     }
@@ -503,16 +571,20 @@ fn run_agent_list() -> std::result::Result<String, String> {
 pub(super) fn run_authorization_snapshot() -> std::result::Result<String, String> {
     let grants: Value = serde_json::from_str(&run_agent_list()?)
         .map_err(|_| "voidb-cli agent list returned invalid JSON".to_string())?;
+
     let output = std::process::Command::new(resolve_voidb_cli_binary())
         .args(["agent", "catalog"])
         .output()
         .map_err(|error| format!("could not launch voidb-cli: {error}"))?;
+
     let catalog: Value = serde_json::from_slice(&output.stdout)
         .map_err(|_| String::from_utf8_lossy(&output.stderr).into_owned())?;
+
     let inbox_output = std::process::Command::new(resolve_voidb_cli_binary())
         .args(["agent", "request", "inbox"])
         .output()
         .map_err(|error| format!("could not launch voidb-cli: {error}"))?;
+
     let inbox: Value = serde_json::from_slice(&inbox_output.stdout)
         .map_err(|_| String::from_utf8_lossy(&inbox_output.stderr).into_owned())?;
     Ok(json!({ "agent": grants, "catalog": catalog, "inbox": inbox }).to_string())
@@ -531,10 +603,12 @@ pub(super) fn run_jit_authorization_decision(
     command
         .args(["agent", "request", "decide", request_id, "--decision"])
         .arg(decision.cli_value());
+
     if matches!(decision, JitDecision::Bounded) {
         command
             .arg("--ttl-seconds")
             .arg((ttl_minutes * 60).to_string());
+
         if let Some(uses) = uses {
             command.arg("--uses").arg(uses.to_string());
         }
@@ -562,6 +636,7 @@ pub(super) fn run_jit_authorization_decision(
     command
         .env_remove(voidb_core::VOIDB_MASTER_PASSWORD_ENV)
         .stdin(std::process::Stdio::piped());
+
     let mut child = command
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
@@ -589,6 +664,7 @@ fn parse_jit_decision_output(
 ) -> std::result::Result<String, String> {
     let value: Value = serde_json::from_slice(&output.stdout)
         .map_err(|_| String::from_utf8_lossy(&output.stderr).into_owned())?;
+
     if value.get("ok").and_then(Value::as_bool) == Some(true) {
         let revision = value
             .pointer("/data/revision/revision")
@@ -614,6 +690,7 @@ pub(super) fn parse_agent_statuses(
     let Ok(value) = serde_json::from_str::<Value>(payload) else {
         return HashMap::new();
     };
+
     let agent = value.get("agent").unwrap_or(&value);
     agent
         .pointer("/data/grants")
@@ -622,7 +699,9 @@ pub(super) fn parse_agent_statuses(
         .flatten()
         .filter_map(|grant| {
             let profile_id = grant.get("profile_id")?.as_str()?.to_string();
+
             let plugin_id = grant.get("plugin_id")?.as_str()?.to_string();
+
             let view = AuthorizationStatusView {
                 grant_id: grant.get("id")?.as_str()?.to_string(),
                 profile_id: profile_id.clone(),
@@ -687,6 +766,7 @@ pub(super) fn parse_pending_authorizations(payload: &str) -> Vec<PendingAuthoriz
     let Ok(value) = serde_json::from_str::<Value>(payload) else {
         return Vec::new();
     };
+
     let mut requests = value
         .pointer("/inbox/data/requests")
         .and_then(Value::as_array)
@@ -767,6 +847,7 @@ pub(super) fn run_capability_list(plugin_id: &str) -> std::result::Result<String
         .args(capability_list_args(plugin_id))
         .output()
         .map_err(|error| format!("could not launch voidb-cli: {error}"))?;
+
     if !output.status.success() && output.stdout.is_empty() {
         return Err(format!("voidb-cli exited with {}", output.status));
     }
@@ -788,6 +869,7 @@ pub(super) fn parse_capabilities(payload: &str) -> Vec<CapabilityItem> {
     let Ok(value) = serde_json::from_str::<Value>(payload) else {
         return Vec::new();
     };
+
     let candidates = value
         .pointer("/data/capabilities")
         .or_else(|| value.pointer("/catalog/data/capabilities"))
@@ -831,7 +913,9 @@ pub(super) fn parse_capabilities(payload: &str) -> Vec<CapabilityItem> {
                     .flatten()
                     .filter_map(|field| {
                         let label = field.get("label")?.as_str()?;
+
                         let path = field.get("path")?.as_str()?;
+
                         let constraint = field
                             .get("constraint")
                             .and_then(Value::as_str)

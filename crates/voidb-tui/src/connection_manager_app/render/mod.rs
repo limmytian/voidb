@@ -5,7 +5,7 @@ use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Wrap};
 
 use super::background::can_install_missing_plugin;
-use super::{AuthorizationStatusView, MIN_HEIGHT, MIN_WIDTH, ScreenMode, plural};
+use super::{AuthorizationStatusView, MIN_HEIGHT, MIN_WIDTH, ScreenMode, StatusKind, plural};
 use voidb_core::process_plugin::ProcessPluginCandidateState;
 
 use super::ConnectionManagerApp;
@@ -260,9 +260,14 @@ impl ConnectionManagerApp {
                 "n/e/d profile · i install plugin · t test · c capabilities · a manage agent access · x review revoke-all · m credentials · ? help"
             }
         };
+        let status_style = match self.status_kind {
+            StatusKind::Info => Style::default().fg(Color::Yellow),
+            StatusKind::Success => Style::default().fg(Color::Green),
+            StatusKind::Error => Style::default().fg(Color::Red),
+        };
         frame.render_widget(
             Paragraph::new(vec![
-                Line::styled(&self.status, Style::default().fg(Color::Yellow)),
+                Line::styled(&self.status, status_style),
                 Line::styled(help, Style::default().fg(Color::DarkGray)),
             ])
             .block(Block::default().borders(Borders::TOP)),

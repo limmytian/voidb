@@ -33,30 +33,46 @@ impl ConnectionManagerApp {
                     credential_refs: Vec::new(),
                     policy: Default::default(),
                 });
+
             let mut dialog = AuthorizationDialog::new(profile);
             dialog.loading = false;
             dialog.review_action = action;
+
             self.authorization_dialog = Some(dialog);
+
             self.mode = ScreenMode::Authorization;
+
             return;
         }
         let Some(profile) = self.selected_profile().cloned() else {
-            self.status = "Select a profile before authorizing agent access".to_string();
+            self.set_status("Select a profile before authorizing agent access".to_string());
             return;
         };
+
         if self.config.requires_master_password() && self.active_master_password.is_none() {
-            self.status = "Press m to unlock credentials before authorizing an agent".to_string();
+            self.set_status(
+                "Press m to unlock credentials before authorizing an agent".to_string(),
+            );
             return;
         }
         let mut dialog = AuthorizationDialog::new(profile.clone());
         dialog.review_action = action;
+
         let (tx, rx) = mpsc::channel();
+
         self.authorization_catalog_rx = Some(rx);
+
         self.authorization_dialog = Some(dialog);
+
         self.mode = ScreenMode::Authorization;
-        self.status = format!("Loading authorization catalog for {}...", profile.plugin_id);
+
+        self.set_status(format!(
+            "Loading authorization catalog for {}...",
+            profile.plugin_id
+        ));
         std::thread::spawn(move || {
             let result = run_capability_list(&profile.plugin_id);
+
             let _ = tx.send(result);
         });
     }
@@ -65,16 +81,26 @@ impl ConnectionManagerApp {
         let Some(dialog) = &self.jit_approval_dialog else {
             return;
         };
+
         let request_id = dialog.request.id.clone();
+
         let decision = dialog.decision;
+
         let ttl_minutes = dialog.ttl_minutes();
+
         let uses = dialog.uses();
+
         let grant_id = dialog.grant_id.clone();
+
         let constraints_json =
             (!dialog.constraints_json.trim().is_empty()).then(|| dialog.constraints_json.clone());
+
         let password = self.active_master_password.clone();
+
         let (tx, rx) = mpsc::channel();
+
         self.authorization_operation_rx = Some(rx);
+
         if let Some(dialog) = &mut self.jit_approval_dialog {
             dialog.message = Some("Applying canonical decision...".into());
         }
@@ -88,6 +114,7 @@ impl ConnectionManagerApp {
                 constraints_json.as_deref(),
                 password.as_deref(),
             );
+
             let _ = tx.send(result);
         });
     }
@@ -96,20 +123,31 @@ impl ConnectionManagerApp {
         let Some(dialog) = &self.authorization_dialog else {
             return;
         };
+
         let profile = dialog.profile.clone();
+
         let capabilities = dialog.selected_capabilities();
+
         let ttl_minutes = dialog.ttl_minutes();
+
         let uses = dialog.uses();
+
         let preset = dialog.preset;
+
         let allow_destructive =
             dialog.requires_destructive_acknowledgement() && dialog.destructive_acknowledged;
+
         let existing = self
             .authorization_statuses
             .get(&(profile.id.clone(), profile.plugin_id.clone()))
             .cloned();
+
         let password = self.active_master_password.clone();
+
         let (tx, rx) = mpsc::channel();
+
         self.authorization_operation_rx = Some(rx);
+
         if let Some(dialog) = &mut self.authorization_dialog {
             dialog.message = Some("Working through the central authorization service...".into());
         }
@@ -136,17 +174,19 @@ impl ConnectionManagerApp {
                     run_agent_revoke_all().map(|count| format!("Revoked {count} agent grant(s)"))
                 }
             };
+
             let _ = tx.send(result);
         });
     }
 
     pub(super) fn begin_edit(&mut self) {
         let Some(profile) = self.selected_profile().cloned() else {
-            self.status = "No profile selected".to_string();
+            self.set_status("No profile selected".to_string());
             return;
         };
+
         if self.config.requires_master_password() && self.active_master_password.is_none() {
-            self.status = "Press m to unlock profile credentials before editing".to_string();
+            self.set_status("Press m to unlock profile credentials before editing".to_string());
             return;
         }
         match self
@@ -155,9 +195,10 @@ impl ConnectionManagerApp {
         {
             Ok(connection) => {
                 self.editor = Some(ProfileEditor::edit(&profile, connection));
+
                 self.mode = ScreenMode::Edit;
             }
-            Err(error) => self.status = format!("Cannot edit profile: {error}"),
+            Err(error) => self.set_status_error(format!("Cannot edit profile: {error}")),
         }
     }
 
@@ -165,9 +206,10 @@ impl ConnectionManagerApp {
         match create_profile_editor(&self.config, self.active_master_password.as_deref()) {
             Ok(editor) => {
                 self.editor = Some(editor);
+
                 self.mode = ScreenMode::Edit;
             }
-            Err(message) => self.status = message.to_string(),
+            Err(message) => self.set_status_error(message.to_string()),
         }
     }
 
@@ -181,10 +223,13 @@ impl ConnectionManagerApp {
         let Some(editor) = &mut self.editor else {
             return;
         };
+
         let profile_name = editor.name.trim().to_string();
+
         if profile_name.is_empty() {
             editor.message = Some("Name is required".to_string());
             editor.active_field = 1;
+
             return;
         }
         let plugin_config: Value = match editor.view {
@@ -193,17 +238,22 @@ impl ConnectionManagerApp {
                 Ok(config) if config.is_object() => config,
                 Ok(_) => {
                     editor.message = Some("Plugin configuration must be a JSON object".to_string());
+
                     return;
                 }
                 Err(error) => {
                     editor.message = Some(format!("Invalid JSON: {error}"));
+
                     return;
                 }
             },
         };
+
         let violations = editor.schema.validate(&plugin_config);
+
         if let Some(violation) = violations.first() {
             editor.message = Some(format!("{}: {}", violation.path, violation.message));
+
             if let Some(index) = editor
                 .schema
                 .visible_fields(&plugin_config)
@@ -217,14 +267,17 @@ impl ConnectionManagerApp {
             return;
         }
         let plugin_id = editor.plugin_id().to_string();
+
         let config = ConnectionConfig {
             name: profile_name,
             db_type: database_type_for_plugin(&plugin_id),
             plugin_id: Some(plugin_id),
             plugin_config: Some(plugin_config),
         };
+
         let display_name = (!editor.display_name.trim().is_empty())
             .then(|| editor.display_name.trim().to_string());
+
         match self.store.upsert_native_connection(
             editor.existing_profile_id.as_deref(),
             &config,
@@ -232,19 +285,24 @@ impl ConnectionManagerApp {
             self.active_master_password.as_deref(),
         ) {
             Ok(profile) => {
-                self.status = format!(
+                self.set_status_success(format!(
                     "Saved native profile '{}'/{}",
                     profile.name, profile.plugin_id
-                );
+                ));
+
                 self.editor = None;
+
                 self.mode = ScreenMode::Browse;
+
                 let _ = self.refresh_profiles();
+
                 if let Some(index) = self
                     .filtered_indices
                     .iter()
                     .position(|index| self.profiles[*index].id == profile.id)
                 {
                     self.selected = index;
+
                     self.list_state.select(Some(index));
                 }
             }
@@ -258,7 +316,9 @@ impl ConnectionManagerApp {
         } else {
             CredentialMode::Set
         };
+
         self.credential_dialog = Some(CredentialDialog::new(mode));
+
         self.mode = ScreenMode::Credentials;
     }
 
@@ -266,10 +326,12 @@ impl ConnectionManagerApp {
         let Some(mut dialog) = self.credential_dialog.take() else {
             return;
         };
+
         let result = match dialog.mode {
             CredentialMode::Unlock => AppConfig::load_with_password(Some(&dialog.password))
                 .map(|config| {
                     self.config = config;
+
                     self.active_master_password = Some(dialog.password.clone());
                     "Profile credentials unlocked for this session".to_string()
                 })
@@ -289,7 +351,9 @@ impl ConnectionManagerApp {
                             self.active_master_password.as_deref(),
                             &dialog.password,
                         )?;
+
                         self.config = AppConfig::load_with_password(Some(&dialog.password))?;
+
                         self.active_master_password = Some(dialog.password.clone());
                         Ok(
                             "Native profile credentials protected with a master password"
@@ -299,13 +363,15 @@ impl ConnectionManagerApp {
                 }
             }
         };
+
         match result {
             Ok(message) => {
-                self.status = message;
+                self.set_status(message);
                 self.mode = ScreenMode::Browse;
             }
             Err(error) => {
                 dialog.message = Some(error.to_string());
+
                 self.credential_dialog = Some(dialog);
             }
         }
@@ -313,69 +379,80 @@ impl ConnectionManagerApp {
 
     pub(super) fn offer_selected_plugin_install(&mut self) {
         if self.plugin_install_rx.is_some() {
-            self.status = "A plugin installation is already running".into();
+            self.set_status("A plugin installation is already running".to_string());
             return;
         }
         let Some(profile) = self.selected_profile() else {
-            self.status = "Select a profile to install its plugin".into();
+            self.set_status("Select a profile to install its plugin".to_string());
             return;
         };
+
         let plugin_id = profile.plugin_id.clone();
+
         self.plugin_states = installed_plugin_states();
+
         if !can_install_missing_plugin(&plugin_id, self.plugin_states.get(&plugin_id).copied()) {
-            self.status = format!(
+            self.set_status_error(format!(
                 "Plugin '{plugin_id}' is already present or is not an official installable plugin; inspect with voidb-cli plugin describe {plugin_id}"
-            );
+            ));
+
             return;
         }
         self.plugin_install_target = Some(plugin_id);
+
         self.mode = ScreenMode::ConfirmPluginInstall;
     }
 
     pub(super) fn show_guidance(&mut self) {
         let Some(profile) = self.selected_profile() else {
-            self.status = "No profile selected".to_string();
+            self.set_status("No profile selected".to_string());
             return;
         };
+
         let guidance = format!(
             "voidb-cli profile test id:{} --plugin {}\nvoidb-cli {} tui --profile id:{}",
             profile.id, profile.plugin_id, profile.plugin_id, profile.id
         );
+
         match voidb_core::clipboard::copy_to_clipboard(&guidance) {
             Ok(()) => {
-                self.status = format!(
+                self.set_status_success(format!(
                     "Copied CLI guidance · test: voidb-cli profile test id:{} --plugin {}",
                     profile.id, profile.plugin_id
-                );
+                ));
             }
             Err(error) => {
-                self.status = format!(
+                self.set_status_error(format!(
                     "Clipboard unavailable ({error}) · test: voidb-cli profile test id:{} --plugin {}",
                     profile.id, profile.plugin_id
-                );
+                ));
             }
         }
     }
 
     pub(super) fn start_test(&mut self) {
         if self.test_rx.is_some() {
-            self.status = "A profile test is already running".to_string();
+            self.set_status("A profile test is already running".to_string());
             return;
         }
         let Some(profile) = self.selected_profile().cloned() else {
-            self.status = "No profile selected".to_string();
+            self.set_status("No profile selected".to_string());
             return;
         };
+
         if self.config.requires_master_password() && self.active_master_password.is_none() {
-            self.status = "Press m to unlock profile credentials before testing".to_string();
+            self.set_status("Press m to unlock profile credentials before testing".to_string());
             return;
         }
         let (tx, rx) = mpsc::channel();
+
         self.test_rx = Some(rx);
-        self.status = format!("Testing {}/{}...", profile.plugin_id, profile.name);
+
+        self.set_status(format!("Testing {}/{}...", profile.plugin_id, profile.name));
         let password = self.active_master_password.clone();
         std::thread::spawn(move || {
             let result = run_profile_test(&profile, password.as_deref());
+
             let _ = tx.send(result);
         });
     }
@@ -385,17 +462,24 @@ impl ConnectionManagerApp {
             return;
         }
         let Some(profile) = self.selected_profile().cloned() else {
-            self.status = "No profile selected".to_string();
+            self.set_status("No profile selected".to_string());
             return;
         };
+
         let (tx, rx) = mpsc::channel();
+
         self.capability_rx = Some(rx);
+
         self.capabilities.clear();
+
         self.capability_selected = 0;
+
         self.mode = ScreenMode::Capabilities;
-        self.status = format!("Loading {} capabilities...", profile.plugin_id);
+
+        self.set_status(format!("Loading {} capabilities...", profile.plugin_id));
         std::thread::spawn(move || {
             let result = run_capability_list(&profile.plugin_id);
+
             let _ = tx.send(result);
         });
     }
@@ -407,11 +491,14 @@ impl ConnectionManagerApp {
             return;
         }
         let (tx, rx) = mpsc::channel();
+
         self.authorization_status_rx = Some(rx);
+
         self.next_authorization_refresh =
             Instant::now() + authorization_refresh_interval(self.mode);
         std::thread::spawn(move || {
             let result = run_authorization_snapshot();
+
             let _ = tx.send(result);
         });
     }

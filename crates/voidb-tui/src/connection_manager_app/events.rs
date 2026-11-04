@@ -60,10 +60,11 @@ impl ConnectionManagerApp {
             KeyCode::Char('r') => {
                 self.plugin_states = installed_plugin_states();
                 match self.refresh_profiles() {
-                    Ok(()) => {
-                        self.status = format!("Reloaded {} native profiles", self.profiles.len())
-                    }
-                    Err(error) => self.status = format!("Refresh failed: {error}"),
+                    Ok(()) => self.set_status_success(format!(
+                        "Reloaded {} native profiles",
+                        self.profiles.len()
+                    )),
+                    Err(error) => self.set_status_error(format!("Refresh failed: {error}")),
                 }
             }
             KeyCode::Char('i') => self.offer_selected_plugin_install(),
@@ -126,7 +127,7 @@ impl ConnectionManagerApp {
             } else {
                 self.editor = None;
                 self.mode = ScreenMode::Browse;
-                self.status = "Edit cancelled".to_string();
+                self.set_status("Edit cancelled".to_string());
             }
             return;
         }
@@ -218,7 +219,7 @@ impl ConnectionManagerApp {
             KeyCode::Char('y') => {
                 self.editor = None;
                 self.mode = ScreenMode::Browse;
-                self.status = "Edit cancelled".to_string();
+                self.set_status("Edit cancelled".to_string());
             }
             KeyCode::Esc | KeyCode::Enter | KeyCode::Char('n') => self.mode = ScreenMode::Edit,
             _ => {}
@@ -233,11 +234,14 @@ impl ConnectionManagerApp {
                 if let Some(profile) = self.selected_profile().cloned() {
                     match self.store.delete_profile(&profile.id) {
                         Ok(true) => {
-                            self.status = format!("Deleted native profile '{}'", profile.name);
+                            self.set_status_success(format!(
+                                "Deleted native profile '{}'",
+                                profile.name
+                            ));
                             let _ = self.refresh_profiles();
                         }
-                        Ok(false) => self.status = "Profile was already removed".to_string(),
-                        Err(error) => self.status = format!("Delete failed: {error}"),
+                        Ok(false) => self.set_status("Profile was already removed".to_string()),
+                        Err(error) => self.set_status_error(format!("Delete failed: {error}")),
                     }
                 }
                 self.mode = ScreenMode::Browse;
@@ -327,7 +331,7 @@ impl ConnectionManagerApp {
     fn handle_authorization_key(&mut self, key: KeyEvent) {
         if self.authorization_operation_rx.is_some() {
             if key.code == KeyCode::Esc {
-                self.status = "Authorization operation is still running".to_string();
+                self.set_status("Authorization operation is still running".to_string());
             }
             return;
         }
@@ -448,7 +452,7 @@ impl ConnectionManagerApp {
 
     fn handle_authorization_inbox_key(&mut self, key: KeyEvent) {
         if self.authorization_operation_rx.is_some() {
-            self.status = "Authorization decision is still running".into();
+            self.set_status("Authorization decision is still running".to_string());
             return;
         }
         if let Some(dialog) = &mut self.jit_approval_dialog {
@@ -560,7 +564,7 @@ impl ConnectionManagerApp {
             KeyCode::Char('r') => {
                 self.next_authorization_refresh = Instant::now();
                 self.start_authorization_status_refresh();
-                self.status = "Refreshing canonical approval inbox...".into();
+                self.set_status("Refreshing canonical approval inbox...".to_string());
             }
             KeyCode::Enter | KeyCode::Char('d') => {
                 let Some(request) = self
@@ -569,7 +573,7 @@ impl ConnectionManagerApp {
                     .filter(|request| request.is_pending())
                     .cloned()
                 else {
-                    self.status = "Select a canonical pending request".into();
+                    self.set_status("Select a canonical pending request".to_string());
                     return;
                 };
                 let mut dialog = JitApprovalDialog::new(request, &self.grant_revisions);
@@ -682,11 +686,13 @@ impl ConnectionManagerApp {
                         self.plugin_states.get(&plugin_id).copied(),
                     )
                 {
-                    self.status = "Plugin state changed; refresh and try again".into();
+                    self.set_status_error(
+                        "Plugin state changed; refresh and try again".to_string(),
+                    );
                     return;
                 }
                 let (tx, rx) = mpsc::channel();
-                self.status = format!("Downloading and installing '{plugin_id}'...");
+                self.set_status(format!("Downloading and installing '{plugin_id}'..."));
                 self.plugin_install_rx = Some((plugin_id.clone(), rx));
                 std::thread::spawn(move || {
                     let _ = tx.send(run_plugin_install(&plugin_id));

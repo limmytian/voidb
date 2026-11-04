@@ -174,6 +174,15 @@ enum CredentialMode {
     Set,
 }
 
+/// Severity of the footer status line; drives its color so failures are not
+/// indistinguishable from progress or success feedback.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum StatusKind {
+    Info,
+    Success,
+    Error,
+}
+
 #[derive(Debug)]
 struct CredentialDialog {
     mode: CredentialMode,
@@ -1060,6 +1069,7 @@ pub struct ConnectionManagerApp {
     credential_dialog: Option<CredentialDialog>,
     active_master_password: Option<String>,
     status: String,
+    status_kind: StatusKind,
     plugin_states: HashMap<String, ProcessPluginCandidateState>,
     plugin_install_target: Option<String>,
     plugin_install_rx: Option<(String, BackgroundResult)>,
@@ -1115,6 +1125,7 @@ impl ConnectionManagerApp {
             credential_dialog: None,
             active_master_password,
             status: "Ready".to_string(),
+            status_kind: StatusKind::Info,
             plugin_states: installed_plugin_states(),
             plugin_install_target: None,
             plugin_install_rx: None,
@@ -1270,6 +1281,25 @@ impl ConnectionManagerApp {
     /// Move the selection one step, wrapping around both ends.
     fn move_selection(&mut self, down: bool) {
         self.move_selection_by(if down { 1 } else { -1 });
+    }
+
+    /// Replace the status line with a neutral informational message.
+    fn set_status(&mut self, message: impl Into<String>) {
+        self.status_kind = StatusKind::Info;
+        self.status = message.into();
+    }
+
+    /// Replace the status line with a success message.
+    fn set_status_success(&mut self, message: impl Into<String>) {
+        self.status_kind = StatusKind::Success;
+        self.status = message.into();
+    }
+
+    /// Replace the status line with an error message. Errors keep the exact
+    /// text until another action replaces the status, and render in red.
+    fn set_status_error(&mut self, message: impl Into<String>) {
+        self.status_kind = StatusKind::Error;
+        self.status = message.into();
     }
 
     /// Move the selection by `delta` items, wrapping around both ends, and
