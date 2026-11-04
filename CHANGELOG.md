@@ -5,6 +5,28 @@ All notable changes to VoidB will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.9] - 2026-11-04
+
+### Added
+- The agent command family is discoverable: the tree is registered in the top-level clap app so `--help` and shell completions list every `agent` command, and the top-level command name is unified to `voidb-cli`.
+- Short top-level aliases for the frequent authorization operations: `vb approve <id>`, `vb inbox`, `vb grants`, `vb auth <profile>`, `vb catalog`, and `vb exec` expand in the pre-clap broker to their `agent ...` equivalents.
+- `agent list --format table`: grant id, profile, plugin, lifecycle status badge, relative expiry ("in 12m" / "expired 5m ago"), remaining uses, active sessions, and a DESTRUCTIVE risk flag. JSON stays the default and byte-identical.
+- `agent request inbox --format table`: short id, status, risk, plugin, profile, truncated purpose, relative expiry; the previously undocumented command is now described in docs/jit-agent-authorization.md.
+- The Connection Manager header shows a bold `[N PENDING]` marker while JIT requests await review, and the footer help line lists the `p` approvals key.
+- Risk severity coloring: capability-checklist risk badges grade destructive/external_side_effect red and mutating amber; the JIT approval dialog border turns red while Deny is selected.
+- One-line scope summaries replace raw JSON dumps in the TUI detail pane, the TUI approval dialog, and the CLI interactive review.
+- Execution-time grant warnings: `agent exec`/`run` print a stderr notice when the selected grant is inside the expiring window, exhausted, or has at most two uses left, with the exact renew command.
+- The JIT human-wait ceiling is configurable through `VOIDB_AGENT_MAX_WAIT_SECONDS` (1..=3600 s); `agent exec` announces how long the human has to approve, announces capping instead of silently clamping `--wait-timeout-ms`, and rate-limit responses add a human "try again in Ns" hint.
+- Structured `{ok:false,error:{...}}` envelopes for `agent authorize/authorize-batch/catalog/list/renew/revoke` failures, matching the agent-facing commands, plus a next-step line on the `--replace` bail.
+
+### Changed
+- **Binary rename (breaking): the CLI dispatcher is now `vb` and the connection manager `vb-tui`.** Crate names (voidb-cli, voidb-tui, voidb-core, SDK) are unchanged. Both resolvers prefer the new sibling names and fall back to the legacy names; the homebrew formula ships `voidb-cli`/`voidb` compatibility symlinks; installer, release staging, smoke/gate scripts, CI, docs, and all guidance strings use the new spellings.
+- The batch authorize review reports per-entry risk rollups (read_only/mutating/destructive counts with the destructive capability ids flagged inline) instead of a single boolean.
+- `agent request review` verifies the master password right after the request summary, before any decision is collected, so a wrong password no longer discards the whole decision flow.
+
+### Fixed
+- The README `agent exec` example includes the hard-required `--purpose`; copying it no longer fails with `purpose_required`.
+
 ## [0.3.8] - 2026-11-04
 
 ### Added
