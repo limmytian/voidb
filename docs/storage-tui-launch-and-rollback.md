@@ -8,20 +8,20 @@ known gaps, rollback behavior, and scripted equivalents for S3 and WebDAV.
 S3:
 
 ```bash
-voidb-cli s3 tui --profile <profile>
-voidb-cli s3 tui --profile <profile> --readonly
-voidb-cli s3 tui --profile <profile> --format json
-voidb-cli s3 tui --fixture crates/plugins/voidb-plugin-s3/fixtures/s3_tui_browser.json \
+vb s3 tui --profile <profile>
+vb s3 tui --profile <profile> --readonly
+vb s3 tui --profile <profile> --format json
+vb s3 tui --fixture crates/plugins/voidb-plugin-s3/fixtures/s3_tui_browser.json \
   --evidence target/tmp/s3-tui-fixture-evidence.json
 ```
 
 WebDAV:
 
 ```bash
-voidb-cli webdav tui --profile <profile>
-voidb-cli webdav tui --profile <profile> --readonly
-voidb-cli webdav tui --profile <profile> --format json
-voidb-cli webdav tui --fixture crates/plugins/voidb-plugin-webdav/fixtures/webdav_tui_browser.json \
+vb webdav tui --profile <profile>
+vb webdav tui --profile <profile> --readonly
+vb webdav tui --profile <profile> --format json
+vb webdav tui --fixture crates/plugins/voidb-plugin-webdav/fixtures/webdav_tui_browser.json \
   --evidence target/tmp/webdav-tui-fixture-evidence.json
 ```
 
@@ -91,11 +91,11 @@ bypassing capability policy. See the
 The rollback path is operational, not a reintroduction of legacy router-hosted
 storage UI code.
 
-- Stop using `voidb-cli s3 tui` or `voidb-cli webdav tui` for the affected
+- Stop using `vb s3 tui` or `vb webdav tui` for the affected
   plugin.
 - Use the plugin CLI commands listed below for the same operation.
-- Use `voidb-cli invoke describe <capability>` and
-  `voidb-cli invoke run <capability>` for machine-readable scripted flows.
+- Use `vb invoke describe <capability>` and
+  `vb invoke run <capability>` for machine-readable scripted flows.
 - Keep profile and credential configuration unchanged; rollback does not
   require profile migration.
 - Do not restore the old router-hosted file manager or shared TUI widgets.
@@ -108,47 +108,47 @@ and planning remain available, while mutating plans stay non-executing.
 S3 CLI equivalents:
 
 ```bash
-voidb-cli s3 ls --connection <connection> [s3://bucket/prefix]
-voidb-cli s3 info --connection <connection> s3://bucket/key
-voidb-cli s3 get --connection <connection> s3://bucket/key ./local-file
-voidb-cli s3 put --connection <connection> ./local-file s3://bucket/key
-voidb-cli s3 rm --connection <connection> s3://bucket/key
-voidb-cli s3 pull --connection <connection> s3://bucket/prefix ./local-dir --dry-run
-voidb-cli s3 push --connection <connection> ./local-dir s3://bucket/prefix --dry-run
+vb s3 ls --connection <connection> [s3://bucket/prefix]
+vb s3 info --connection <connection> s3://bucket/key
+vb s3 get --connection <connection> s3://bucket/key ./local-file
+vb s3 put --connection <connection> ./local-file s3://bucket/key
+vb s3 rm --connection <connection> s3://bucket/key
+vb s3 pull --connection <connection> s3://bucket/prefix ./local-dir --dry-run
+vb s3 push --connection <connection> ./local-dir s3://bucket/prefix --dry-run
 ```
 
 S3 capability equivalents:
 
 ```bash
-voidb-cli invoke run s3.list --profile <profile> --input-json '{"bucket":"bucket","prefix":"prefix/"}' --format json
-voidb-cli invoke run s3.stat --profile <profile> --input-json '{"bucket":"bucket","key":"prefix/file.txt"}' --format json
-voidb-cli invoke run s3.get --profile <profile> --input-json '{"bucket":"bucket","key":"prefix/file.txt"}' --format json
-voidb-cli invoke run s3.put --profile <profile> --input-json '{"bucket":"bucket","key":"prefix/file.txt","content_base64":"..."}' --dry-run --format json
-voidb-cli invoke run s3.delete --profile <profile> --input-json '{"bucket":"bucket","key":"prefix/file.txt"}' --dry-run --format json
-voidb-cli invoke run s3.sync_plan --profile <profile> --input-json '{"bucket":"bucket","remote_prefix":"prefix/","local_root":"/approved/root","local_path":"local-dir","mode":"pull"}' --format json
+vb invoke run s3.list --profile <profile> --input-json '{"bucket":"bucket","prefix":"prefix/"}' --format json
+vb invoke run s3.stat --profile <profile> --input-json '{"bucket":"bucket","key":"prefix/file.txt"}' --format json
+vb invoke run s3.get --profile <profile> --input-json '{"bucket":"bucket","key":"prefix/file.txt"}' --format json
+vb invoke run s3.put --profile <profile> --input-json '{"bucket":"bucket","key":"prefix/file.txt","content_base64":"..."}' --dry-run --format json
+vb invoke run s3.delete --profile <profile> --input-json '{"bucket":"bucket","key":"prefix/file.txt"}' --dry-run --format json
+vb invoke run s3.sync_plan --profile <profile> --input-json '{"bucket":"bucket","remote_prefix":"prefix/","local_root":"/approved/root","local_path":"local-dir","mode":"pull"}' --format json
 ```
 
 WebDAV CLI equivalents:
 
 ```bash
-voidb-cli webdav ls --connection <connection> /remote/path/
-voidb-cli webdav info --connection <connection> /remote/path/file.txt
-voidb-cli webdav get --connection <connection> /remote/path/file.txt ./local-file
-voidb-cli webdav put --connection <connection> ./local-file /remote/path/file.txt
-voidb-cli webdav rm --connection <connection> /remote/path/file.txt
-voidb-cli webdav pull --connection <connection> /remote/path/ ./local-dir --dry-run
-voidb-cli webdav push --connection <connection> ./local-dir /remote/path/ --dry-run
+vb webdav ls --connection <connection> /remote/path/
+vb webdav info --connection <connection> /remote/path/file.txt
+vb webdav get --connection <connection> /remote/path/file.txt ./local-file
+vb webdav put --connection <connection> ./local-file /remote/path/file.txt
+vb webdav rm --connection <connection> /remote/path/file.txt
+vb webdav pull --connection <connection> /remote/path/ ./local-dir --dry-run
+vb webdav push --connection <connection> ./local-dir /remote/path/ --dry-run
 ```
 
 WebDAV capability equivalents:
 
 ```bash
-voidb-cli invoke run webdav.list --profile <profile> --input-json '{"path":"/remote/path/"}' --format json
-voidb-cli invoke run webdav.stat --profile <profile> --input-json '{"path":"/remote/path/file.txt"}' --format json
-voidb-cli invoke run webdav.get --profile <profile> --input-json '{"path":"/remote/path/file.txt"}' --format json
-voidb-cli invoke run webdav.put --profile <profile> --input-json '{"path":"/remote/path/file.txt","content_base64":"..."}' --dry-run --format json
-voidb-cli invoke run webdav.delete --profile <profile> --input-json '{"path":"/remote/path/file.txt"}' --dry-run --format json
-voidb-cli invoke run webdav.sync_plan --profile <profile> --input-json '{"remote_path":"/remote/path/","local_root":"/approved/root","local_path":"local-dir","mode":"pull"}' --format json
+vb invoke run webdav.list --profile <profile> --input-json '{"path":"/remote/path/"}' --format json
+vb invoke run webdav.stat --profile <profile> --input-json '{"path":"/remote/path/file.txt"}' --format json
+vb invoke run webdav.get --profile <profile> --input-json '{"path":"/remote/path/file.txt"}' --format json
+vb invoke run webdav.put --profile <profile> --input-json '{"path":"/remote/path/file.txt","content_base64":"..."}' --dry-run --format json
+vb invoke run webdav.delete --profile <profile> --input-json '{"path":"/remote/path/file.txt"}' --dry-run --format json
+vb invoke run webdav.sync_plan --profile <profile> --input-json '{"remote_path":"/remote/path/","local_root":"/approved/root","local_path":"local-dir","mode":"pull"}' --format json
 ```
 
 ## Known Gaps

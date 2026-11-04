@@ -21,7 +21,7 @@ Replicating Navicat-class multi-protocol power in your terminal with Vim-style n
 - 🤖 **Secure Gateway for AI Agents** — Purpose-built CLI & broker architecture that lets AI agents (Cursor, Claude Code, Goose, Antigravity) query databases, inspect containers, and manage infrastructure without handing over raw passwords or permanent privileges.
 - 🛡️ **Defensive Security & JIT Authorization** — Master passwords and credentials stored in AES-256-GCM encrypted vaults; agents request 15-minute time-bounded, read-only or explicit JIT authorization with mandatory human review for destructive calls.
 - 🔌 **Unified Multi-Protocol Ecosystem** — One tool across relational databases (MySQL, PostgreSQL, SQLite, DuckDB), in-memory stores (Redis), document/search engines (MongoDB, Elasticsearch), DevOps infrastructure (SSH, Docker, Kubernetes), and storage/collaboration plugins (S3, WebDAV, Email, Jenkins).
-- 🚀 **100% Decoupled & Blazing Fast** — Clean, lightweight core with zero heavy C++ or driver bloat. All 14 official protocol plugins run as first-class, independent process plugins with identical standing under `voidb-cli`; the Connection Manager is native, and only the optional Sync client plugin remains in this repository.
+- 🚀 **100% Decoupled & Blazing Fast** — Clean, lightweight core with zero heavy C++ or driver bloat. All 14 official protocol plugins run as first-class, independent process plugins with identical standing under `vb`; the Connection Manager is native, and only the optional Sync client plugin remains in this repository.
 
 ---
 
@@ -29,18 +29,18 @@ Replicating Navicat-class multi-protocol power in your terminal with Vim-style n
 
 VoidB uses a capability-first core with completely decoupled process plugins:
 
-- **Connection Manager (`voidb`)**: the default standalone application. It owns its event loop, encrypted credentials vault, profile state, and JIT authorization gateway. It never directly embeds heavy protocol drivers.
-- **Unified Command Dispatcher (`voidb-cli`)**: the master CLI dispatch desk. Discovers user-installed process plugins and explicitly configured development plugins and transparently routes commands, arguments, and flags.
+- **Connection Manager (`vb-tui`)**: the default standalone application. It owns its event loop, encrypted credentials vault, profile state, and JIT authorization gateway. It never directly embeds heavy protocol drivers.
+- **Unified Command Dispatcher (`vb`)**: the master CLI dispatch desk. Discovers user-installed process plugins and explicitly configured development plugins and transparently routes commands, arguments, and flags.
 - **Decoupled Process Plugins (`voidb-plugin-<name>`)**: All 14 official plugins live in separate repositories and adhere to the tri-modal contract: `test` (connectivity check), `tui` (interactive terminal app), and `serve` (`stdio-jsonrpc` for agents).
-- **Optional Plugins**: Core distributions contain no plugins. On first interactive launch, choose whether to install the recommended set, or run `voidb-cli plugin install-default` later. All official plugins use the same user installation and uninstall lifecycle.
+- **Optional Plugins**: Core distributions contain no plugins. On first interactive launch, choose whether to install the recommended set, or run `vb plugin install-default` later. All official plugins use the same user installation and uninstall lifecycle.
 
 Install only what you need:
 
 ```bash
-voidb-cli plugin install mysql
+vb plugin install mysql
 # Or install the six recommended plugins:
-voidb-cli plugin install-default
-voidb-cli plugin uninstall mysql
+vb plugin install-default
+vb plugin uninstall mysql
 ```
 
 In the Connection Manager, a profile with a missing plugin shows `NOT INSTALLED`.
@@ -82,13 +82,13 @@ brew install limmytian/tap/voidb
 
 ```bash
 # Install via cargo
-cargo install --locked voidb voidb-cli
+cargo install --locked voidb vb
 
 # Or clone and build
 git clone https://github.com/limmytian/voidb.git
 cd voidb
 cargo build --release
-sudo cp target/release/voidb target/release/voidb-cli /usr/local/bin/
+sudo cp target/release/voidb target/release/vb /usr/local/bin/
 ```
 
 ### First Run
@@ -98,24 +98,24 @@ sudo cp target/release/voidb target/release/voidb-cli /usr/local/bin/
 voidb
 
 # Equivalent explicit Connection Manager entrypoints
-voidb --connection-manager
-voidb-cli connections tui
+vb-tui --connection-manager
+vb connections tui
 
 # Deprecated compatibility alias: --shell prints a warning and then
 # launches the native Connection Manager (the embedded shell was removed)
-voidb --shell
+vb-tui --shell
 
 # In VoidB:
 # 1. Use the Connection Manager to create or edit profiles
 # 2. Press Enter on a profile for CLI/capability guidance
-# 3. Use voidb-cli or voidb invoke for plugin operations
+# 3. Use vb or voidb invoke for plugin operations
 ```
 
-`voidb-cli` itself ships only the built-in command groups (`audit`,
+`vb` itself ships only the built-in command groups (`audit`,
 `connections`, `context`, `credential`, `invoke`, `plugin`, `profile`, plus the
-feature-gated `sync`). Plugin domain commands such as `voidb-cli mysql query`
+feature-gated `sync`). Plugin domain commands such as `vb mysql query`
 require that plugin to be installed first, for example with
-`voidb-cli plugin install-default` or `voidb-cli plugin install <plugin>`.
+`vb plugin install-default` or `vb plugin install <plugin>`.
 
 CLI ergonomics:
 
@@ -123,8 +123,8 @@ CLI ergonomics:
   (profile), and `re-encrypt` (`credential master reencrypt`) are visible
   aliases shown in `--help`.
 - **Shell completions**: generate a completion script for your shell, for
-  example `voidb-cli completions fish >
-  ~/.config/fish/completions/voidb-cli.fish` (also supports `bash`, `zsh`,
+  example `vb completions fish >
+  ~/.config/fish/completions/vb.fish` (also supports `bash`, `zsh`,
   `powershell`, and `elvish`).
 - **Interactive unlock**: in a terminal, commands that need credential
   decryption prompt once for the master password (echo disabled, prompt on
@@ -143,7 +143,7 @@ short facade command without handling grant IDs, plugin IDs, or immutable
 Profile IDs:
 
 ```bash
-voidb-cli agent exec jenkins.jobs --profile prod-jenkins --input-json '{}'
+vb agent exec jenkins.jobs --profile prod-jenkins --input-json '{}'
 ```
 
 If no current grant permits an operation, an identified interactive agent
@@ -260,7 +260,7 @@ VoidB uses independent frontend boundaries over a shared capability core:
   capability guidance. Authentication choices dynamically reveal their fields;
   advanced JSON is available with `F2`.
 - **Deprecated `--shell` alias**: the embedded shell was removed in v0.3.6.
-  `voidb --shell` is accepted only as a deprecated alias that prints a warning
+  `vb-tui --shell` is accepted only as a deprecated alias that prints a warning
   and then launches the native Connection Manager.
 
 - **Plugins**: Fully autonomous applications that:
@@ -378,7 +378,7 @@ VoidB v0.3.5 verifies managed plugin signatures against a compiled official publ
 key before CLI, TUI or agent execution. Installation records are inventory caches;
 deleting them or rewriting their hashes never authorizes a replacement binary.
 Install the new signed official plugin v0.3.4 packages explicitly. Recover an old
-unsigned installation with `voidb-cli plugin update <plugin>`; profiles and
+unsigned installation with `vb plugin update <plugin>`; profiles and
 credentials are preserved. The public registry advances only after signed release
 assets are published, so candidate verification uses the candidate registry.
 

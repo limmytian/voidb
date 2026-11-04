@@ -42,7 +42,7 @@ substitution also fail closed.
 The normal interactive path is a single command:
 
 ```bash
-voidb-cli agent exec ssh.exec \
+vb agent exec ssh.exec \
   --profile prod \
   --input-json '{"command":"uptime"}' \
   --purpose "Check production uptime while triaging incident INC-42" \
@@ -61,7 +61,7 @@ Copy the review command emitted by `agent exec` into a local interactive
 terminal:
 
 ```bash
-voidb-cli agent request review auth-request:<uuid>
+vb agent request review auth-request:<uuid>
 ```
 
 The command displays the canonical request before prompting for a decision and
@@ -75,21 +75,21 @@ An agent creates a request with explicit identity and one scope:
 
 ```bash
 # Whole capability
-voidb-cli agent request create \
+vb agent request create \
   --client-id agent --task-id task-123 \
   --profile id:profile-ssh --plugin ssh --capability ssh.exec \
   --scope capability \
   --purpose "Inspect service health while triaging incident INC-42"
 
 # Structured constraint declared by the plugin
-voidb-cli agent request create \
+vb agent request create \
   --client-id agent --task-id task-123 \
   --profile id:profile-ssh --plugin ssh --capability ssh.exec \
   --scope constrained --constraints-json '{"/command":"systemctl status api"}' \
   --purpose "Verify the API service state before restarting the deployment"
 
 # One exact normalized invocation
-voidb-cli agent request create \
+vb agent request create \
   --client-id agent --task-id task-123 \
   --profile id:profile-ssh --plugin ssh --capability ssh.exec \
   --scope exact --input-json '{"command":"uptime"}' \
@@ -124,7 +124,7 @@ same principal flags. Stable terminal states use these exit codes:
 Run the broker-provided command in a local interactive terminal:
 
 ```bash
-voidb-cli agent request review auth-request:<uuid>
+vb agent request review auth-request:<uuid>
 ```
 
 For a quick machine-or-human glance at everything pending, the canonical
@@ -132,7 +132,7 @@ approval inbox is also a standalone command and accepts the same
 `--format json|table` split as `agent list` and `agent catalog`:
 
 ```bash
-voidb-cli agent request inbox --format table
+vb agent request inbox --format table
 ```
 
 The table view lists each request's short id, status, risk, plugin, profile,
@@ -151,7 +151,7 @@ output.
 
 ### Connection Manager (secondary)
 
-Open `voidb-cli connections tui`, then press `p`. The non-blocking inbox refreshes
+Open `vb connections tui`, then press `p`. The non-blocking inbox refreshes
 canonical broker state every two seconds, groups requests by principal and
 immutable profile, marks stale snapshots, and shows revision history. `Enter`
 opens the Core-owned form; `d` opens denial review. The form renders plugin
@@ -203,8 +203,8 @@ surface.
 Use JIT for interactive agents, uncertain scope, destructive work, and any
 workflow where the needed operation becomes known during execution. Prefer a
 time-bounded approval when follow-up calls are expected; add a use limit only
-when the operator explicitly wants one. Use `voidb-cli agent authorize` for one
-known profile or `voidb-cli agent authorize-batch --spec <path>` for several
+when the operator explicitly wants one. Use `vb agent authorize` for one
+known profile or `vb agent authorize-batch --spec <path>` for several
 known profiles. Batch authorization still creates one isolated grant per
 Profile ID/plugin, requires a concrete purpose for every plan entry, and
 performs one local CLI review and hidden password prompt.

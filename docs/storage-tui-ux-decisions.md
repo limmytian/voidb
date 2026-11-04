@@ -10,8 +10,8 @@ manager.
 S3 and WebDAV should each own an independent standalone command:
 
 ```bash
-voidb-cli s3 tui --profile <profile>
-voidb-cli webdav tui --profile <profile>
+vb s3 tui --profile <profile>
+vb webdav tui --profile <profile>
 ```
 
 Both TUIs may reuse non-UI contracts such as profile resolution, redaction,

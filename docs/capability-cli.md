@@ -13,7 +13,7 @@ capability discovery, and generic capability invocation. It complements:
 
 The design contract below is broader than the current implementation. Runtime
 plugin discovery, focused stdio process-plugin invocation, and the managed
-plugin lifecycle (`voidb-cli plugin install`, `install-default`, `update`,
+plugin lifecycle (`vb plugin install`, `install-default`, `update`,
 `search`, `uninstall`, and the `registry` subcommands over the signed registry
 index) now exist. Long-lived process pooling, hosted marketplace behavior
 beyond the static registry index, and full credential brokering remain future
@@ -25,40 +25,40 @@ The current in-repo implementation exposes the first generic invocation path
 through the existing CLI plugin router:
 
 ```bash
-voidb-cli plugin list --format json
-voidb-cli plugin list --include-invalid --format json
-voidb-cli plugin describe mysql --include diagnostics,schemas --state-any --format json
-voidb-cli audit list --operation capability_invoke --format json
-voidb-cli audit export --plugin redis --status failed --format json
-voidb-cli invoke list --format json
-voidb-cli invoke list ssh --format json
-voidb-cli invoke describe sqlite.query --format json
-voidb-cli invoke describe sqlite.explain --format json
-voidb-cli invoke describe duckdb.query --format json
-voidb-cli invoke describe ssh.exec --format json
-voidb-cli invoke run sqlite.query --profile local --input-json '{"sql":"select 1"}' --format json
-voidb-cli invoke run sqlite.explain --profile local --input-json '{"sql":"select 1"}' --format json
-voidb-cli invoke run sqlite.exec --profile local --input-json '{"sql":"insert into users(name) values (\"Ada\")"}' --yes --format json
-voidb-cli invoke run postgres.query --profile warehouse --input-json '{"sql":"select 1"}' --format json
-voidb-cli invoke run postgres.exec --profile warehouse --input-json '{"sql":"drop table scratch"}' --dry-run --format json
-voidb-cli invoke run duckdb.query --profile analytics --input-json '{"sql":"select 1"}' --format json
-voidb-cli invoke run duckdb.exec --profile analytics --input-json '{"sql":"drop table scratch"}' --dry-run --format json
-voidb-cli invoke run redis.set --profile cache --input-json '{"key":"agent:test","value":"ok"}' --dry-run --format json
-voidb-cli invoke run ssh.diagnostics --profile shell --input-json '{}' --format json
-voidb-cli invoke run ssh.exec --profile shell --input-json '{"command":"uname -a"}' --yes --format json
-voidb-cli invoke run s3.list --profile assets --input-json '{"bucket":"logs","prefix":"2026/"}' --format json
-voidb-cli invoke run webdav.mkdir --profile dav --input-json '{"path":"/agent"}' --dry-run --format json
-voidb-cli invoke run email.diagnostics --profile mail --input-json '{}' --format json
-voidb-cli invoke describe docker.list_containers --format json
-voidb-cli invoke run docker.container_action --profile local-docker --dry-run --input-json '{"id":"abc123","action":"restart"}' --format json
-voidb-cli invoke describe kubernetes.list --format json
-voidb-cli invoke run kubernetes.apply --profile staging --dry-run --input-json '{"yaml":"apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: agent-probe\n"}' --format json
-voidb-cli invoke describe mongodb.find --format json
-voidb-cli invoke run mongodb.insert --profile documents --dry-run --input-json '{"database":"app","collection":"users","document":{"name":"Ada"}}' --format json
-voidb-cli invoke describe elasticsearch.search --format json
-voidb-cli invoke run elasticsearch.raw_api --profile search --dry-run --input-json '{"method":"POST","path":"/users/_doc/1","body":{"name":"Ada"}}' --format json
-voidb-cli invoke describe jenkins.jobs --format json
-voidb-cli invoke run jenkins.trigger_build --profile ci --dry-run --input-json '{"job_full_name":"folder/build"}' --format json
+vb plugin list --format json
+vb plugin list --include-invalid --format json
+vb plugin describe mysql --include diagnostics,schemas --state-any --format json
+vb audit list --operation capability_invoke --format json
+vb audit export --plugin redis --status failed --format json
+vb invoke list --format json
+vb invoke list ssh --format json
+vb invoke describe sqlite.query --format json
+vb invoke describe sqlite.explain --format json
+vb invoke describe duckdb.query --format json
+vb invoke describe ssh.exec --format json
+vb invoke run sqlite.query --profile local --input-json '{"sql":"select 1"}' --format json
+vb invoke run sqlite.explain --profile local --input-json '{"sql":"select 1"}' --format json
+vb invoke run sqlite.exec --profile local --input-json '{"sql":"insert into users(name) values (\"Ada\")"}' --yes --format json
+vb invoke run postgres.query --profile warehouse --input-json '{"sql":"select 1"}' --format json
+vb invoke run postgres.exec --profile warehouse --input-json '{"sql":"drop table scratch"}' --dry-run --format json
+vb invoke run duckdb.query --profile analytics --input-json '{"sql":"select 1"}' --format json
+vb invoke run duckdb.exec --profile analytics --input-json '{"sql":"drop table scratch"}' --dry-run --format json
+vb invoke run redis.set --profile cache --input-json '{"key":"agent:test","value":"ok"}' --dry-run --format json
+vb invoke run ssh.diagnostics --profile shell --input-json '{}' --format json
+vb invoke run ssh.exec --profile shell --input-json '{"command":"uname -a"}' --yes --format json
+vb invoke run s3.list --profile assets --input-json '{"bucket":"logs","prefix":"2026/"}' --format json
+vb invoke run webdav.mkdir --profile dav --input-json '{"path":"/agent"}' --dry-run --format json
+vb invoke run email.diagnostics --profile mail --input-json '{}' --format json
+vb invoke describe docker.list_containers --format json
+vb invoke run docker.container_action --profile local-docker --dry-run --input-json '{"id":"abc123","action":"restart"}' --format json
+vb invoke describe kubernetes.list --format json
+vb invoke run kubernetes.apply --profile staging --dry-run --input-json '{"yaml":"apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: agent-probe\n"}' --format json
+vb invoke describe mongodb.find --format json
+vb invoke run mongodb.insert --profile documents --dry-run --input-json '{"database":"app","collection":"users","document":{"name":"Ada"}}' --format json
+vb invoke describe elasticsearch.search --format json
+vb invoke run elasticsearch.raw_api --profile search --dry-run --input-json '{"method":"POST","path":"/users/_doc/1","body":{"name":"Ada"}}' --format json
+vb invoke describe jenkins.jobs --format json
+vb invoke run jenkins.trigger_build --profile ci --dry-run --input-json '{"job_full_name":"folder/build"}' --format json
 ```
 
 This MVP supports SQLite, Redis, MySQL, PostgreSQL, DuckDB, SSH, S3, WebDAV,
@@ -530,7 +530,7 @@ bounding, destructive policy, or profile redaction.
 
 ### Agent Authorization Catalog And Presets
 
-`voidb-cli agent catalog [--plugin <id>] [--execution-mode <mode>]` is
+`vb agent catalog [--plugin <id>] [--execution-mode <mode>]` is
 password-free and returns raw
 capability definitions plus centrally normalized plugin support and preset
 records under `data.plugins`. Presets are projected separately for `stateless`,
@@ -542,7 +542,7 @@ inherited. Process plugins with missing authorization declarations are
 Custom-only, and Sync is reported as deferred because it uses its dedicated
 encrypted protocol.
 
-`voidb-cli agent authorize` defaults to a stateless Read-only grant. Select
+`vb agent authorize` defaults to a stateless Read-only grant. Select
 `--execution-mode session_only` for a persistent-session grant or
 `--execution-mode both` for an explicit combined grant. Use
 `--preset interactive_execute` for the narrow centrally declared execute scope,
@@ -557,7 +557,7 @@ Grant lifecycle, frontend-safe status, broker recovery, and persistent session
 commands are documented in
 [Agent Authorization Broker](agent-authorization-broker.md).
 
-Interactive agents should prefer `voidb-cli agent exec <plugin.capability>
+Interactive agents should prefer `vb agent exec <plugin.capability>
 --profile <name> --input-json <json> --purpose <specific-use>`. It infers the plugin, resolves the
 immutable Profile ID, reuses matching access, and creates an exact JIT request
 when an identified agent needs approval. JIT requests are deliberately

@@ -53,7 +53,7 @@ fi
 mkdir -p "$(dirname "${OUTPUT_FILE}")"
 
 CMD=(
-  cargo run -p voidb-cli --
+  cargo run -p vb --
   plugin registry-index
   "${INPUT_PATHS[@]}"
   --output "${OUTPUT_FILE}"

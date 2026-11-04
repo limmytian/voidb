@@ -309,17 +309,20 @@ fn resolve_voidb_cli_binary() -> PathBuf {
     if let Ok(current) = std::env::current_exe()
         && let Some(directory) = current.parent()
     {
-        let sibling = directory.join(if cfg!(windows) {
-            "voidb-cli.exe"
-        } else {
-            "voidb-cli"
-        });
-
-        if sibling.exists() {
-            return sibling;
+        // The CLI binary is named `vb` since v0.3.9; fall back to the legacy
+        // `voidb-cli` name while compatibility links still exist.
+        for name in ["vb", "voidb-cli"] {
+            let sibling = directory.join(if cfg!(windows) {
+                format!("{name}.exe")
+            } else {
+                name.to_string()
+            });
+            if sibling.exists() {
+                return sibling;
+            }
         }
     }
-    "voidb-cli".into()
+    "vb".into()
 }
 
 pub(super) fn run_profile_test(

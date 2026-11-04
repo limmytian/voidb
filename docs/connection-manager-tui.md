@@ -10,20 +10,20 @@ plugin or product-wide plugin TUI launcher.
 The canonical workspace command is:
 
 ```bash
-voidb-cli connections tui
+vb connections tui
 ```
 
-That command launches the `voidb` TUI binary in standalone Connection Manager
+That command launches the `vb-tui` TUI binary in standalone Connection Manager
 mode:
 
 ```bash
-voidb --connection-manager
+vb-tui --connection-manager
 ```
 
-`voidb` without arguments opens this native Connection Manager. The explicit
-`voidb --connection-manager` form remains supported. The legacy embedded shell
-was removed in v0.3.6; `voidb --shell` is a deprecated alias that still opens
-the native Connection Manager. `voidb-cli connections tui --print-command`
+`vb-tui` without arguments opens this native Connection Manager. The explicit
+`vb-tui --connection-manager` form remains supported. The legacy embedded shell
+was removed in v0.3.6; `vb-tui --shell` is a deprecated alias that still opens
+the native Connection Manager. `vb connections tui --print-command`
 prints the resolved standalone command for scripts and tests.
 
 ## Native storage
@@ -35,7 +35,7 @@ prints the resolved standalone command for scripts and tests.
 - New manager CRUD never writes `AppConfig.connections` and never labels newly
   created profiles as legacy.
 - Existing `config.toml` connections can be imported explicitly with
-  `voidb-cli profile migrate apply`; migration creates self-contained native
+  `vb profile migrate apply`; migration creates self-contained native
   profiles while leaving the old file only as a rollback backup.
 
 ## Boundary
@@ -58,8 +58,8 @@ Connection Manager must not:
 Plugin TUIs remain plugin-owned commands such as:
 
 ```bash
-voidb-cli ssh tui --profile prod-shell
-voidb-cli email tui --profile work-mail
+vb ssh tui --profile prod-shell
+vb email tui --profile work-mail
 ```
 
 ## Schema-driven profile forms
@@ -72,7 +72,7 @@ inactive branch and reveals only the fields accepted by that plugin.
 
 New profiles begin with connection type, then name, then optional display name.
 Name is the stable CLI reference used by commands such as
-`voidb-cli profile test prod-bastion --plugin ssh`. It is required and unique
+`vb profile test prod-bastion --plugin ssh`. It is required and unique
 within the selected plugin, ignoring case. Display name is a human-facing label
 and may be repeated. A globally unique Profile ID is generated on creation and
 is preserved when either name is edited.
@@ -147,7 +147,7 @@ States:
 - test running/result: status line updates from the structured `profile test`
   JSON envelope, without printing stderr or decrypted config;
 - capability browser: modal lists `invoke list` metadata and emits command
-  guidance only; capability execution stays in `voidb-cli invoke run`;
+  guidance only; capability execution stays in `vb invoke run`;
 - authorization manager: Read-only is the recommended preset;
   Interactive/Execute selects only a centrally recommended semantic capability;
   Full access captures every capability in the current catalog as an exact
@@ -173,7 +173,7 @@ States:
 Promotion evidence:
 
 - focused `voidb-tui` tests for the standalone runtime boundary;
-- CLI preflight test for `voidb-cli connections tui --print-command`;
+- CLI preflight test for `vb connections tui --print-command`;
 - PTY startup, first-frame, quit, and cleanup transcript evidence;
 - secret-leak checks for rendered status, stderr, and captured transcripts.
 

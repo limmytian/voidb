@@ -18,9 +18,9 @@ Regenerate or query the matrix before changing automation:
 
 ```bash
 mkdir -p target/tmp
-voidb-cli invoke matrix --format json > target/tmp/voidb-agent-matrix.json
-voidb-cli invoke list --format json > target/tmp/voidb-installed-capabilities.json
-voidb-cli agent catalog --plugin ssh
+vb invoke matrix --format json > target/tmp/voidb-agent-matrix.json
+vb invoke list --format json > target/tmp/voidb-installed-capabilities.json
+vb agent catalog --plugin ssh
 ```
 
 The generated matrix covers repository-owned built-ins. `invoke list` also
@@ -62,14 +62,14 @@ outside the config directory so Sync and migration cannot modify it.
 
 ### 2. Install, inspect, and preview
 
-Install the new `voidb`, `voidb-cli`, and optional `voidb-sync-server` binaries
+Install the new `vb-tui`, `vb`, and optional `voidb-sync-server` binaries
 from one versioned artifact set. Confirm the selected binary before writing
 state:
 
 ```bash
-voidb-cli --version
-voidb-cli profile list --format json
-voidb-cli profile migrate preview --format json
+vb --version
+vb profile list --format json
+vb profile migrate preview --format json
 ```
 
 The preview is read-only. Review profile counts, plugin IDs, warnings, and
@@ -80,8 +80,8 @@ PostgreSQL records.
 ### 3. Apply explicitly
 
 ```bash
-voidb-cli profile migrate apply --format json
-voidb-cli profile list --format json
+vb profile migrate apply --format json
+vb profile list --format json
 ```
 
 Migration is additive and non-destructive:
@@ -116,7 +116,7 @@ NDJSON is opt-in, not a replacement for JSON. Use it when progress or multiple
 data events matter:
 
 ```bash
-voidb-cli invoke run s3.list \
+vb invoke run s3.list \
   --profile id:<profile-id> \
   --input-json '{"prefix":"","limit":100}' \
   --format ndjson \
@@ -142,8 +142,8 @@ Execution mode is an authorization boundary:
 List exact preset contents before granting access:
 
 ```bash
-voidb-cli agent catalog --plugin ssh --execution-mode stateless
-voidb-cli agent catalog --plugin ssh --execution-mode session_only
+vb agent catalog --plugin ssh --execution-mode stateless
+vb agent catalog --plugin ssh --execution-mode session_only
 ```
 
 Presets expand to exact capability snapshots:
@@ -158,7 +158,7 @@ Presets expand to exact capability snapshots:
 Create a short stateless grant:
 
 ```bash
-voidb-cli agent authorize \
+vb agent authorize \
   --profile prod \
   --plugin ssh \
   --execution-mode stateless \
@@ -174,7 +174,7 @@ set in a local JSON `grants` array. Every entry must also include a concrete
 `purpose` explaining why that scope is needed. Then run:
 
 ```bash
-voidb-cli agent authorize-batch --spec grants.json --ttl-minutes 15
+vb agent authorize-batch --spec grants.json --ttl-minutes 15
 ```
 
 The CLI shows every purpose while reviewing the complete plan, prompts for the
@@ -184,7 +184,7 @@ Profile ID/plugin.
 Create a session grant only after reviewing the matrix handoff:
 
 ```bash
-voidb-cli agent authorize \
+vb agent authorize \
   --profile prod \
   --plugin ssh \
   --execution-mode session_only \
@@ -211,7 +211,7 @@ For a one-shot call through an existing grant, set a public call ID before work
 begins and use a unit-bearing timeout:
 
 ```bash
-voidb-cli agent run --grant agent-grant:<uuid> -- \
+vb agent run --grant agent-grant:<uuid> -- \
   invoke run jenkins.jobs \
   --profile id:<profile-id> \
   --input-json '{}' \
@@ -230,7 +230,7 @@ instead of structured output. Caller-provided cancellation tokens are for
 correlation only and are never emitted or persisted:
 
 ```bash
-voidb-cli invoke run elasticsearch.search \
+vb invoke run elasticsearch.search \
   --profile id:<profile-id> \
   --input-json '{"query":{"match_all":{}}}' \
   --format ndjson \
@@ -248,7 +248,7 @@ contract and policy explicitly make that retry idempotent.
 Open a session from an explicit session-mode grant:
 
 ```bash
-voidb-cli agent session open \
+vb agent session open \
   --grant agent-grant:<uuid> \
   --purpose interactive_terminal \
   --capability ssh.terminal_read \
@@ -262,31 +262,31 @@ without blocking, wait in bounded intervals, and cancel by the same public call
 ID:
 
 ```bash
-voidb-cli agent session start \
+vb agent session start \
   --grant agent-grant:<uuid> \
   agent-session:<uuid> --generation 1 \
   --call-id call:terminal-read-001 \
   --capability ssh.terminal_read \
   --input-json '{"after_offset":0,"max_bytes":32768}'
 
-voidb-cli agent session status \
+vb agent session status \
   --grant agent-grant:<uuid> \
   agent-session:<uuid> --generation 1 \
   --call-id call:terminal-read-001
 
-voidb-cli agent session wait \
+vb agent session wait \
   --grant agent-grant:<uuid> \
   agent-session:<uuid> --generation 1 \
   --call-id call:terminal-read-001 \
   --wait-timeout-ms 30000
 
-voidb-cli agent session cancel \
+vb agent session cancel \
   --grant agent-grant:<uuid> \
   agent-session:<uuid> --generation 1 \
   --call-id call:terminal-read-001 \
   --timeout-ms 1000
 
-voidb-cli agent session close \
+vb agent session close \
   --grant agent-grant:<uuid> \
   agent-session:<uuid> --generation 1 \
   --timeout-ms 5000
@@ -300,11 +300,11 @@ timeout escalates to close, and repeated cancel/close is idempotent.
 At task end:
 
 ```bash
-voidb-cli agent session list --grant agent-grant:<uuid>
-voidb-cli agent session close \
+vb agent session list --grant agent-grant:<uuid>
+vb agent session close \
   --grant agent-grant:<uuid> \
   agent-session:<uuid> --generation 1
-voidb-cli agent revoke agent-grant:<uuid>
+vb agent revoke agent-grant:<uuid>
 ```
 
 Revocation is the emergency close-all operation for that grant. It removes
@@ -406,7 +406,7 @@ mv "$voidb_config_dir" "$voidb_failed_dir"
 cp -Rp "$voidb_backup_dir/voidb" "$voidb_config_dir"
 ```
 
-Restore the previous `voidb` and `voidb-cli` binaries from the same release
+Restore the previous `vb-tui` and `vb` binaries from the same release
 set. Restore `voidb-sync-server` and its data directory separately when its
 on-disk format changed. Do not use the Sync server as the only backup of local
 configuration.
@@ -414,9 +414,9 @@ configuration.
 After rollback, verify:
 
 ```bash
-voidb-cli --version
-voidb-cli profile list --format json
-voidb-cli connections list
+vb --version
+vb profile list --format json
+vb connections list
 ```
 
 Then open Connection Manager without saving, verify protected config still

@@ -12,7 +12,7 @@ name = "voidb_tui"
 path = "src/lib.rs"
 
 [[bin]]
-name = "voidb"
+name = "vb-tui"
 path = "src/main.rs"
 
 [dependencies]

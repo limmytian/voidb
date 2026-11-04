@@ -10,9 +10,9 @@ layout.
 Each live-operations plugin owns its standalone command and terminal lifecycle:
 
 ```bash
-voidb-cli docker tui --profile <profile>
-voidb-cli kubernetes tui --profile <profile>
-voidb-cli jenkins tui --profile <profile>
+vb docker tui --profile <profile>
+vb kubernetes tui --profile <profile>
+vb jenkins tui --profile <profile>
 ```
 
 The TUIs may reuse non-UI contracts such as profile resolution, credential

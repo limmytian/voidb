@@ -24,13 +24,13 @@ from these two stores and do not read live connection details from
 Preview a migration without writing files:
 
 ```bash
-voidb-cli profile migrate preview --format json
+vb profile migrate preview --format json
 ```
 
 Apply the migration:
 
 ```bash
-voidb-cli profile migrate apply --format json
+vb profile migrate apply --format json
 ```
 
 Both commands support `--plugin <PLUGIN_ID>` to limit migration to one plugin.
@@ -41,7 +41,7 @@ Both commands support `--plugin <PLUGIN_ID>` to limit migration to one plugin.
 Humans can start from the standalone Connection Manager:
 
 ```bash
-voidb-cli connections tui
+vb connections tui
 ```
 
 Recommended setup order:
@@ -54,13 +54,13 @@ Recommended setup order:
    without blocking the TUI.
 4. Press `c` to inspect capability metadata for the selected profile's plugin.
    The browser shows command guidance only; capability execution still belongs
-   to `voidb-cli invoke run`.
-5. Use `voidb-cli profile migrate preview --format json` and
-   `voidb-cli profile migrate apply --format json` when moving legacy configs
+   to `vb invoke run`.
+5. Use `vb profile migrate preview --format json` and
+   `vb profile migrate apply --format json` when moving legacy configs
    into explicit profile records.
 
 The Connection Manager may show plugin-owned TUI command guidance such as
-`voidb-cli ssh tui --profile id:<profile-id>`, but it must not launch or host
+`vb ssh tui --profile id:<profile-id>`, but it must not launch or host
 that plugin TUI.
 
 ## Compatibility

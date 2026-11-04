@@ -20,7 +20,7 @@ class InstallerTests(unittest.TestCase):
         mocks.mkdir()
         archive = root / 'archive.tar.gz'
         scripts = {'voidb': '#!/bin/sh\nexit 0\n',
-                   'voidb-cli': '#!/bin/sh\nprintf "%s\\n" "$@" > "$(dirname "$0")/bootstrap.args"\n[ -d "$VOIDB_BUNDLED_PLUGIN_ROOT" ] || exit 5\nprintf \'{"results":[{"status": "installed"}]}\'\n',
+                   'vb': '#!/bin/sh\nprintf "%s\\n" "$@" > "$(dirname "$0")/bootstrap.args"\n[ -d "$VOIDB_BUNDLED_PLUGIN_ROOT" ] || exit 5\nprintf \'{"results":[{"status": "installed"}]}\'\n',
                    'plugins/sqlite/plugin.toml': 'id = "sqlite"\n'}
         with tarfile.open(archive, 'w:gz') as package:
             for name, script in scripts.items():

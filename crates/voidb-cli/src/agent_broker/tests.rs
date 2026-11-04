@@ -337,7 +337,7 @@ fn resolve_profile_accepts_bare_immutable_profile_id() {
 fn agent_exec_builds_an_immutable_profile_invocation_without_grant_plumbing() {
     let matches = agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "exec",
             "docker.list_containers",
@@ -379,7 +379,7 @@ fn agent_exec_builds_an_immutable_profile_invocation_without_grant_plumbing() {
 fn agent_exec_accepts_explicit_principal_binding_and_exact_jit_scope() {
     let matches = agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "exec",
             "docker.list_containers",
@@ -446,7 +446,7 @@ fn agent_exec_help_hides_principal_and_grant_plumbing() {
 #[test]
 fn jit_request_create_requires_a_reviewable_purpose_and_keeps_reason_alias() {
     let base = [
-        "voidb-cli",
+        "vb",
         "agent",
         "request",
         "create",
@@ -810,7 +810,7 @@ fn request_review_accepts_only_an_opaque_id_and_no_secret_parameters() {
     assert!(
         agent_command()
             .try_get_matches_from([
-                "voidb-cli",
+                "vb",
                 "agent",
                 "request",
                 "review",
@@ -822,7 +822,7 @@ fn request_review_accepts_only_an_opaque_id_and_no_secret_parameters() {
         assert!(
             agent_command()
                 .try_get_matches_from([
-                    "voidb-cli",
+                    "vb",
                     "agent",
                     "request",
                     "review",
@@ -840,7 +840,7 @@ fn request_review_accepts_only_an_opaque_id_and_no_secret_parameters() {
 fn tui_decision_accepts_only_non_secret_scope_and_password_stdin_marker() {
     let command = agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "request",
             "decide",
@@ -864,7 +864,7 @@ fn tui_decision_accepts_only_non_secret_scope_and_password_stdin_marker() {
         assert!(
             agent_command()
                 .try_get_matches_from([
-                    "voidb-cli",
+                    "vb",
                     "agent",
                     "request",
                     "decide",
@@ -1262,7 +1262,7 @@ fn shared_presets_resolve_and_validate_exact_cli_scopes() {
 fn full_access_cli_preset_parses_with_explicit_destructive_acknowledgement() {
     let matches = agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "authorize",
             "--profile",
@@ -1295,7 +1295,7 @@ fn full_access_cli_preset_parses_with_explicit_destructive_acknowledgement() {
 
     let session = agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "authorize",
             "--profile",
@@ -1324,7 +1324,7 @@ fn full_access_cli_preset_parses_with_explicit_destructive_acknowledgement() {
 fn time_bounded_authorization_defaults_to_unlimited_uses_and_keeps_optional_limit() {
     let unlimited = agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "authorize",
             "--profile",
@@ -1341,7 +1341,7 @@ fn time_bounded_authorization_defaults_to_unlimited_uses_and_keeps_optional_limi
 
     let limited = agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "authorize",
             "--profile",
@@ -1400,7 +1400,7 @@ fn batch_authorization_spec_is_bounded_and_supports_mixed_scopes() {
 
     let matches = agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "authorize-batch",
             "--spec",
@@ -1530,7 +1530,7 @@ fn authorization_catalog_filters_supported_modes_and_remains_secret_free() {
 
     let matches = agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "catalog",
             "--plugin",
@@ -1703,7 +1703,7 @@ fn incomplete_process_metadata_is_custom_only_and_sync_is_supported() {
 fn lifecycle_cli_requires_explicit_replace_renew_and_profile_revoke() {
     let replace = agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "authorize",
             "--profile",
@@ -1723,7 +1723,7 @@ fn lifecycle_cli_requires_explicit_replace_renew_and_profile_revoke() {
 
     agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "renew",
             "agent-grant:test",
@@ -1735,7 +1735,7 @@ fn lifecycle_cli_requires_explicit_replace_renew_and_profile_revoke() {
         .expect("parse renew");
     agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "revoke",
             "--profile",
@@ -1746,13 +1746,7 @@ fn lifecycle_cli_requires_explicit_replace_renew_and_profile_revoke() {
         .expect("parse profile revoke");
     assert!(
         agent_command()
-            .try_get_matches_from([
-                "voidb-cli",
-                "agent",
-                "revoke",
-                "--profile",
-                "id:profile:test",
-            ])
+            .try_get_matches_from(["vb", "agent", "revoke", "--profile", "id:profile:test",])
             .is_err()
     );
 }
@@ -1929,7 +1923,7 @@ fn session_calls_recheck_capability_and_destructive_policy() {
 fn session_cli_parses_machine_readable_operation_envelopes() {
     let open = agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "session",
             "open",
@@ -1953,7 +1947,7 @@ fn session_cli_parses_machine_readable_operation_envelopes() {
 
     let matches = agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "session",
             "call",
@@ -1992,7 +1986,7 @@ fn session_cli_parses_machine_readable_operation_envelopes() {
 fn session_cli_exposes_start_status_wait_and_control_lifecycle() {
     let start = agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "session",
             "start",
@@ -2018,7 +2012,7 @@ fn session_cli_exposes_start_status_wait_and_control_lifecycle() {
 
     let status = agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "session",
             "status",
@@ -2041,7 +2035,7 @@ fn session_cli_exposes_start_status_wait_and_control_lifecycle() {
 
     let wait = agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "session",
             "wait",
@@ -2109,7 +2103,7 @@ fn broker_wire_protocol_negotiates_with_legacy_requests_and_responses() {
 fn session_cli_rejects_non_public_caller_owned_call_ids() {
     let matches = agent_command()
         .try_get_matches_from([
-            "voidb-cli",
+            "vb",
             "agent",
             "session",
             "call",

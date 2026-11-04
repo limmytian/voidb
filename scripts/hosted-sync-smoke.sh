@@ -75,7 +75,7 @@ log_level = "error"
 EOF
 
 BASE_URL="http://127.0.0.1:${PORT}"
-SERVER_BIN="${REPO_ROOT}/voidb-sync-server/target/debug/voidb-sync-server"
+SERVER_BIN="${REPO_ROOT}/voidb-sync-server/target/debug/vb-tui-sync-server"
 
 run cargo build --manifest-path voidb-sync-server/Cargo.toml --quiet
 "${SERVER_BIN}" --config "${CONFIG_PATH}" >"${SERVER_LOG}" 2>&1 &

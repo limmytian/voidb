@@ -204,11 +204,11 @@ impl ConnectionManagerApp {
                 Line::raw(""),
                 Line::styled("Next steps", Style::default().add_modifier(Modifier::BOLD)),
                 Line::raw(format!(
-                    "Test: voidb-cli profile test id:{} --plugin {}",
+                    "Test: vb profile test id:{} --plugin {}",
                     profile.id, profile.plugin_id
                 )),
                 Line::raw(format!(
-                    "TUI:  voidb-cli {} tui --profile id:{}",
+                    "TUI:  vb {} tui --profile id:{}",
                     profile.plugin_id, profile.id
                 )),
                 Line::styled(

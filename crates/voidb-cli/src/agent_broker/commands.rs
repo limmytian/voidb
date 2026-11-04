@@ -114,7 +114,7 @@ pub async fn take_broker_child_password() -> anyhow::Result<Option<String>> {
 }
 
 pub(crate) fn agent_command() -> Command {
-    Command::new("voidb-cli")
+    Command::new("vb")
         .subcommand_required(true)
         .subcommand(agent_subcommand())
 }
@@ -992,10 +992,10 @@ pub(super) async fn authorize(matches: &ArgMatches) -> anyhow::Result<i32> {
                     "execution_mode": grant.execution_mode,
                 },
                 "usage_args": [
-                    "voidb-cli", "agent", "exec", "<plugin.capability>",
+                    "vb", "agent", "exec", "<plugin.capability>",
                     "--profile", grant.profile_name, "--input-json", "{}"
                 ],
-                "advanced_usage": format!("voidb-cli agent run --grant {} -- invoke run <plugin.capability> --profile id:{} --input-json '{{}}' --format json", grant.id, grant.profile_id),
+                "advanced_usage": format!("vb agent run --grant {} -- invoke run <plugin.capability> --profile id:{} --input-json '{{}}' --format json", grant.id, grant.profile_id),
             }
         }))?
     );
@@ -2257,7 +2257,7 @@ fn print_agent_exec_authorization_required(
                 "quick_authorize": {
                     "tui": "Select this profile in the Connection Manager, press a, then confirm read-only access.",
                     "cli_args": [
-                        "voidb-cli", "agent", "authorize", "--profile", profile_name,
+                        "vb", "agent", "authorize", "--profile", profile_name,
                         "--plugin", plugin_id
                     ]
                 }

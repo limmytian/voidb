@@ -56,7 +56,7 @@ separately privileged service.
 For normal agent calls, use the facade command:
 
 ```bash
-voidb-cli agent exec jenkins.jobs \
+vb agent exec jenkins.jobs \
   --profile prod-jenkins \
   --input-json '{}' \
   --purpose "Inspect failed production builds for incident INC-42"
@@ -90,7 +90,7 @@ need explicit lifecycle control.
 Create a default grant. The password prompt is hidden:
 
 ```bash
-voidb-cli agent authorize --profile prod --plugin ssh
+vb agent authorize --profile prod --plugin ssh
 ```
 
 The default resolves the central `read_only` preset to an exact capability
@@ -148,7 +148,7 @@ file:
 Review and authorize the whole plan from a local terminal:
 
 ```bash
-voidb-cli agent authorize-batch \
+vb agent authorize-batch \
   --spec grants.json \
   --ttl-minutes 30 \
   --allow-destructive
@@ -168,7 +168,7 @@ interactive batch confirmation.
 Limit the grant to selected capabilities or shorten it:
 
 ```bash
-voidb-cli agent authorize \
+vb agent authorize \
   --profile prod \
   --plugin ssh \
   --execution-mode stateless \
@@ -183,10 +183,10 @@ accepted at execution time so renaming or replacing a profile cannot widen an
 existing grant. `--grant` may be omitted when exactly one active grant matches:
 
 ```bash
-voidb-cli agent run -- \
+vb agent run -- \
   profile test id:<profile-id> --plugin ssh --format json
 
-voidb-cli agent run -- \
+vb agent run -- \
   invoke run ssh.sftp_list --profile id:<profile-id> \
   --input-json '{"path":"."}' --format json
 ```
@@ -194,13 +194,13 @@ voidb-cli agent run -- \
 Inspect and revoke access:
 
 ```bash
-voidb-cli agent list
-voidb-cli agent list --profile id:<profile-id> --plugin ssh
-voidb-cli agent renew agent-grant:<uuid> --ttl-minutes 15
-voidb-cli agent renew agent-grant:<uuid> --ttl-minutes 15 --uses 10
-voidb-cli agent revoke agent-grant:<uuid>
-voidb-cli agent revoke --profile id:<profile-id> --plugin ssh
-voidb-cli agent revoke --all
+vb agent list
+vb agent list --profile id:<profile-id> --plugin ssh
+vb agent renew agent-grant:<uuid> --ttl-minutes 15
+vb agent renew agent-grant:<uuid> --ttl-minutes 15 --uses 10
+vb agent revoke agent-grant:<uuid>
+vb agent revoke --profile id:<profile-id> --plugin ssh
+vb agent revoke --all
 ```
 
 Only one central grant may exist for an immutable Profile ID and plugin. A new
@@ -209,7 +209,7 @@ replacement to start the new broker, verify it, close sessions owned by the
 displaced broker, and remove its private artifacts:
 
 ```bash
-voidb-cli agent authorize \
+vb agent authorize \
   --profile id:<profile-id> --plugin ssh --replace
 ```
 
@@ -237,7 +237,7 @@ First create an explicit session grant. The catalog or a structured
 `execution_mode_mismatch` response supplies the exact handoff capability set:
 
 ```bash
-voidb-cli agent authorize \
+vb agent authorize \
   --profile prod --plugin ssh \
   --execution-mode session_only \
   --capability ssh.terminal_read \
@@ -253,7 +253,7 @@ The purpose must match each capability's declared `session_handoff`, and the
 requested lease is capped at grant expiry:
 
 ```bash
-voidb-cli agent session open \
+vb agent session open \
   --grant agent-grant:<uuid> \
   --purpose interactive_terminal \
   --capability ssh.terminal_read \
@@ -269,27 +269,27 @@ The response returns an opaque `session_id` and `generation`. Pass both on later
 operations so stale state is rejected explicitly:
 
 ```bash
-voidb-cli agent session start \
+vb agent session start \
   --grant agent-grant:<uuid> \
   agent-session:<uuid> --generation 1 \
   --call-id call:agent-task-42 \
   --capability ssh.terminal_read \
   --input-json '{"after_offset":0,"max_bytes":32768}'
 
-voidb-cli agent session status \
+vb agent session status \
   --grant agent-grant:<uuid> agent-session:<uuid> --generation 1 \
   --call-id call:agent-task-42
-voidb-cli agent session wait \
+vb agent session wait \
   --grant agent-grant:<uuid> agent-session:<uuid> --generation 1 \
   --call-id call:agent-task-42 --wait-timeout-ms 30000
-voidb-cli agent session list --grant agent-grant:<uuid>
-voidb-cli agent session renew \
+vb agent session list --grant agent-grant:<uuid>
+vb agent session renew \
   --grant agent-grant:<uuid> agent-session:<uuid> --generation 1 \
   --lease-seconds 300
-voidb-cli agent session cancel \
+vb agent session cancel \
   --grant agent-grant:<uuid> agent-session:<uuid> --generation 1 \
   --call-id call:agent-task-42 --timeout-ms 1000
-voidb-cli agent session close \
+vb agent session close \
   --grant agent-grant:<uuid> agent-session:<uuid> --generation 1 \
   --timeout-ms 5000
 ```
@@ -383,7 +383,7 @@ and explicitly safe multiplexed sessions, can execute concurrently.
 Destructive access requires an explicit authorization confirmation:
 
 ```bash
-voidb-cli agent authorize \
+vb agent authorize \
   --profile prod --plugin ssh \
   --preset interactive_execute \
   --allow-destructive --yes \
@@ -398,7 +398,7 @@ them individually, use the Full access preset. If any capability is destructive,
 both acknowledgement flags remain mandatory:
 
 ```bash
-voidb-cli agent authorize \
+vb agent authorize \
   --profile prod-jenkins --plugin jenkins \
   --preset full_access \
   --allow-destructive --yes \

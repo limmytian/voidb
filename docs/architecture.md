@@ -18,7 +18,7 @@
 |   [Human Interaction]                                 [Machine Communication] |
 |                                                                               |
 |   +-----------------------+   +-------------------+   +-------------------+   |
-|   |   voidb (Main TUI)    |   | voidb-cli <cmd>   |   | AI Agents / Core  |   |
+|   |   voidb (Main TUI)    |   | vb <cmd>   |   | AI Agents / Core  |   |
 |   |  Connection & Profile |   | Unified Command   |   | Capability Broker |   |
 |   |       Manager         |   |    Dispatcher     |   |                   |   |
 |   +-----------------------+   +-------------------+   +-------------------+   |
@@ -43,7 +43,7 @@
 - The legacy embedded shell (`app_v4.rs`) was removed in v0.3.6; the native
   Connection Manager is the only terminal application.
 
-### 2. Unified Command Dispatcher (`voidb-cli`)
+### 2. Unified Command Dispatcher (`vb`)
 - Serves as the first-class dispatch desk.
 - First-class equality for built-in and external process plugins.
 - Dynamically discovers external plugins installed under `~/Library/Application Support/voidb/plugins/<plugin>/bin/`.
@@ -53,7 +53,7 @@
 - Fully autonomous domain operators.
 - Support the tri-modal operational contract:
   - `test`: Automated connectivity verification.
-  - `tui`: Standalone full-screen interactive terminal interface (invoked via `voidb-cli <plugin> tui --profile <profile>`).
+  - `tui`: Standalone full-screen interactive terminal interface (invoked via `vb <plugin> tui --profile <profile>`).
   - `serve`: `stdio-jsonrpc` protocol server for AI Agents and automated orchestration.
   - Domain commands: Full autonomous command surface (e.g., `k8s pods`, `docker ps`, `s3 buckets`).
 
@@ -130,9 +130,9 @@ The normative matrix and compatibility boundary are in
 
 | Entry | Location | Trigger |
 |---|---|---|
-| TUI app | `crates/voidb-tui/src/main.rs` | User runs `voidb` |
-| CLI | `crates/voidb-cli/src/main.rs` | User runs `voidb-cli <plugin> <command>` |
-| Plugin registration | `voidb-cli` dynamic discovery + provenance gate | `voidb-cli` startup and invocation |
+| TUI app | `crates/voidb-tui/src/main.rs` | User runs `vb-tui` |
+| CLI | `crates/voidb-cli/src/main.rs` | User runs `vb <plugin> <command>` |
+| Plugin registration | `vb` dynamic discovery + provenance gate | `vb` startup and invocation |
 
 ## Error Handling
 
@@ -159,10 +159,10 @@ The shell registry currently contains only the built-in Connection Manager:
 |---|---|---|---|
 | `connection-manager` | `ConnectionManagerPluginFactory` | `voidb-tui` | Home screen |
 
-Protocol plugins are registered with `voidb-cli` for commands and capability
+Protocol plugins are registered with `vb` for commands and capability
 invocation. Retained interactive plugins such as Docker, Kubernetes, Jenkins,
 and SSH own standalone terminal apps launched with
-`voidb-cli <plugin> tui --profile <profile>`; they are intentionally not
+`vb <plugin> tui --profile <profile>`; they are intentionally not
 registered as embedded shell tabs. Connection Manager presents profile,
 capability, and standalone-TUI launch guidance without owning a plugin runtime.
 

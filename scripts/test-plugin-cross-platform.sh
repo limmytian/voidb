@@ -36,13 +36,13 @@ echo "==========================================================================
 rm -rf "${OUTPUT_DIR}"
 mkdir -p "${INSTALL_ROOT}" "${DIST_DIR}"
 
-# Step 1: Ensure voidb-cli is built
-echo "==> Step 1: Building voidb-cli"
-cargo build -p voidb-cli
+# Step 1: Ensure vb is built
+echo "==> Step 1: Building vb"
+cargo build -p vb
 
-VOIDB_CLI="${REPO_ROOT}/target/debug/voidb-cli"
+VOIDB_CLI="${REPO_ROOT}/target/debug/vb"
 if [ ! -f "${VOIDB_CLI}" ]; then
-  VOIDB_CLI="${REPO_ROOT}/target/debug/voidb"
+  VOIDB_CLI="${REPO_ROOT}/target/debug/vb-tui"
 fi
 
 # Step 2: Generate Ed25519 signing keypair

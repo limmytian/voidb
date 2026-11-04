@@ -7,7 +7,7 @@ authors.workspace = true
 description = "VoidB CLI with JSON output support"
 
 [[bin]]
-name = "voidb-cli"
+name = "vb"
 path = "src/main.rs"
 
 [dependencies]

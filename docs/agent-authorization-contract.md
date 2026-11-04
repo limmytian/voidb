@@ -78,7 +78,7 @@ the broker. The default expiring window is two minutes.
 
 ## Bundled Capability Audit
 
-The audit used the machine-readable `voidb-cli invoke list --format json`
+The audit used the machine-readable `vb invoke list --format json`
 catalog from commit `639e8ef`. It contained 104 capabilities across 14 generic
 invoke plugins and classified them as `read_only` or `destructive`. The table is
 that audit snapshot. Subsequent hardening classifies `ssh.sftp_get` as
@@ -126,7 +126,7 @@ declare labels and enforcement metadata only; Core owns review rendering,
 narrowing validation, persistence, policy, and audit. Missing, secret-bearing,
 unknown-version, or incompatible schemas fail closed.
 
-The password-free `voidb-cli agent catalog` groups definitions into shared
+The password-free `vb agent catalog` groups definitions into shared
 plugin catalogs and builds execution-mode-bounded presets centrally. Read-only
 contains reviewed read-only definitions supported by the selected transport.
 Interactive/Execute contains only explicitly opted-in definitions. Full access

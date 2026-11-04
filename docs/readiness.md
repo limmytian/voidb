@@ -23,12 +23,12 @@ plugin-experience inventory. Generate it as JSON for tooling or Markdown for
 documentation:
 
 ```bash
-cargo run -p voidb-cli -- invoke matrix --format json
-cargo run -p voidb-cli -- invoke matrix --format markdown
+cargo run -p vb -- invoke matrix --format json
+cargo run -p vb -- invoke matrix --format markdown
 scripts/check-agent-capability-matrix.sh
 ```
 
-Installed process plugins remain discoverable with `voidb-cli invoke list`.
+Installed process plugins remain discoverable with `vb invoke list`.
 They are intentionally absent from the repository-owned matrix because their
 manifests and trust roots are node-local.
 

@@ -23,9 +23,9 @@ Runs the retained standalone TUI automated release gate:
 
 Options:
   --out DIR          Output directory. Default: target/tmp/tui-quality-gate.
-  --skip-build       Use existing binaries instead of building voidb-cli and voidb.
-  --cli-bin PATH     voidb-cli binary to smoke. Default: target/debug/voidb-cli.
-  --tui-bin PATH     voidb TUI binary to smoke. Default: target/debug/voidb.
+  --skip-build       Use existing binaries instead of building vb and voidb.
+  --cli-bin PATH     vb binary to smoke. Default: target/debug/vb.
+  --tui-bin PATH     voidb TUI binary to smoke. Default: target/debug/vb-tui.
   --quick-journeys  Run one transition-only process per journey; not a release gate.
   --no-diff-check   Skip /usr/bin/git diff --check.
   -h, --help        Show this help.
@@ -87,12 +87,12 @@ cd "${REPO_ROOT}"
 export VOIDB_PLUGIN_PATH="${VOIDB_PLUGIN_PATH:-${REPO_ROOT}/..}"
 
 if [[ "${BUILD}" -eq 1 ]]; then
-  printf '\n==> cargo build -q -p voidb-cli -p voidb-tui\n'
-  cargo build -q -p voidb-cli -p voidb-tui
+  printf '\n==> cargo build -q -p vb -p voidb-tui\n'
+  cargo build -q -p vb -p voidb-tui
 fi
 
-CLI_BIN="${CLI_BIN:-target/debug/voidb-cli}"
-TUI_BIN="${TUI_BIN:-target/debug/voidb}"
+CLI_BIN="${CLI_BIN:-target/debug/vb}"
+TUI_BIN="${TUI_BIN:-target/debug/vb-tui}"
 
 set +e
 python3 - "${OUT_DIR}" "${CLI_BIN}" "${TUI_BIN}" <<'PY'
@@ -124,7 +124,7 @@ cli = cli_arg if cli_arg.is_absolute() else repo / cli_arg
 tui = tui_arg if tui_arg.is_absolute() else repo / tui_arg
 
 if not cli.exists():
-    raise SystemExit(f"missing voidb-cli binary: {cli}")
+    raise SystemExit(f"missing vb binary: {cli}")
 if not tui.exists():
     raise SystemExit(f"missing voidb TUI binary: {tui}")
 

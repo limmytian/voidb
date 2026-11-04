@@ -164,7 +164,7 @@ For MySQL capability changes, run:
 
 ```bash
 cargo test -p voidb-plugin-mysql
-cargo test -p voidb-cli invoke
+cargo test -p vb invoke
 cargo test -p voidb-core sql_contract
 git diff --check
 ```
@@ -176,7 +176,7 @@ For PostgreSQL capability changes, run:
 
 ```bash
 cargo test -p voidb-plugin-postgres capabilities
-cargo test -p voidb-cli invoke
+cargo test -p vb invoke
 cargo test -p voidb-core sql_contract
 git diff --check
 ```
@@ -189,7 +189,7 @@ For DuckDB capability changes, run:
 
 ```bash
 cargo test -p voidb-plugin-duckdb
-cargo test -p voidb-cli invoke
+cargo test -p vb invoke
 cargo test -p voidb-core sql_contract
 git diff --check
 ```

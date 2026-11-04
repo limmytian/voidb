@@ -86,11 +86,11 @@ Every plugin decision should record:
 
 Validation baseline on 2026-07-07:
 
-- `target/debug/voidb-cli invoke list mysql --format json`
-- `target/debug/voidb-cli invoke list postgres --format json`
-- `target/debug/voidb-cli invoke list sqlite --format json`
-- `target/debug/voidb-cli invoke list duckdb --format json`
-- `target/debug/voidb-cli invoke list redis --format json`
+- `target/debug/vb invoke list mysql --format json`
+- `target/debug/vb invoke list postgres --format json`
+- `target/debug/vb invoke list sqlite --format json`
+- `target/debug/vb invoke list duckdb --format json`
+- `target/debug/vb invoke list redis --format json`
 
 The SQL plugins all advertised `describe_table`, `exec`, `explain`, `query`,
 and `tables`. Redis advertised `del`, `exec`, `get`, `info`, `keys`, `set`,
@@ -98,13 +98,13 @@ and `ttl`.
 
 | Plugin | Reviewed human workflow | Gate result | Requirement 83 decision |
 |---|---|---|---|
-| MySQL | Networked schema lookup, table listing, one-off query/explain, and explicit SQL execution during incident triage. | Shared SQL CLI/capabilities cover the supported read/query path. The workflow is not plugin-unique enough to justify a standalone TUI before shared table-page and mutation-preview capabilities exist. | `CLI-only`. Do not add `mysql tui`; keep Connection Manager guidance pointed at `voidb-cli mysql ...` and `voidb-cli invoke run mysql.<capability> ...`. |
+| MySQL | Networked schema lookup, table listing, one-off query/explain, and explicit SQL execution during incident triage. | Shared SQL CLI/capabilities cover the supported read/query path. The workflow is not plugin-unique enough to justify a standalone TUI before shared table-page and mutation-preview capabilities exist. | `CLI-only`. Do not add `mysql tui`; keep Connection Manager guidance pointed at `vb mysql ...` and `vb invoke run mysql.<capability> ...`. |
 | PostgreSQL | Networked schema lookup, table listing, one-off query/explain, and explicit SQL execution. | Shared SQL CLI/capabilities cover the supported path. PostgreSQL lacks a plugin-specific inspector UX brief and retained fixture/transcript evidence that beats repeated CLI commands. | `CLI-only`. Do not add `postgres tui`; future work should first strengthen fixture-backed SQL capability evidence. |
 | SQLite | Local file triage: list tables, inspect schema, run bounded read queries, and possibly inspect a small table page during debugging. | The workflow is plausible because local SQLite is deterministic and fixture-friendly, but the gate is incomplete: no dedicated table-page/table-count capability contract, no row-mutation preview, and no PTY evidence. | `Later candidate`, shipping as `CLI-only`. Do not add `sqlite tui` in Requirement 83; reconsider only after shared table-page and mutation safety capabilities exist. |
 | DuckDB | Analytics file triage, schema lookup, repeatable query execution, import/export, and extension diagnostics. | CLI/capability workflows are more repeatable for analytics and import/export. Native build cost and extension variability make it a poor first inspector pilot. | `CLI-only`. Do not add `duckdb tui`; keep analytics workflows scriptable through CLI/capabilities. |
 | Redis | Prefix triage: scan bounded keys, inspect type/TTL/value, review server info, and perform explicit single-key writes/deletes. | Bounded key/read/write capabilities and local fixture evidence exist, so the workflow is a possible future pilot. The gate is still incomplete because there is no plugin-owned UX brief, no PTY lifecycle evidence, and no destructive-confirmation transcript for bulk or irreversible key operations. | `Later candidate`, shipping as `CLI-only`. Do not add `redis tui` in Requirement 83; require a focused key-triage pilot proposal before implementation. |
 
-This slice does not accept any SQL or Redis pilot. No `voidb-cli <plugin> tui`
+This slice does not accept any SQL or Redis pilot. No `vb <plugin> tui`
 command should be added for these plugins from this requirement, and no default
 TUI path should advertise one.
 
@@ -112,8 +112,8 @@ TUI path should advertise one.
 
 Validation baseline on 2026-07-07:
 
-- `target/debug/voidb-cli invoke list mongodb --format json`
-- `target/debug/voidb-cli invoke list elasticsearch --format json`
+- `target/debug/vb invoke list mongodb --format json`
+- `target/debug/vb invoke list elasticsearch --format json`
 
 MongoDB advertised `aggregate`, `collections`, `count`, `create_index`,
 `databases`, `delete`, `diagnostics`, `find`, `indexes`, `insert`,
@@ -155,8 +155,8 @@ No plugin passed every hard gate at the same time:
 
 User-facing migration note:
 
-- use `voidb-cli <plugin> ...` commands and
-  `voidb-cli invoke list|describe|run <plugin>...` for data inspection;
+- use `vb <plugin> ...` commands and
+  `vb invoke list|describe|run <plugin>...` for data inspection;
 - use the Connection Manager as a profile catalog and command guidance surface;
 - do not document or advertise `mysql tui`, `postgres tui`, `sqlite tui`,
   `duckdb tui`, `redis tui`, `mongodb tui`, or `elasticsearch tui`;
@@ -206,7 +206,7 @@ capabilities, CLI commands, and release evidence.
 
 Future data inspector UI work may start only when these conditions hold:
 
-- CLI/capability commands named above are still registered in `voidb-cli`.
+- CLI/capability commands named above are still registered in `vb`.
 - Default TUI tests continue to pass without loading database inspector plugin
   factories.
 - Release docs say data surfaces are CLI-first unless a new plugin-owned TUI

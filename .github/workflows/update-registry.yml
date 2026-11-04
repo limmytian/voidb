@@ -82,12 +82,12 @@ jobs:
             echo "::error::Downloaded ${#archives[@]} plugin archives, expected ${expected} (staged plugins x TARGETS in scripts/download-release-plugins.py)."
             exit 1
           fi
-          cargo run -p voidb-cli -- plugin registry-index "${archives[@]}" --output registry/index.json --registry-name 'VoidB Official Plugin Registry' --format json
+          cargo run -p vb -- plugin registry-index "${archives[@]}" --output registry/index.json --registry-name 'VoidB Official Plugin Registry' --format json
         shell: bash
 
       - name: Validate Registry Manifest with CLI
         run: |
-          cargo run -p voidb-cli -- plugin registry list --url file://$(pwd)/registry/index.json
+          cargo run -p vb -- plugin registry list --url file://$(pwd)/registry/index.json
         shell: bash
 
       - name: Commit & Push Updated Registry

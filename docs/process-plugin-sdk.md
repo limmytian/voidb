@@ -86,8 +86,8 @@ They are intentionally shell-based so they can be discovered and health-checked
 without building anything:
 
 ```bash
-VOIDB_PLUGIN_PATH=examples/process-plugins cargo run -p voidb-cli -- plugin list --format json
-VOIDB_PLUGIN_PATH=examples/process-plugins cargo run -p voidb-cli -- plugin describe hello-sql --include capabilities,schemas --format json
+VOIDB_PLUGIN_PATH=examples/process-plugins cargo run -p vb -- plugin list --format json
+VOIDB_PLUGIN_PATH=examples/process-plugins cargo run -p vb -- plugin describe hello-sql --include capabilities,schemas --format json
 ```
 
 The examples are not live database or cloud clients. They exist to show package
@@ -147,6 +147,6 @@ For SDK or example changes, run:
 ```bash
 cargo test -p voidb-process-plugin-sdk
 cargo test -p voidb-core process_plugin
-VOIDB_PLUGIN_PATH=examples/process-plugins cargo run -p voidb-cli -- plugin list --format json
+VOIDB_PLUGIN_PATH=examples/process-plugins cargo run -p vb -- plugin list --format json
 git diff --check
 ```

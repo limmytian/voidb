@@ -42,15 +42,15 @@ It complements:
 | Sync client/server smoke | Yes, while Sync is documented or shipped | `scripts/release-sync-smoke.sh` | Release Sync Smoke |
 | Stable object Sync claim | Only if release notes or UI copy call Sync stable/default | `cargo test -p voidb-core object_sync`, plus the stable object sync gate in Release Sync Smoke | Release Sync Smoke |
 | Security release gate | Yes | Commands in [Security Release Checklist](security-release-checklist.md) | [Security Release Checklist](security-release-checklist.md) |
-| Process-plugin runtime & tooling gate | Yes, while process plugins are enabled | `cargo test -p voidb-core process_plugin`; `cargo test -p voidb-core process_plugin_runtime`; `cargo test -p voidb-cli plugin`; `cargo test -p voidb-cli invoke`; `cargo test -p voidb-process-plugin-sdk` | [CI Check Tiers](ci-checks.md) |
+| Process-plugin runtime & tooling gate | Yes, while process plugins are enabled | `cargo test -p voidb-core process_plugin`; `cargo test -p voidb-core process_plugin_runtime`; `cargo test -p vb plugin`; `cargo test -p vb invoke`; `cargo test -p voidb-process-plugin-sdk` | [CI Check Tiers](ci-checks.md) |
 | External-agent interaction boundary | Yes | `scripts/check-external-agent-interaction.sh`; focused SSH/infrastructure/capability-only plugin groups from the CI guide | External-Agent Interaction Evidence |
-| Core protocol & RDBMS baseline | Yes, for core database contract confidence | `cargo test -p voidb-plugin-sqlite`; `cargo test -p voidb-plugin-redis`; `cargo test -p voidb-plugin-mysql`; `cargo test -p voidb-plugin-postgres`; `cargo test -p voidb-plugin-duckdb`; `cargo test -p voidb-cli invoke`; `git diff --check` | [CI Check Tiers](ci-checks.md) |
+| Core protocol & RDBMS baseline | Yes, for core database contract confidence | `cargo test -p voidb-plugin-sqlite`; `cargo test -p voidb-plugin-redis`; `cargo test -p voidb-plugin-mysql`; `cargo test -p voidb-plugin-postgres`; `cargo test -p voidb-plugin-duckdb`; `cargo test -p vb invoke`; `git diff --check` | [CI Check Tiers](ci-checks.md) |
 | Decoupled long-tail protocol plugins | Verified in independent repos | Independent CI checks in `voidb-plugin-jenkins`, `voidb-plugin-webdav`, `voidb-plugin-email`, `voidb-plugin-s3`, `voidb-plugin-kubernetes`, `voidb-plugin-docker`, `voidb-plugin-elasticsearch`, `voidb-plugin-mongodb` | External Process Plugin Workflow |
-| SSH capability smoke | Yes, for SSH release candidate status | `cargo check -p voidb-plugin-ssh --example fixture_smoke`; `cargo test -p voidb-plugin-ssh`; `cargo test -p voidb-cli invoke`; `cargo test -p voidb-core profile_adapter`; `cargo test -p voidb-core profile_store`; `scripts/ssh-fixture-smoke.sh --report target/tmp/ssh-fixture-smoke-evidence.md` | SSH Release Readiness |
+| SSH capability smoke | Yes, for SSH release candidate status | `cargo check -p voidb-plugin-ssh --example fixture_smoke`; `cargo test -p voidb-plugin-ssh`; `cargo test -p vb invoke`; `cargo test -p voidb-core profile_adapter`; `cargo test -p voidb-core profile_store`; `scripts/ssh-fixture-smoke.sh --report target/tmp/ssh-fixture-smoke-evidence.md` | SSH Release Readiness |
 | Default native Connection Manager | Yes | `cargo test -p voidb-tui`; manual `cargo run` smoke | [Connection Manager TUI](connection-manager-tui.md) |
 | Retained standalone TUI gate | Yes, while retained standalone TUIs are shipped | `scripts/tui-quality-gate.sh`; retain its full output on failure; use `--cli-bin` and `--tui-bin` for staged/package binaries | [TUI CI And Real-Terminal Coverage](tui-terminal-coverage.md) |
 | Future plugin TUI UX gate | Only if a new plugin-owned TUI is accepted | `cargo test -p voidb-core tui_launch`; plugin-owned PTY/lifecycle test target | [Plugin-Owned TUI Development Guide](plugin-owned-tui-development-guide.md) |
-| Data inspector TUI gate | Only if release notes or UI copy advertise a data inspector TUI | Requirement 83 currently accepts no pilot; rerun the accepted plugin's capability, fixture, and PTY gates before adding any `voidb-cli <data-plugin> tui` command. | [Data Inspector CLI-First Decisions](data-inspector-cli-first-decisions.md) |
+| Data inspector TUI gate | Only if release notes or UI copy advertise a data inspector TUI | Requirement 83 currently accepts no pilot; rerun the accepted plugin's capability, fixture, and PTY gates before adding any `vb <data-plugin> tui` command. | [Data Inspector CLI-First Decisions](data-inspector-cli-first-decisions.md) |
 | Package artifact smoke | Yes before tag | Commands in [Release Packaging](release-packaging.md), plus `scripts/linux-package-smoke.sh --report target/tmp/linux-package-smoke-evidence.md` when Linux Docker smoke is used; record platform evidence with the format in [Package CI Matrix](package-ci-matrix.md#package-evidence-format) | [Release Packaging](release-packaging.md) |
 | Full workspace | Yes before tag | `cargo test --workspace --no-fail-fast` | [CI Check Tiers](ci-checks.md) |
 | Full clippy | Yes before tag | `cargo clippy --workspace --all-targets --no-deps` | [CI Check Tiers](ci-checks.md) |
@@ -85,7 +85,7 @@ Include these notes in release-candidate notes when applicable:
   evidence only.
 - Default-passphrase legacy configs: saved legacy `ConnectionConfig` credential
   material may still be protected by the compiled default passphrase until the
-  user re-encrypts with `voidb-cli credential master reencrypt` or the
+  user re-encrypts with `vb credential master reencrypt` or the
   Connection Manager `m` master-password flow. The TUI path exists, but release
   notes should still disclose risk for users who have not completed
   re-encryption.
@@ -189,7 +189,7 @@ Supporting evidence:
   independent open-source repositories under `https://github.com/limmytian/`.
 - Process-Plugin SDK published readiness and `cargo-generate` template completed
   in `crates/voidb-process-plugin-sdk` and `templates/process-plugin-template`.
-- CLI packaging (`voidb-cli plugin package`) and distribution tooling completed
+- CLI packaging (`vb plugin package`) and distribution tooling completed
   supporting `.tar.zst` and `.tar` with sha256 digests and integrity verification.
 - Third-party developer guide published in `docs/process-plugin-development-guide.md`.
 - Full workspace tests (`cargo test --workspace --no-fail-fast`) pass cleanly with 0 failures.

@@ -70,7 +70,7 @@ compatibility aliases MUST be hidden from normal help.
 
 ### External context protocol v1
 
-`voidb-cli context` is the password-free, non-PTY automation boundary. Protocol
+`vb context` is the password-free, non-PTY automation boundary. Protocol
 version 1 defines these commands and response shapes:
 
 | Command | Required input | Successful `data` |
@@ -120,14 +120,14 @@ non-interactive environment fallbacks are `VOIDB_AGENT_CLIENT_ID`,
 profiles or prompts for a master password. Current commands are:
 
 ```bash
-voidb-cli context list \
+vb context list \
   --client-id agent-cli --task-id task-123 [--plugin docker]
 
-voidb-cli context show \
+vb context show \
   --client-id agent-cli --task-id task-123 \
   --plugin docker --generation 4 context:docker:1720000000000:1
 
-voidb-cli context operation \
+vb context operation \
   --client-id agent-cli --task-id task-123 \
   --plugin docker --generation 4 \
   --operation-request-id operation:task-123:1 \
@@ -135,16 +135,16 @@ voidb-cli context operation \
   --operations-json '[{"kind":"capability_call","capability_id":"docker.container_action","input_summary":{"action":"stop","target_id":"container-id","target_label":"api"},"rationale":"Stop the unhealthy fixture target","risk":"destructive","target":{"kind":"capability","capability_id":"docker.container_action"}}]' \
   context:docker:1720000000000:1
 
-voidb-cli context status \
+vb context status \
   --client-id agent-cli --task-id task-123 \
   --plugin docker --generation 4 context:docker:1720000000000:1
 
-voidb-cli context wait \
+vb context wait \
   --client-id agent-cli --task-id task-123 \
   --plugin docker --generation 4 --timeout-ms 30000 \
   context:docker:1720000000000:1
 
-voidb-cli context deny \
+vb context deny \
   --client-id agent-cli --task-id task-123 \
   --plugin docker --generation 4 \
   --operation-request-id operation:task-123:1 --operation-index 0 \
@@ -250,7 +250,7 @@ The following MAY remain temporarily for decoding or source compatibility:
   optional note, and operations;
 - old `post_response`/`wait_for_response` helper spellings as non-advertised
   wrappers around operation methods;
-- `voidb-cli ssh assist` as a hidden alias for `ssh session`; and
+- `vb ssh assist` as a hidden alias for `ssh session`; and
 - historical audit event names beginning with `assist.` when changing them
   would break retained evidence.
 
@@ -285,7 +285,7 @@ scripts/check-external-agent-interaction.sh
 scripts/check-external-context-handoff.sh
 ```
 
-The second command builds `voidb-cli`, launches all three fixture-backed TUIs
+The second command builds `vb`, launches all three fixture-backed TUIs
 in real pseudo-terminals, and runs the identical `allow`, `deny`, `timeout`,
 `replay`, `multi_action`, and `crash_recovery` scenario matrix from separate
 CLI processes. Its generated JSON report and ANSI transcripts stay below

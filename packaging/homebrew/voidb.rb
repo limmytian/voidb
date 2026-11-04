@@ -25,8 +25,12 @@ class Voidb < Formula
   end
 
   def install
-    bin.install "voidb"
-    bin.install "voidb-cli"
+    bin.install "vb-tui"
+    bin.install "vb"
+    # Compatibility links: the binaries were renamed in v0.3.9
+    # (voidb-cli -> vb, voidb -> vb-tui).
+    bin.install_symlink "vb" => "voidb-cli"
+    bin.install_symlink "vb-tui" => "voidb"
   end
 
   def caveats
@@ -34,20 +38,20 @@ class Voidb < Formula
       VoidB v#{version} installed successfully!
 
       Quick start:
-        voidb                             # Launch interactive TUI
-        voidb-cli plugin install-default  # Install the recommended plugins (optional)
-        voidb-cli --help                  # Explore CLI & plugin commands
+        vb-tui                            # Launch the connection manager TUI
+        vb plugin install-default         # Install the recommended plugins (optional)
+        vb --help                         # Explore CLI & plugin commands
 
       Plugins are installed separately in your user plugin directory.
       Install official plugins directly from CLI:
-        voidb-cli plugin search
-        voidb-cli plugin install mysql
-        voidb-cli plugin install s3
-        voidb-cli plugin install docker
+        vb plugin search
+        vb plugin install mysql
+        vb plugin install s3
+        vb plugin install docker
     EOS
   end
 
   test do
-    assert_match "voidb #{version}", shell_output("#{bin}/voidb-cli --version")
+    assert_match "vb #{version}", shell_output("#{bin}/vb --version")
   end
 end

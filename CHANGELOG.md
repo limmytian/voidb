@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Paging keys across the app: `PageUp`/`PageDown` (±10, matching the plugin TUI family), `Home`/`End`, and vim `g`/`G` on the profile list, capability browser, authorization capability list, and JIT inbox; `j`/`k` now wrap at both ends via one shared selection stepper.
 
 ### Fixed
-- The idle authorization snapshot no longer spawns three sequential `voidb-cli` subprocesses every 2 s regardless of context; the 2 s cadence applies only while an authorization surface is visible and falls back to a 60 s cadence for Browse badges, restoring the idle budget in docs/tui-interaction-performance.md.
+- The idle authorization snapshot no longer spawns three sequential `vb` subprocesses every 2 s regardless of context; the 2 s cadence applies only while an authorization surface is visible and falls back to a 60 s cadence for Browse badges, restoring the idle budget in docs/tui-interaction-performance.md.
 - Mouse capture is no longer dead: mouse events are handled, and every event class drains the background poll (mouse motion used to skip it entirely, starving test/install/snapshot workers).
 - `Esc` in the profile editor with unsaved work opens a non-default discard confirmation instead of silently discarding, per the no-silent-loss rule in docs/standalone-tui-ux-acceptance.md.
 - `Esc` in search clears a non-empty filter first (the documented behavior) and exits only from an empty filter; `Enter` still applies the filter and returns to Browse.
@@ -35,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Invite-only sync-server registration now succeeds with a valid invite token: the token is stamped after the user row is inserted, instead of always failing the `used_by` foreign key with a 500.
 
 ### Added
-- `voidb-cli completions <shell>` generates shell completion scripts (bash, zsh, fish, powershell, elvish).
+- `vb completions <shell>` generates shell completion scripts (bash, zsh, fish, powershell, elvish).
 - Visible CLI aliases for faster typing: `conn` (connections), `cred` (credential), `profiles` (profile), and `re-encrypt` (`credential master reencrypt`).
 - TTY-gated interactive master-password unlock: in a terminal, commands that need credential decryption prompt once (echo disabled, prompt on stderr) instead of requiring `VOIDB_MASTER_PASSWORD`; non-interactive sessions stay fail-closed.
 - `VOIDB_DISABLE_KEYRING` opt-out skips the OS keyring for the per-installation secret and uses the 0600 file fallback, so tests and headless runs never trigger keychain authorization prompts.
@@ -54,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Zeroize derived Argon2id keys on drop; serialize installation-secret creation and create the file fallback atomically so concurrent first runs cannot mint divergent keys.
 
 ### Added
-- Direct trust-path test coverage: plugin provenance (tampered payloads, untrusted signers, symlinked proofs, binary-path escapes), signing, redaction, credential protection, sync-server auth; new `voidb-cli` integration harness driving the real binary.
+- Direct trust-path test coverage: plugin provenance (tampered payloads, untrusted signers, symlinked proofs, binary-path escapes), signing, redaction, credential protection, sync-server auth; new `vb` integration harness driving the real binary.
 
 ### Changed
 - The plugin SDK builds terminal-free: `voidb-core` gates its TUI/CLI/registry stacks behind features (defaults unchanged in-repo), verified by an isolated dependency tree with no ratatui/crossterm/arboard/reqwest/clap; SDK contract types are re-exported publicly.
@@ -106,10 +106,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **100% Decoupled Process Plugin Architecture**: Completely externalized 6 database and protocol drivers (`mysql`, `postgres`, `sqlite`, `redis`, `ssh`, `duckdb`) into independent repositories, removing all heavy driver crates (`libduckdb-sys`, `tokio-postgres`, `mysql_async`, `rusqlite`, `redis`, `russh`) from the core voidb workspace.
-- **Unified Command Dispatcher & Complete Plugin Equality**: `voidb-cli` now dynamically discovers all 14 official plugins and transparently routes subcommands, arguments, options, and help messages.
+- **Unified Command Dispatcher & Complete Plugin Equality**: `vb` now dynamically discovers all 14 official plugins and transparently routes subcommands, arguments, options, and help messages.
 - **Standard Tri-Modal Contract for All 14 Plugins**: Every official plugin provides `test` (fast connectivity check), `tui` (standalone interactive full-screen terminal), and `serve` (headless stdio-jsonrpc for AI coding agents) alongside domain commands.
-- **Bundled Default Plugins & One-Click Init**: Built-in discovery checks sibling and installation prefix paths (`<exe_dir>/plugins`, `<prefix>/share/voidb/plugins`). Added `voidb-cli plugin install-default` for one-command initialization of core database plugins.
-- **Release Packaging & Distribution**: Updated GitHub release workflow and Homebrew formula to build and package both `voidb` and `voidb-cli` binaries together.
+- **Bundled Default Plugins & One-Click Init**: Built-in discovery checks sibling and installation prefix paths (`<exe_dir>/plugins`, `<prefix>/share/voidb/plugins`). Added `vb plugin install-default` for one-command initialization of core database plugins.
+- **Release Packaging & Distribution**: Updated GitHub release workflow and Homebrew formula to build and package both `vb-tui` and `vb` binaries together.
 
 ### Changed
 

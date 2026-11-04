@@ -15,7 +15,7 @@ if [[ $# -ne 0 ]]; then
 fi
 
 cargo test -p voidb-core live_session --quiet -- --test-threads=1
-cargo test -p voidb-cli data_search_live_session --quiet -- --test-threads=1
+cargo test -p vb data_search_live_session --quiet -- --test-threads=1
 
 cargo test --manifest-path "${ROOT}/../voidb-plugin-redis/Cargo.toml" --quiet -- --test-threads=1
 cargo check --manifest-path "${ROOT}/../voidb-plugin-redis/Cargo.toml" --example fixture_smoke --quiet

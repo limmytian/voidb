@@ -81,8 +81,8 @@ def main(argv: list[str] | None = None) -> int:
         help="Override measured warm runs; release CI uses 5.",
     )
     parser.add_argument("--out", type=pathlib.Path, default=REPO_ROOT / "target/tmp/tui-journeys")
-    parser.add_argument("--cli-bin", type=pathlib.Path, default=REPO_ROOT / "target/debug/voidb-cli")
-    parser.add_argument("--tui-bin", type=pathlib.Path, default=REPO_ROOT / "target/debug/voidb")
+    parser.add_argument("--cli-bin", type=pathlib.Path, default=REPO_ROOT / "target/debug/vb")
+    parser.add_argument("--tui-bin", type=pathlib.Path, default=REPO_ROOT / "target/debug/vb-tui")
     parser.add_argument(
         "--quick",
         action="store_true",

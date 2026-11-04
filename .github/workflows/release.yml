@@ -66,11 +66,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev libdbus-1-dev
 
       - name: Build Binaries
-        run: cargo build --locked --release --target ${{ matrix.target }} -p voidb-tui -p voidb-cli
+        run: cargo build --locked --release --target ${{ matrix.target }} -p voidb-tui -p vb
 
       - name: Verify Native CLI Version and Help
         run: |
-          cli="target/${{ matrix.target }}/release/voidb-cli"
+          cli="target/${{ matrix.target }}/release/vb"
           if [ "${{ runner.os }}" = "Windows" ]; then cli="${cli}.exe"; fi
           test "$("$cli" --version)" = "voidb ${RELEASE_VERSION#v}"
           "$cli" --help
@@ -83,9 +83,9 @@ jobs:
         run: |
           mkdir -p dist
           cp target/${{ matrix.target }}/release/voidb dist/voidb
-          cp target/${{ matrix.target }}/release/voidb-cli dist/voidb-cli
+          cp target/${{ matrix.target }}/release/vb dist/vb
           cd dist
-          tar -czf voidb-${RELEASE_VERSION#v}-${{ matrix.platform }}.tar.gz voidb voidb-cli
+          tar -czf voidb-${RELEASE_VERSION#v}-${{ matrix.platform }}.tar.gz voidb vb
         shell: bash
 
       - name: Package Binaries (Windows)
@@ -93,9 +93,9 @@ jobs:
         run: |
           mkdir -p dist
           cp target/${{ matrix.target }}/release/voidb.exe dist/voidb.exe
-          cp target/${{ matrix.target }}/release/voidb-cli.exe dist/voidb-cli.exe
+          cp target/${{ matrix.target }}/release/vb.exe dist/vb.exe
           cd dist
-          7z a voidb-${RELEASE_VERSION#v}-${{ matrix.platform }}.zip voidb.exe voidb-cli.exe
+          7z a voidb-${RELEASE_VERSION#v}-${{ matrix.platform }}.zip voidb.exe vb.exe
         shell: bash
 
       - name: Upload Artifact
@@ -111,7 +111,7 @@ jobs:
     #
     # scripts/sign-release-artifacts.py consumes plugin archives
     # ({plugin-id}-{version}-{target}.tar.gz containing a plugin.toml
-    # manifest, for the four release targets). The core `voidb`/`voidb-cli`
+    # manifest, for the four release targets). The core `voidb`/`vb`
     # archives built by build-release above are NOT plugin payloads (no
     # plugin.toml, plus an unsupported Windows target), so the signer cannot
     # run over them and this job never runs automatically on tag pushes:

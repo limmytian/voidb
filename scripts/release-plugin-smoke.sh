@@ -83,7 +83,7 @@ case "${PLUGIN}" in
 esac
 
 if [[ "${INVOKE_SMOKE}" -eq 1 ]]; then
-  run cargo test -p voidb-cli invoke --quiet
+  run cargo test -p vb invoke --quiet
 fi
 
 if [[ "${DIFF_CHECK}" -eq 1 ]]; then

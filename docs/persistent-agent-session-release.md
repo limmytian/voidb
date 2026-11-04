@@ -32,7 +32,7 @@ HTTP client reuse and repeated snapshot polling are not user-visible sessions.
 
 ## Operator Workflow
 
-Use `voidb-cli agent session open/call/start/status/wait/list/renew/cancel/close --help`
+Use `vb agent session open/call/start/status/wait/list/renew/cancel/close --help`
 and the copyable examples in
 [Agent Authorization Broker](agent-authorization-broker.md). Connection Manager
 continues to show profile metadata only; inspect live sessions with `agent

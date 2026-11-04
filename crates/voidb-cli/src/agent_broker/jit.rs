@@ -408,7 +408,7 @@ async fn decide_jit_request(
             JIT_EXIT_INVALID,
             "authentication_required",
             &format!(
-                "frontend decisions require the master password on standard input; run 'voidb-cli agent request review {request_id}' in a local terminal for an interactive hidden password prompt"
+                "frontend decisions require the master password on standard input; run 'vb agent request review {request_id}' in a local terminal for an interactive hidden password prompt"
             ),
             None,
         );

@@ -326,8 +326,8 @@ crash diagnostics, stderr redaction, or generic process-plugin invocation:
 ```bash
 cargo test -p voidb-core process_plugin
 cargo test -p voidb-core process_plugin_runtime
-cargo test -p voidb-cli plugin
-cargo test -p voidb-cli invoke
+cargo test -p vb plugin
+cargo test -p vb invoke
 git diff --check
 ```
 

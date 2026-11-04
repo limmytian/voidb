@@ -18,7 +18,7 @@ async fn main() -> Result<()> {
     // Initialize logging to file (avoids polluting terminal)
     let log_dir = dirs::data_local_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("voidb")
+        .join("vb-tui")
         .join("logs");
     std::fs::create_dir_all(&log_dir)?;
 
@@ -111,7 +111,7 @@ fn parse_launch_mode() -> Result<LaunchMode> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     if matches!(args.first().map(String::as_str), Some("--help" | "-h")) {
         println!(
-            "Usage: voidb [--connection-manager]\n\nDefault: native Connection Manager\n(deprecated: --shell is accepted and launches the native Connection Manager)"
+            "Usage: vb-tui [--connection-manager]\n\nDefault: native Connection Manager\n(deprecated: --shell is accepted and launches the native Connection Manager)"
         );
         std::process::exit(0);
     }

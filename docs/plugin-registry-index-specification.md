@@ -70,7 +70,7 @@ The registry schema enforces standard JSON Schema draft 2020-12 compliance:
   - `latest_version`: SemVer string of the latest release.
   - `versions[]`: Version history array containing packages, platform targets, protocol version, and sha256 checksums.
 
-## 3. CLI Command: `voidb-cli plugin registry-index`
+## 3. CLI Command: `vb plugin registry-index`
 
 The `plugin registry-index` command scans local plugin repositories or packaged distribution archives (`.tar`, `.tar.gz`, `.tar.zst`), validates their structure, and updates the registry index manifest:
 

@@ -226,13 +226,20 @@ fn resolve_voidb_tui_binary() -> std::path::PathBuf {
     if let Ok(current_exe) = std::env::current_exe()
         && let Some(dir) = current_exe.parent()
     {
-        let sibling = dir.join("voidb");
+        // The manager binary is named `vb-tui` since v0.3.9; fall back to the
+        // legacy `voidb` name while compatibility links still exist.
+        let new_name = dir.join("vb-tui");
+        let sibling = if new_name.exists() {
+            new_name
+        } else {
+            dir.join("voidb")
+        };
         if sibling.exists() {
             return sibling;
         }
     }
 
-    "voidb".into()
+    "vb-tui".into()
 }
 
 /// Deserialize plugin config from a `ConnectionConfig` into a typed struct.

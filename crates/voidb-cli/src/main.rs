@@ -73,7 +73,7 @@ async fn main() -> anyhow::Result<()> {
         let shell = sub_matches
             .get_one::<clap_complete::shells::Shell>("shell")
             .expect("shell is required");
-        clap_complete::aot::generate(*shell, &mut app, "voidb-cli", &mut std::io::stdout());
+        clap_complete::aot::generate(*shell, &mut app, "vb", &mut std::io::stdout());
         return Ok(());
     }
 
@@ -149,7 +149,7 @@ fn build_cli_app(
     cli_manager: &CliPluginManager,
     discovery: &voidb_core::process_plugin::ProcessPluginDiscovery,
 ) -> Command {
-    let mut app = Command::new("voidb-cli")
+    let mut app = Command::new("vb")
         .about("VoidB - Terminal Database Management Tool")
         .version(env!("CARGO_PKG_VERSION"))
         .subcommand_required(true)
@@ -165,7 +165,7 @@ fn build_cli_app(
 
     app = app.subcommand(
         Command::new("completions")
-            .about("Generate shell completion scripts for voidb-cli (bash, zsh, fish, ...)")
+            .about("Generate shell completion scripts for vb (bash, zsh, fish, ...)")
             .arg(
                 clap::Arg::new("shell")
                     .required(true)

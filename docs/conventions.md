@@ -42,7 +42,7 @@
 - `#[allow(dead_code)]` used sparingly on public API types not all consumed locally
 - Edition 2024 (set in each crate's `Cargo.toml`)
 - No path aliases configured; use relative crate paths
-- Workspace crates referenced by name: `voidb-core`, `voidb-tui`, `voidb-cli`, `voidb-process-plugin-sdk`, `voidb-plugin-sync`, etc.
+- Workspace crates referenced by name: `voidb-core`, `voidb-tui`, `vb`, `voidb-process-plugin-sdk`, `voidb-plugin-sync`, etc.
 
 ## Error Handling
 

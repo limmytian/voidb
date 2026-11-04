@@ -393,7 +393,7 @@ impl ConnectionManagerApp {
 
         if !can_install_missing_plugin(&plugin_id, self.plugin_states.get(&plugin_id).copied()) {
             self.set_status_error(format!(
-                "Plugin '{plugin_id}' is already present or is not an official installable plugin; inspect with voidb-cli plugin describe {plugin_id}"
+                "Plugin '{plugin_id}' is already present or is not an official installable plugin; inspect with vb plugin describe {plugin_id}"
             ));
 
             return;
@@ -410,20 +410,20 @@ impl ConnectionManagerApp {
         };
 
         let guidance = format!(
-            "voidb-cli profile test id:{} --plugin {}\nvoidb-cli {} tui --profile id:{}",
+            "vb profile test id:{} --plugin {}\nvb {} tui --profile id:{}",
             profile.id, profile.plugin_id, profile.plugin_id, profile.id
         );
 
         match voidb_core::clipboard::copy_to_clipboard(&guidance) {
             Ok(()) => {
                 self.set_status_success(format!(
-                    "Copied CLI guidance · test: voidb-cli profile test id:{} --plugin {}",
+                    "Copied CLI guidance · test: vb profile test id:{} --plugin {}",
                     profile.id, profile.plugin_id
                 ));
             }
             Err(error) => {
                 self.set_status_error(format!(
-                    "Clipboard unavailable ({error}) · test: voidb-cli profile test id:{} --plugin {}",
+                    "Clipboard unavailable ({error}) · test: vb profile test id:{} --plugin {}",
                     profile.id, profile.plugin_id
                 ));
             }

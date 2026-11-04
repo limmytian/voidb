@@ -74,9 +74,9 @@ def main():
                 sentinel = home / 'profile-and-encrypted-credential-sentinel'
                 sentinel.write_bytes(b'synthetic preserved user state')
                 if mode == 'upgrade':
-                    shutil.copyfile(legacy_cli, dest / 'voidb-cli')
+                    shutil.copyfile(legacy_cli, dest / 'vb')
                     shutil.copyfile(legacy_tui, dest / 'voidb')
-                    (dest / 'voidb-cli').chmod(0o755)
+                    (dest / 'vb').chmod(0o755)
                     (dest / 'voidb').chmod(0o755)
                 env = dict(os.environ, HOME=str(home), XDG_DATA_HOME=str(home / '.local/share'),
                            XDG_CONFIG_HOME=str(home / '.config'), INSTALL_DIR=str(dest), VOIDB_VERSION=args.version,
@@ -86,9 +86,9 @@ def main():
                     env.pop(key, None)
                 result = subprocess.run(['bash', str(installer)], env=env, capture_output=True, text=True, timeout=60)
                 assert result.returncode == 0, result.stderr
-                assert sorted(p.name for p in dest.iterdir()) == ['voidb', 'voidb-cli']
-                assert subprocess.check_output([str(dest / 'voidb-cli'), '--version'], env=env, text=True).strip() == f'voidb {args.version}'
-                plugins = subprocess.check_output([str(dest / 'voidb-cli'), 'plugin', 'list', '--format', 'json'], env=env, text=True)
+                assert sorted(p.name for p in dest.iterdir()) == ['voidb', 'vb']
+                assert subprocess.check_output([str(dest / 'vb'), '--version'], env=env, text=True).strip() == f'voidb {args.version}'
+                plugins = subprocess.check_output([str(dest / 'vb'), 'plugin', 'list', '--format', 'json'], env=env, text=True)
                 assert json.loads(plugins)['data']['plugins'] == []
                 assert sentinel.read_bytes() == b'synthetic preserved user state'
                 report['checks'].append(f'{mode}: real candidate binaries installed, no plugins or bundled fallback, user sentinel preserved')

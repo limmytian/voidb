@@ -19,9 +19,9 @@ The snippets use the current built-in MVP command surface documented in
 [Capability Discovery and Invocation CLI Contract](capability-cli.md):
 
 ```bash
-voidb-cli invoke list --format json
-voidb-cli invoke describe sqlite.query --format json
-voidb-cli invoke run sqlite.query --profile local-dev --input-json '{"sql":"select 1"}' --format json
+vb invoke list --format json
+vb invoke describe sqlite.query --format json
+vb invoke run sqlite.query --profile local-dev --input-json '{"sql":"select 1"}' --format json
 ```
 
 ## Discovery
@@ -32,7 +32,7 @@ support, and secret-class requirements without exposing plaintext connection
 secrets.
 
 ```bash
-voidb-cli invoke describe sqlite.query --format json
+vb invoke describe sqlite.query --format json
 ```
 
 Abridged expected shape:
@@ -69,7 +69,7 @@ Abridged expected shape:
 Redis follows the same discovery model:
 
 ```bash
-voidb-cli invoke describe redis.set --format json
+vb invoke describe redis.set --format json
 ```
 
 `redis.set` is destructive, supports dry-run, and accepts only `key` plus a
@@ -79,8 +79,8 @@ connection URL values.
 PostgreSQL follows the shared SQL capability contract:
 
 ```bash
-voidb-cli invoke describe postgres.query --format json
-voidb-cli invoke describe postgres.describe_table --format json
+vb invoke describe postgres.query --format json
+vb invoke describe postgres.describe_table --format json
 ```
 
 `postgres.query` is read-oriented only. `postgres.exec` is destructive and
@@ -91,8 +91,8 @@ invocation.
 DuckDB follows the shared SQL capability contract for local analytics profiles:
 
 ```bash
-voidb-cli invoke describe duckdb.query --format json
-voidb-cli invoke describe duckdb.describe_table --format json
+vb invoke describe duckdb.query --format json
+vb invoke describe duckdb.describe_table --format json
 ```
 
 `duckdb.query` is read-oriented only. `duckdb.exec` is destructive and supports
@@ -115,8 +115,8 @@ shape. `get` returns bounded `content_base64`; `put` accepts either
 result.
 
 ```bash
-voidb-cli invoke describe s3.put --format json
-voidb-cli invoke describe webdav.sync_plan --format json
+vb invoke describe s3.put --format json
+vb invoke describe webdav.sync_plan --format json
 ```
 
 `put`, `delete`, and `mkdir` are destructive and support `--dry-run`.
@@ -127,11 +127,11 @@ Email reads remain bounded, while side effects require preview and explicit
 authorization:
 
 ```bash
-voidb-cli invoke describe email.folders --format json
-voidb-cli invoke describe email.fetch --format json
-voidb-cli invoke describe email.send --format json
-voidb-cli invoke describe email.delete --format json
-voidb-cli invoke describe email.idle --format json
+vb invoke describe email.folders --format json
+vb invoke describe email.fetch --format json
+vb invoke describe email.send --format json
+vb invoke describe email.delete --format json
+vb invoke describe email.idle --format json
 ```
 
 `email.fetch` uses the service's read-only fetch path and does not mark IMAP
@@ -146,10 +146,10 @@ Docker and Kubernetes operations capabilities follow the same discovery and
 policy model:
 
 ```bash
-voidb-cli invoke describe docker.list_containers --format json
-voidb-cli invoke describe docker.container_action --format json
-voidb-cli invoke describe kubernetes.list --format json
-voidb-cli invoke describe kubernetes.apply --format json
+vb invoke describe docker.list_containers --format json
+vb invoke describe docker.container_action --format json
+vb invoke describe kubernetes.list --format json
+vb invoke describe kubernetes.apply --format json
 ```
 
 Docker read capabilities include `docker.diagnostics`,
@@ -172,10 +172,10 @@ MongoDB and Elasticsearch document/search capabilities follow the same
 discovery and policy model:
 
 ```bash
-voidb-cli invoke describe mongodb.find --format json
-voidb-cli invoke describe mongodb.run_command --format json
-voidb-cli invoke describe elasticsearch.search --format json
-voidb-cli invoke describe elasticsearch.raw_api --format json
+vb invoke describe mongodb.find --format json
+vb invoke describe mongodb.run_command --format json
+vb invoke describe elasticsearch.search --format json
+vb invoke describe elasticsearch.raw_api --format json
 ```
 
 MongoDB read capabilities include `mongodb.diagnostics`, `mongodb.databases`,
@@ -195,9 +195,9 @@ destructive-gated; agents should use the explicit read capabilities first.
 Jenkins CI capabilities follow the same discovery and policy model:
 
 ```bash
-voidb-cli invoke describe jenkins.jobs --format json
-voidb-cli invoke describe jenkins.console --format json
-voidb-cli invoke describe jenkins.trigger_build --format json
+vb invoke describe jenkins.jobs --format json
+vb invoke describe jenkins.console --format json
+vb invoke describe jenkins.trigger_build --format json
 ```
 
 Jenkins read capabilities include `jenkins.diagnostics`, `jenkins.jobs`,
@@ -211,7 +211,7 @@ support `--dry-run`.
 
 No built-in plugin should be invoked by inferring capability IDs from TUI or
 traditional CLI command names. Agents must discover `*.capability` IDs through
-`voidb-cli invoke list` or `voidb-cli invoke describe` and treat absent
+`vb invoke list` or `vb invoke describe` and treat absent
 capabilities as unsupported.
 
 ## Agent Workflow Recipes
@@ -226,16 +226,16 @@ are not stable contracts.
 Start by listing profiles and selecting a profile by explicit alias or ID:
 
 ```bash
-voidb-cli profile list --format json
-voidb-cli profile show alias:local-dev --format json
-voidb-cli profile test alias:local-dev --format json
+vb profile list --format json
+vb profile show alias:local-dev --format json
+vb profile test alias:local-dev --format json
 ```
 
 Then discover the exact capability schema before constructing input:
 
 ```bash
-voidb-cli invoke list sqlite --format json
-voidb-cli invoke describe sqlite.query --format json
+vb invoke list sqlite --format json
+vb invoke describe sqlite.query --format json
 ```
 
 Use `data.capability.input_schema` and `data.capability.output_schema` as the
@@ -247,7 +247,7 @@ Use read-only query capabilities for inspection. Keep page limits explicit and
 pass returned cursors back unchanged:
 
 ```bash
-voidb-cli invoke run sqlite.query \
+vb invoke run sqlite.query \
   --profile local-dev \
   --page-limit 100 \
   --input-json '{"sql":"select name from users order by id"}' \
@@ -258,7 +258,7 @@ Use `explain` for one read-oriented statement when the next step depends on
 the target plan:
 
 ```bash
-voidb-cli invoke run sqlite.explain \
+vb invoke run sqlite.explain \
   --profile local-dev \
   --input-json '{"sql":"select name from users order by id"}' \
   --format json
@@ -267,8 +267,8 @@ voidb-cli invoke run sqlite.explain \
 For a networked SQL profile, use the same flow with the target plugin:
 
 ```bash
-voidb-cli invoke describe postgres.query --format json
-voidb-cli invoke run postgres.query \
+vb invoke describe postgres.query --format json
+vb invoke run postgres.query \
   --profile warehouse \
   --page-limit 100 \
   --input-json '{"sql":"select id, total from invoices order by id"}' \
@@ -281,8 +281,8 @@ DuckDB uses the same bounded SQL result contract as the other SQL plugins. The
 profile owns the database path; the input owns only SQL and pagination:
 
 ```bash
-voidb-cli invoke describe duckdb.query --format json
-voidb-cli invoke run duckdb.query \
+vb invoke describe duckdb.query --format json
+vb invoke run duckdb.query \
   --profile analytics \
   --page-limit 100 \
   --input-json '{"sql":"select region, revenue from sales order by region"}' \
@@ -292,7 +292,7 @@ voidb-cli invoke run duckdb.query \
 Use `duckdb.exec --dry-run` before any mutation:
 
 ```bash
-voidb-cli invoke run duckdb.exec \
+vb invoke run duckdb.exec \
   --profile analytics \
   --dry-run \
   --input-json '{"sql":"drop table scratch"}' \
@@ -309,13 +309,13 @@ For object storage or WebDAV mutations, dry-run first and inspect structured
 intent rather than object contents:
 
 ```bash
-voidb-cli invoke run s3.put \
+vb invoke run s3.put \
   --profile assets \
   --dry-run \
   --input-json '{"bucket":"logs","key":"agent/probe.txt","content_text":"hello"}' \
   --format json
 
-voidb-cli invoke run webdav.mkdir \
+vb invoke run webdav.mkdir \
   --profile dav \
   --dry-run \
   --input-json '{"path":"/agent"}' \
@@ -329,13 +329,13 @@ Only add `--yes` when the user has explicitly requested the side effect.
 For Docker lifecycle and Kubernetes mutation operations, dry-run first:
 
 ```bash
-voidb-cli invoke run docker.container_action \
+vb invoke run docker.container_action \
   --profile local-docker \
   --dry-run \
   --input-json '{"id":"abc123","action":"restart"}' \
   --format json
 
-voidb-cli invoke run kubernetes.apply \
+vb invoke run kubernetes.apply \
   --profile staging \
   --dry-run \
   --input-json '{"yaml":"apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: agent-probe\n"}' \
@@ -352,13 +352,13 @@ For MongoDB document reads, keep page limits explicit and pass returned cursors
 back unchanged:
 
 ```bash
-voidb-cli invoke run mongodb.find \
+vb invoke run mongodb.find \
   --profile documents \
   --page-limit 100 \
   --input-json '{"database":"app","collection":"users","filter":{"active":true}}' \
   --format json
 
-voidb-cli invoke run mongodb.aggregate \
+vb invoke run mongodb.aggregate \
   --profile documents \
   --page-limit 100 \
   --input-json '{"database":"app","collection":"users","pipeline":[{"$match":{"active":true}}]}' \
@@ -368,7 +368,7 @@ voidb-cli invoke run mongodb.aggregate \
 For Elasticsearch search reads, use the same cursor flow:
 
 ```bash
-voidb-cli invoke run elasticsearch.search \
+vb invoke run elasticsearch.search \
   --profile search \
   --page-limit 100 \
   --input-json '{"index":"users","query":{"query":{"match_all":{}}}}' \
@@ -385,13 +385,13 @@ MongoDB mutations and Elasticsearch raw API calls are destructive-gated. Dry
 run first and inspect intent summaries:
 
 ```bash
-voidb-cli invoke run mongodb.update \
+vb invoke run mongodb.update \
   --profile documents \
   --dry-run \
   --input-json '{"database":"app","collection":"users","filter":{"id":1},"update":{"$set":{"active":false}}}' \
   --format json
 
-voidb-cli invoke run elasticsearch.raw_api \
+vb invoke run elasticsearch.raw_api \
   --profile search \
   --dry-run \
   --input-json '{"method":"POST","path":"/users/_doc/1","body":{"active":false}}' \
@@ -407,19 +407,19 @@ the task.
 For Jenkins, use read-only capabilities to inspect jobs, activity, and logs:
 
 ```bash
-voidb-cli invoke run jenkins.jobs \
+vb invoke run jenkins.jobs \
   --profile ci \
   --page-limit 50 \
   --input-json '{"folder":"team"}' \
   --format json
 
-voidb-cli invoke run jenkins.job_detail \
+vb invoke run jenkins.job_detail \
   --profile ci \
   --page-limit 20 \
   --input-json '{"job_full_name":"team/build"}' \
   --format json
 
-voidb-cli invoke run jenkins.console \
+vb invoke run jenkins.console \
   --profile ci \
   --input-json '{"job_full_name":"team/build","build_number":42,"max_bytes":65536}' \
   --format json
@@ -435,13 +435,13 @@ Triggering, aborting, and queue cancellation are destructive-gated. Dry-run
 first:
 
 ```bash
-voidb-cli invoke run jenkins.trigger_build \
+vb invoke run jenkins.trigger_build \
   --profile ci \
   --dry-run \
   --input-json '{"job_full_name":"team/build"}' \
   --format json
 
-voidb-cli invoke run jenkins.abort_build \
+vb invoke run jenkins.abort_build \
   --profile ci \
   --dry-run \
   --input-json '{"job_full_name":"team/build","build_number":42}' \
@@ -457,15 +457,15 @@ Sync status is local and redacted. JSON output uses the sync envelope and keeps
 object details under `data.objects`:
 
 ```bash
-voidb-cli sync status --format json
-voidb-cli sync conflict list --format json
+vb sync status --format json
+vb sync conflict list --format json
 ```
 
 Conflict resolution commands must use opaque IDs from the JSON output, not
 local profile IDs or labels:
 
 ```bash
-voidb-cli sync conflict resolve \
+vb sync conflict resolve \
   --mode keep-remote \
   --object-kind profile \
   --object-id sync_profile_abc
@@ -476,7 +476,7 @@ returned `data.command` with local secret-source flags. The handoff output does
 not print credential material:
 
 ```bash
-voidb-cli sync conflict credential-handoff \
+vb sync conflict credential-handoff \
   --object-id sync_credrec_abc \
   --format json
 ```
@@ -488,7 +488,7 @@ database path inside VoidB; the agent supplies only capability input and optiona
 execution controls.
 
 ```bash
-voidb-cli invoke run sqlite.query \
+vb invoke run sqlite.query \
   --profile local-dev \
   --page-limit 100 \
   --input-json '{"sql":"select name from users order by id"}' \
@@ -533,7 +533,7 @@ When `next_cursor` is present, pass it back through `--page-cursor` with the
 same SQL and profile:
 
 ```bash
-voidb-cli invoke run sqlite.query \
+vb invoke run sqlite.query \
   --profile local-dev \
   --page-limit 100 \
   --page-cursor 100 \
@@ -548,7 +548,7 @@ profile selects the target database. Metadata calls default to the `public`
 schema unless the input includes `schema`.
 
 ```bash
-voidb-cli invoke run postgres.query \
+vb invoke run postgres.query \
   --profile warehouse \
   --page-limit 100 \
   --input-json '{"sql":"select id, total from invoices order by id"}' \
@@ -558,7 +558,7 @@ voidb-cli invoke run postgres.query \
 Plan inspection:
 
 ```bash
-voidb-cli invoke run postgres.explain \
+vb invoke run postgres.explain \
   --profile warehouse \
   --input-json '{"sql":"select id, total from invoices order by id"}' \
   --format json
@@ -567,12 +567,12 @@ voidb-cli invoke run postgres.explain \
 Schema discovery:
 
 ```bash
-voidb-cli invoke run postgres.tables \
+vb invoke run postgres.tables \
   --profile warehouse \
   --input-json '{"schema":"analytics"}' \
   --format json
 
-voidb-cli invoke run postgres.describe_table \
+vb invoke run postgres.describe_table \
   --profile warehouse \
   --input-json '{"schema":"analytics","table":"daily_revenue"}' \
   --format json
@@ -582,7 +582,7 @@ Destructive SQL remains denied by default. Use `--dry-run` to inspect intent,
 or `--yes` only when the user explicitly requested a real mutation.
 
 ```bash
-voidb-cli invoke run postgres.exec \
+vb invoke run postgres.exec \
   --profile warehouse \
   --dry-run \
   --input-json '{"sql":"drop table analytics.old_rollup"}' \
@@ -622,7 +622,7 @@ DuckDB uses the same local direct-mode shape as SQLite while preserving the
 service-owned `SyncWorker` path for the native driver.
 
 ```bash
-voidb-cli invoke run duckdb.query \
+vb invoke run duckdb.query \
   --profile analytics \
   --page-limit 100 \
   --input-json '{"sql":"select region, revenue from sales order by region"}' \
@@ -632,12 +632,12 @@ voidb-cli invoke run duckdb.query \
 Schema discovery:
 
 ```bash
-voidb-cli invoke run duckdb.tables \
+vb invoke run duckdb.tables \
   --profile analytics \
   --input-json '{}' \
   --format json
 
-voidb-cli invoke run duckdb.describe_table \
+vb invoke run duckdb.describe_table \
   --profile analytics \
   --input-json '{"table":"sales"}' \
   --format json
@@ -657,7 +657,7 @@ capability-owned local page cursor form (`"42:100"`). Agents must treat cursors
 as opaque and pass them back unchanged.
 
 ```bash
-voidb-cli invoke run redis.keys \
+vb invoke run redis.keys \
   --profile cache-dev \
   --page-limit 50 \
   --input-json '{"pattern":"agent:*"}' \
@@ -691,7 +691,7 @@ Abridged success shape:
 Next page:
 
 ```bash
-voidb-cli invoke run redis.keys \
+vb invoke run redis.keys \
   --profile cache-dev \
   --page-limit 50 \
   --page-cursor '0:50' \
@@ -705,7 +705,7 @@ S3 list results use the provider's bounded `ListObjects` page and return its
 opaque continuation token unchanged.
 
 ```bash
-voidb-cli invoke run s3.list \
+vb invoke run s3.list \
   --profile assets \
   --page-limit 50 \
   --input-json '{"bucket":"logs","prefix":"2026/07/"}' \
@@ -741,7 +741,7 @@ Abridged success shape:
 Dry-run upload returns only metadata about the intended write:
 
 ```bash
-voidb-cli invoke run s3.put \
+vb invoke run s3.put \
   --profile assets \
   --dry-run \
   --input-json '{"bucket":"logs","key":"agent/probe.txt","content_text":"hello"}' \
@@ -752,11 +752,11 @@ Bucket discovery, verified copy/move, and delegated URLs are also explicit
 capabilities:
 
 ```bash
-voidb-cli invoke run s3.buckets --profile assets --input-json '{}' --format json
-voidb-cli invoke run s3.copy --profile assets --dry-run \
+vb invoke run s3.buckets --profile assets --input-json '{}' --format json
+vb invoke run s3.copy --profile assets --dry-run \
   --input-json '{"source_bucket":"logs","source_key":"a.log","destination_bucket":"archive","destination_key":"a.log","replace":false}' \
   --format json
-voidb-cli invoke run s3.presign --profile assets \
+vb invoke run s3.presign --profile assets \
   --input-json '{"bucket":"logs","key":"a.log","method":"get","expires_seconds":900}' \
   --format json
 ```
@@ -767,7 +767,7 @@ WebDAV capabilities use `path` for item operations and `remote_path` plus
 `local_path` for sync planning.
 
 ```bash
-voidb-cli invoke run webdav.list \
+vb invoke run webdav.list \
   --profile dav \
   --page-limit 50 \
   --input-json '{"path":"/reports"}' \
@@ -778,9 +778,9 @@ Feature probing and conditional server-side copy are available without
 exposing lock tokens:
 
 ```bash
-voidb-cli invoke run webdav.probe --profile dav \
+vb invoke run webdav.probe --profile dav \
   --input-json '{"path":"/reports"}' --format json
-voidb-cli invoke run webdav.copy --profile dav --dry-run \
+vb invoke run webdav.copy --profile dav --dry-run \
   --input-json '{"source":"/reports/a.pdf","destination":"/archive/a.pdf","overwrite":false,"depth":"0"}' \
   --format json
 ```
@@ -794,7 +794,7 @@ invocation uses `--dry-run`, the profile explicitly allows it, or the user
 passes `--yes`:
 
 ```bash
-voidb-cli invoke run webdav.mkdir \
+vb invoke run webdav.mkdir \
   --profile dav \
   --dry-run \
   --input-json '{"path":"/agent"}' \
@@ -804,7 +804,7 @@ voidb-cli invoke run webdav.mkdir \
 Sync planning is non-destructive:
 
 ```bash
-voidb-cli invoke run webdav.sync_plan \
+vb invoke run webdav.sync_plan \
   --profile dav \
   --input-json "{\"remote_path\":\"/reports\",\"local_root\":\"$PWD\",\"local_path\":\"reports\",\"mode\":\"pull\"}" \
   --format json
@@ -822,7 +822,7 @@ Email diagnostics are profile-shape checks only; they do not connect to IMAP,
 POP3, or SMTP and do not emit the email address or password.
 
 ```bash
-voidb-cli invoke run email.diagnostics \
+vb invoke run email.diagnostics \
   --profile mail \
   --input-json '{}' \
   --format json
@@ -831,12 +831,12 @@ voidb-cli invoke run email.diagnostics \
 Folder and message listing use bounded service direct-mode calls:
 
 ```bash
-voidb-cli invoke run email.folders \
+vb invoke run email.folders \
   --profile mail \
   --input-json '{}' \
   --format json
 
-voidb-cli invoke run email.list \
+vb invoke run email.list \
   --profile mail \
   --page-limit 25 \
   --input-json '{"folder":"INBOX","unread_only":false}' \
@@ -847,7 +847,7 @@ voidb-cli invoke run email.list \
 should follow `next_cursor` for additional pages.
 
 ```bash
-voidb-cli invoke run email.search \
+vb invoke run email.search \
   --profile mail \
   --page-limit 25 \
   --input-json '{"folder":"INBOX","query":"invoice"}' \
@@ -858,7 +858,7 @@ Message fetch returns bounded text and attachment metadata only. Attachment
 bytes are not exposed by this capability.
 
 ```bash
-voidb-cli invoke run email.fetch \
+vb invoke run email.fetch \
   --profile mail \
   --input-json '{"folder":"INBOX","uid":42,"max_text_bytes":65536}' \
   --format json
@@ -871,7 +871,7 @@ for a real mutation. Dry-run output intentionally does not echo sensitive value
 payloads.
 
 ```bash
-voidb-cli invoke run redis.set \
+vb invoke run redis.set \
   --profile cache-dev \
   --dry-run \
   --input-json '{"key":"agent:test","value":"ready"}' \
@@ -900,7 +900,7 @@ Expected dry-run shape:
 For a real destructive invocation, the CLI requires explicit acknowledgement:
 
 ```bash
-voidb-cli invoke run redis.del \
+vb invoke run redis.del \
   --profile cache-dev \
   --yes \
   --input-json '{"key":"agent:test"}' \
@@ -916,7 +916,7 @@ Attempting a mutating statement through `sqlite.query` fails before opening the
 target database:
 
 ```bash
-voidb-cli invoke run sqlite.query \
+vb invoke run sqlite.query \
   --profile local-dev \
   --input-json '{"sql":"delete from users"}' \
   --format json
@@ -942,7 +942,7 @@ An invalid Redis pagination cursor returns a validation error and does not open
 a Redis connection:
 
 ```bash
-voidb-cli invoke run redis.keys \
+vb invoke run redis.keys \
   --profile cache-dev \
   --page-cursor not-a-cursor \
   --input-json '{"pattern":"agent:*"}' \
@@ -988,12 +988,12 @@ invocations may reference the same profile name while Core creates distinct
 invocation IDs and grants.
 
 ```bash
-voidb-cli invoke run sqlite.query \
+vb invoke run sqlite.query \
   --profile local-dev \
   --input-json '{"sql":"select count(*) as total from users"}' \
   --format json
 
-voidb-cli invoke run sqlite.query \
+vb invoke run sqlite.query \
   --profile local-dev \
   --input-json '{"sql":"select name from users order by id limit 1"}' \
   --format json

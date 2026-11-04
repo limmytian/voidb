@@ -41,7 +41,7 @@ Master-password session states are `not_configured`, `locked`, `unlocked`,
 
 ## Short-Lived Agent Authorization
 
-Agents do not need the master password. `voidb-cli agent authorize` starts a
+Agents do not need the master password. `vb agent authorize` starts a
 small local broker that keeps the password in memory and issues a scoped grant.
 The default grant is limited to one profile and plugin, lasts 15 minutes, has no
 operation-count limit, and rejects destructive acknowledgements. Passing
@@ -49,12 +49,12 @@ operation-count limit, and rejects destructive acknowledgements. Passing
 private to the local user.
 
 ```bash
-voidb-cli agent authorize --profile prod --plugin ssh
-voidb-cli agent list
-voidb-cli agent exec ssh.sftp_list --profile prod \
+vb agent authorize --profile prod --plugin ssh
+vb agent list
+vb agent exec ssh.sftp_list --profile prod \
   --input-json '{"path":"."}' \
   --purpose "List deployment artifacts needed for release verification"
-voidb-cli agent revoke --all
+vb agent revoke --all
 ```
 
 Authorization prompts for the master password with terminal echo disabled when
@@ -80,7 +80,7 @@ explicit use exhaustion shuts down the broker and deletes its runtime files.
 requiring the master password. An already-running call is still bounded by the
 grant expiration.
 
-For several profiles, `voidb-cli agent authorize-batch --spec <path>` renders
+For several profiles, `vb agent authorize-batch --spec <path>` renders
 one local CLI review, prompts for the master password once, and starts separate
 profile/plugin-bound brokers. The spec contains only profile references,
 plugins, a concrete non-secret purpose for each grant, presets, execution
@@ -104,7 +104,7 @@ should behave as follows:
    is:
 
    ```bash
-   voidb-cli credential master reencrypt --yes
+   vb credential master reencrypt --yes
    ```
 
    In an interactive terminal the CLI prompts for the current master password
@@ -209,9 +209,9 @@ Focused changes to this flow should run:
 cargo test -p voidb-core credential_protection --quiet
 cargo test -p voidb-core reencrypt_config_file_sets_user_passphrase_metadata --quiet
 cargo test -p voidb-core configured_user_passphrase_save_requires_active_password --quiet
-cargo test -p voidb-cli master_reencrypt_command_exposes_safe_password_sources --quiet
-cargo test -p voidb-cli default_passphrase_warning_is_redacted_and_machine_readable --quiet
-cargo test -p voidb-cli user_passphrase_protection_suppresses_default_passphrase_warning --quiet
+cargo test -p vb master_reencrypt_command_exposes_safe_password_sources --quiet
+cargo test -p vb default_passphrase_warning_is_redacted_and_machine_readable --quiet
+cargo test -p vb user_passphrase_protection_suppresses_default_passphrase_warning --quiet
 cargo test -p voidb-tui credential --quiet
 git diff --check
 ```

@@ -675,7 +675,7 @@ impl JitAuthorizationStore {
     ) -> Result<CreateAuthorizationResult, JitAuthorizationStoreError> {
         Ok(CreateAuthorizationResult {
             request: FrontendAuthorizationRequest::try_from(request)?,
-            review_command: format!("voidb-cli agent request review {}", request.id),
+            review_command: format!("vb agent request review {}", request.id),
             deduplicated,
         })
     }
@@ -1035,7 +1035,7 @@ mod tests {
             assert_eq!(uuid.get_version_num(), 4);
             assert!(ids.insert(result.request.id.clone()));
             let parts = result.review_command.split_whitespace().collect::<Vec<_>>();
-            assert_eq!(parts[..4], ["voidb-cli", "agent", "request", "review"]);
+            assert_eq!(parts[..4], ["vb", "agent", "request", "review"]);
             assert_eq!(parts[4], result.request.id);
             for shell_metacharacter in [';', '\n', '\r', '`', '$', '|', '&'] {
                 assert!(!result.review_command.contains(shell_metacharacter));

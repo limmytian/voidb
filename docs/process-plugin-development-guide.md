@@ -218,25 +218,25 @@ VoidB CLI includes built-in commands for validating, packaging, and installing p
 
 ### Packaging an Offline Bundle
 ```bash
-voidb-cli plugin package ./my-service-plugin --archive-format tar.zst
+vb plugin package ./my-service-plugin --archive-format tar.zst
 # Output: dist/my-service-0.1.0.tar.zst
 ```
 
 ### Inspecting and Validating a Package
 ```bash
-voidb-cli plugin describe my-service --state-any --include runtime,connections,capabilities,schemas,diagnostics
+vb plugin describe my-service --state-any --include runtime,connections,capabilities,schemas,diagnostics
 ```
 
 ### Installing an Offline Package
 ```bash
-voidb-cli plugin install dist/my-service-0.1.0.tar.zst
+vb plugin install dist/my-service-0.1.0.tar.zst
 ```
 
 ### Updating or Downgrading an Installed Plugin
 ```bash
-voidb-cli plugin update my-service --from dist/my-service-0.2.0.tar.zst
+vb plugin update my-service --from dist/my-service-0.2.0.tar.zst
 # For rollback or downgrade:
-voidb-cli plugin update my-service --from dist/my-service-0.1.0.tar.zst --allow-downgrade
+vb plugin update my-service --from dist/my-service-0.1.0.tar.zst --allow-downgrade
 ```
 
 ---
@@ -259,6 +259,6 @@ Before publishing your plugin or submitting it for community inclusion, run the 
 - [ ] **Protocol Handshake**:
   - Direct smoke-test verifies `voidb.initialize`, `voidb.health`, and `voidb.invoke`.
 - [ ] **Clean Diagnostics**:
-  - Running `voidb-cli plugin describe <id> --state-any` reports `state = "available"` with zero diagnostic errors.
+  - Running `vb plugin describe <id> --state-any` reports `state = "available"` with zero diagnostic errors.
 - [ ] **Offline Packaging**:
-  - Package builds cleanly via `voidb-cli plugin package` and successfully installs in a fresh install root.
+  - Package builds cleanly via `vb plugin package` and successfully installs in a fresh install root.

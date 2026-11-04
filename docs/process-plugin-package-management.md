@@ -138,9 +138,9 @@ Focused process-plugin package-management changes should run:
 ```bash
 cargo test -p voidb-core process_plugin
 cargo test -p voidb-core process_plugin_runtime
-cargo test -p voidb-cli plugin
-cargo test -p voidb-cli invoke
+cargo test -p vb plugin
+cargo test -p vb invoke
 cargo clippy -p voidb-core --all-targets --no-deps
-cargo clippy -p voidb-cli --all-targets --no-deps
+cargo clippy -p vb --all-targets --no-deps
 git diff --check
 ```

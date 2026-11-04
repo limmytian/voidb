@@ -290,7 +290,7 @@ pub(crate) fn session_handoff_guidance(
     let requires_destructive_grant =
         requires_destructive_acknowledgement || requires_start_acknowledgement;
     let mut authorize_args = vec![
-        "voidb-cli".to_string(),
+        "vb".to_string(),
         "agent".into(),
         "authorize".into(),
         "--profile".into(),
@@ -308,7 +308,7 @@ pub(crate) fn session_handoff_guidance(
     }
 
     let mut session_open_args = vec![
-        "voidb-cli".to_string(),
+        "vb".to_string(),
         "agent".into(),
         "session".into(),
         "open".into(),

@@ -1031,7 +1031,7 @@ fn browse_render_shows_profiles_details_and_guidance() {
     assert!(text.contains("alpha"));
     assert!(text.contains("beta"));
     assert!(text.contains("Profile details"));
-    assert!(text.contains("voidb-cli mysql tui --profile"));
+    assert!(text.contains("vb mysql tui --profile"));
     assert!(text.contains("Enter copies these commands to the clipboard"));
     assert!(text.contains("Saved native profile"));
 }

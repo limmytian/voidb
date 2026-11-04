@@ -1190,7 +1190,7 @@ async fn run_scoped_child(
     deadline: Duration,
 ) -> std::io::Result<std::process::Output> {
     let mut command = tokio::process::Command::new(
-        std::env::current_exe().unwrap_or_else(|_| PathBuf::from("voidb-cli")),
+        std::env::current_exe().unwrap_or_else(|_| PathBuf::from("vb")),
     );
     command
         .args(argv)

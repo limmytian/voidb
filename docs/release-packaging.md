@@ -10,7 +10,7 @@ cross-platform job contract in Package CI Matrix.
 | Artifact | Command | Output | Notes |
 |---|---|---|---|
 | Default TUI | `cargo build --release` | `target/release/voidb` | The workspace `default-members` list only includes `crates/voidb-tui`, so this is the lightweight default TUI build. |
-| CLI | `cargo build --release -p voidb-cli` | `target/release/voidb-cli` | Builds the machine-readable command surface and all CLI plugin command families. It is not produced by the default workspace build. |
+| CLI | `cargo build --release -p vb` | `target/release/vb` | Builds the machine-readable command surface and all CLI plugin command families. It is not produced by the default workspace build. |
 | Standalone sync server | `cargo build --release --manifest-path voidb-sync-server/Cargo.toml` | `voidb-sync-server/target/release/voidb-sync-server` | Separate crate with its own workspace. Build only when shipping or validating sync server deployment artifacts. |
 
 The release profile is size-oriented: LTO is enabled, symbols are stripped, and
@@ -32,8 +32,8 @@ test builds.
 
 ## Artifact Naming
 
-- `voidb` is the terminal UI binary.
-- `voidb-cli` is the agent- and script-friendly CLI binary.
+- `vb-tui` is the terminal UI binary.
+- `vb` is the agent- and script-friendly CLI binary.
 - `voidb-sync-server` is the optional standalone sync server binary.
 - Legacy database TUI and router-hosted plugin bridge artifacts are no longer
   built or staged.
@@ -99,7 +99,7 @@ The default output root is:
 ```text
 target/package/voidb-<version>-<platform>/
   voidb-default/voidb
-  cli/voidb-cli
+  cli/vb
   sync-server/voidb-sync-server
   SHA256SUMS
   artifact-manifest.json
@@ -128,7 +128,7 @@ Install or replace user-local binaries:
 ```bash
 mkdir -p "$HOME/.local/bin"
 install -m 0755 target/package/voidb-<version>-darwin-arm64/voidb-default/voidb "$HOME/.local/bin/voidb"
-install -m 0755 target/package/voidb-<version>-darwin-arm64/cli/voidb-cli "$HOME/.local/bin/voidb-cli"
+install -m 0755 target/package/voidb-<version>-darwin-arm64/cli/vb "$HOME/.local/bin/vb"
 ```
 
 Install `sync-server/voidb-sync-server` only for deployments that run a local or
@@ -136,7 +136,7 @@ hosted sync server.
 
 Upgrade sequence:
 
-1. Stop running `voidb` TUI sessions and any `voidb-sync-server` process being
+1. Stop running `vb-tui` TUI sessions and any `voidb-sync-server` process being
    replaced.
 2. Back up the config directory and any sync server data directory.
 3. Build or unpack the selected release artifacts into a staging directory.
@@ -151,7 +151,7 @@ Binary rollback:
 
 ```bash
 install -m 0755 "$PREVIOUS_RELEASE_DIR/voidb" "$HOME/.local/bin/voidb"
-install -m 0755 "$PREVIOUS_RELEASE_DIR/voidb-cli" "$HOME/.local/bin/voidb-cli"
+install -m 0755 "$PREVIOUS_RELEASE_DIR/vb" "$HOME/.local/bin/vb"
 ```
 
 Config rollback:
@@ -179,7 +179,7 @@ experimental, opt-in, and still uses a full-directory compatibility bundle.
 
 After rollback, rerun the previous release's smoke checks and confirm that:
 
-- `voidb-cli --version` reports the restored version;
+- `vb --version` reports the restored version;
 - profile listing or connection listing works with the restored config;
 - master-password protected configs still require the expected password;
 - the TUI can open the Connection Manager without rewriting config;
@@ -226,7 +226,7 @@ scripts/package-smoke.sh \
 ```
 
 Windows staged executable names are `voidb-default/voidb.exe`,
-`cli/voidb-cli.exe`, and `sync-server/voidb-sync-server.exe`. Record skipped
+`cli/vb.exe`, and `sync-server/voidb-sync-server.exe`. Record skipped
 POSIX install-command checks as Windows-not-applicable, not as package-smoke
 failures.
 
@@ -316,11 +316,11 @@ Before tagging a release candidate:
 - Pick the target SemVer version and decide whether the sync server uses the
   same version or a separately documented server version.
 - Update every shipped crate `version` in `Cargo.toml`, including `voidb-core`,
-  `voidb-tui`, `voidb-cli`, plugin crates, and `voidb-sync-server`.
+  `voidb-tui`, `vb`, plugin crates, and `voidb-sync-server`.
 - Refresh `Cargo.lock` after version changes.
 - Move relevant `CHANGELOG.md` entries from `Unreleased` into the target version
   section and add the release date.
-- Confirm binary versions with `voidb-cli --version` and
+- Confirm binary versions with `vb --version` and
   `voidb-sync-server --version`.
 - Create a signed or annotated tag named `vX.Y.Z` unless the release owner
   documents a different tag scheme.
@@ -420,7 +420,7 @@ Linux Docker staged checksums:
 | Artifact | Path | SHA-256 |
 |---|---|---|
 | Default TUI | `voidb-default/voidb` | `4cfbcbdf9077d27db153b00c9254dfde202ff1aa93511ec6d23e22123af17ab4` |
-| CLI | `cli/voidb-cli` | `3c6edf827d53b916e1ac44cd91e8189c101eed654f075e5b84b9f3e98ff4c3cb` |
+| CLI | `cli/vb` | `3c6edf827d53b916e1ac44cd91e8189c101eed654f075e5b84b9f3e98ff4c3cb` |
 | Legacy database TUI | `voidb-legacy/voidb` | `3c478326abc6722346704a5362250eae03b673c9b4227bd7a78c79461bcb2cfd` |
 | Sync server | `sync-server/voidb-sync-server` | `559a159e9090044ef3b82acf6020da64cf7c525ed5fb1ac5fd5d09a4be3b084d` |
 
@@ -437,13 +437,13 @@ Task Weaver requirement 53 rebuilt and staged release-candidate artifacts at:
 | Check | Command | Result | Observed artifact |
 |---|---|---|---|
 | Default TUI release build | `cargo build --release` | passed | `target/package/voidb-<version>-darwin-arm64/voidb-default/voidb`, macOS arm64 |
-| CLI release build | `cargo build --release -p voidb-cli` | passed | `target/package/voidb-<version>-darwin-arm64/cli/voidb-cli`, macOS arm64 |
+| CLI release build | `cargo build --release -p vb` | passed | `target/package/voidb-<version>-darwin-arm64/cli/vb`, macOS arm64 |
 | Legacy database TUI release build | `cargo build --release -p voidb-tui --features legacy-db-tui` | passed | `target/package/voidb-<version>-darwin-arm64/voidb-legacy/voidb`, macOS arm64 |
 | Sync server release build | `cargo build --release --manifest-path voidb-sync-server/Cargo.toml` | passed | `target/package/voidb-<version>-darwin-arm64/sync-server/voidb-sync-server`, macOS arm64 |
 | CLI entry point smoke | CLI version and command-family help | passed | `voidb <version>` |
 | Sync server entry point smoke | Sync server version and help | passed | `voidb-sync-server <version>` |
-| Default TUI real-terminal smoke | Packaged default `voidb` with disposable `HOME` | passed | Connection Manager, credential masking, profile CRUD/test/open, tab manager, shell escape, and terminal restore. |
-| Legacy TUI real-terminal smoke | Packaged legacy `voidb` with disposable `HOME` | passed after fix | SQLite connection opened the legacy browser surface. |
+| Default TUI real-terminal smoke | Packaged default `vb-tui` with disposable `HOME` | passed | Connection Manager, credential masking, profile CRUD/test/open, tab manager, shell escape, and terminal restore. |
+| Legacy TUI real-terminal smoke | Packaged legacy `vb-tui` with disposable `HOME` | passed after fix | SQLite connection opened the legacy browser surface. |
 | Staged artifact checksums | `shasum -a 256 ...` | passed | Checksums below. |
 
 Final staged checksums:
@@ -451,7 +451,7 @@ Final staged checksums:
 | Artifact | Path | Size | SHA-256 |
 |---|---|---:|---|
 | Default TUI | `target/package/voidb-<version>-darwin-arm64/voidb-default/voidb` | 15,187,584 | `0ec55001254216eaa7fb2fabdaf435dcf024372018078b15bb002e2d27db0295` |
-| CLI | `target/package/voidb-<version>-darwin-arm64/cli/voidb-cli` | 37,649,200 | `c080ccb34f96fc0173fbb5f04ccbdca53d70928b6884793f4a5ede2f4f3f2d00` |
+| CLI | `target/package/voidb-<version>-darwin-arm64/cli/vb` | 37,649,200 | `c080ccb34f96fc0173fbb5f04ccbdca53d70928b6884793f4a5ede2f4f3f2d00` |
 | Legacy database TUI | `target/package/voidb-<version>-darwin-arm64/voidb-legacy/voidb` | 37,813,408 | `40cd27696ad2a267896ea897ccf918f84fbbba49586acd19389f74f4d6f2baf4` |
 | Sync server | `target/package/voidb-<version>-darwin-arm64/sync-server/voidb-sync-server` | 6,500,576 | `27e54dfcc9e7f4f13308a1d08fd957865b67ba8444a28ae628142d8419ec287f` |
 
@@ -464,7 +464,7 @@ Refresh notes:
   legacy database factories. Requirement 53 fixed SQLite, PostgreSQL, and
   DuckDB factories to accept both composite keys and legacy display names.
 - Version/tag consistency is resolved for `<version>`: crate versions,
-  `Cargo.lock`, `voidb-cli --version`, `voidb-sync-server --version`,
+  `Cargo.lock`, `vb --version`, `voidb-sync-server --version`,
   changelog section, artifact directory, and intended tag agree.
 
 ## 2026-07-04 Package-Readiness Run
@@ -475,8 +475,8 @@ Local logs were written under
 | Check | Command | Result | Duration | Observed artifact |
 |---|---|---|---|---|
 | Default TUI release build | `cargo build --release` | passed | 3m 15s | `target/release/voidb`, 14M, Mach-O arm64 |
-| CLI release build | `cargo build --release -p voidb-cli` | passed | 5m 03s | `target/release/voidb-cli`, 34M, Mach-O arm64 |
-| CLI entry point smoke | `./target/release/voidb-cli --help` | passed | <1s | Listed command families including `connections`, `credential`, `profile`, `plugin`, `invoke`, and protocol plugins. |
+| CLI release build | `cargo build --release -p vb` | passed | 5m 03s | `target/release/vb`, 34M, Mach-O arm64 |
+| CLI entry point smoke | `./target/release/vb --help` | passed | <1s | Listed command families including `connections`, `credential`, `profile`, `plugin`, `invoke`, and protocol plugins. |
 | Legacy database TUI release build | `cargo build --release -p voidb-tui --features legacy-db-tui` | passed | 2m 27s | `target/release/voidb`, 36M, Mach-O arm64 |
 | Sync server release build | `cargo build --release --manifest-path voidb-sync-server/Cargo.toml` | passed | 36.92s | `voidb-sync-server/target/release/voidb-sync-server`, 5.9M, Mach-O arm64 |
 | Sync server entry point smoke | `./voidb-sync-server/target/release/voidb-sync-server --help` | passed | <1s | Help and version output reported `voidb-sync-server 0.1.0`. |
@@ -502,7 +502,7 @@ readiness updates landed. Local logs were written to
 | Check | Command | Result | Duration | Observed artifact |
 |---|---|---|---|---|
 | Default TUI release build | `cargo build --release` | passed | 1m 38s | `target/package/voidb-default/voidb`, 14M, macOS arm64 |
-| CLI release build | `cargo build --release -p voidb-cli` | passed | 1m 50s | `target/package/cli/voidb-cli`, 35M, macOS arm64 |
+| CLI release build | `cargo build --release -p vb` | passed | 1m 50s | `target/package/cli/vb`, 35M, macOS arm64 |
 | Legacy database TUI release build | `cargo build --release -p voidb-tui --features legacy-db-tui` | passed | 1m 55s | `target/package/voidb-legacy/voidb`, 36M, macOS arm64 |
 | Sync server release build | `cargo build --release --manifest-path voidb-sync-server/Cargo.toml` | passed | 4.07s | `voidb-sync-server/target/release/voidb-sync-server`, 6.2M, macOS arm64 |
 | Staged executable smoke | executable bits, CLI help/version, sync-server help/version | passed | <1s | CLI reported `voidb 0.1.0`; sync server reported `voidb-sync-server 0.1.0`. |
@@ -513,7 +513,7 @@ Refreshed staged checksums:
 | Artifact | Path | SHA-256 |
 |---|---|---|
 | Default TUI | `target/package/voidb-default/voidb` | `614cb77e14294f838e359ed64906b64676f9432a20b0ce15afd4933b27c36ecf` |
-| CLI | `target/package/cli/voidb-cli` | `52795513c9f9bd3addf9a72e49dc344fe9988a5e4e3415a84fd3afd4818bd5c8` |
+| CLI | `target/package/cli/vb` | `52795513c9f9bd3addf9a72e49dc344fe9988a5e4e3415a84fd3afd4818bd5c8` |
 | Legacy database TUI | `target/package/voidb-legacy/voidb` | `01f7b12eeb92495f2688e94ed8b188e9c404c2a278ed61d2b0d20f4003f04abd` |
 | Sync server | `voidb-sync-server/target/release/voidb-sync-server` | `e8d5ca0223bcc5afb4a4df69c0bac2fd1d6f8b966cf309f25cc6a8ea12c4648c` |
 

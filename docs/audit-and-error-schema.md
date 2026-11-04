@@ -24,10 +24,10 @@ failure reporting.
 The schema is intentionally narrow. It defines the record shape and stable
 categories. The current implementation persists a local rotating
 newline-delimited JSON audit stream under the VoidB data directory and exposes
-it through `voidb-cli audit list --format json` and
-`voidb-cli audit export --format json`, with aggregate triage through
-`voidb-cli audit summary --format json` and redacted reproduction bundles
-through `voidb-cli audit bundle --format json`. This local backend is the
+it through `vb audit list --format json` and
+`vb audit export --format json`, with aggregate triage through
+`vb audit summary --format json` and redacted reproduction bundles
+through `vb audit bundle --format json`. This local backend is the
 first storage abstraction, not the final sync policy.
 
 ## Current Local Audit MVP
@@ -105,14 +105,14 @@ The `data` object for `audit list` and `audit export` includes:
 Useful agent-facing query examples:
 
 ```bash
-voidb-cli audit list \
+vb audit list \
   --operation capability_invoke \
   --status blocked \
   --actor-type agent \
   --policy-outcome requires_acknowledgement \
   --format json
 
-voidb-cli audit export \
+vb audit export \
   --plugin redis \
   --capability set \
   --error-category target_system \
@@ -126,7 +126,7 @@ instead of raw event records. It is the preferred first query for agents that
 need to triage a large audit window without exposing event details:
 
 ```bash
-voidb-cli audit summary \
+vb audit summary \
   --operation capability_invoke \
   --since 2026-07-04T00:00:00Z \
   --format json
@@ -161,7 +161,7 @@ event excerpt with the matching summary and export metadata for support or bug
 reproduction:
 
 ```bash
-voidb-cli audit bundle \
+vb audit bundle \
   --operation capability_invoke \
   --status failed \
   --limit 50 \
@@ -172,7 +172,7 @@ The bundle lives at `data.bundle` and includes:
 
 - `schema_version`: support-bundle schema version.
 - `generated_at`: bundle generation timestamp.
-- `voidb`: CLI package version and target platform.
+- `vb-tui`: CLI package version and target platform.
 - `audit.events`: matching redacted audit events.
 - `audit.summary`: the same aggregate shape returned by `audit summary`.
 - `audit.page`: pagination metadata for the event excerpt.

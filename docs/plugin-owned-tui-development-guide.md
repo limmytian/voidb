@@ -13,9 +13,9 @@ It complements:
 - [Standalone TUI UX Acceptance Criteria](standalone-tui-ux-acceptance.md);
 - [Plugin-Owned TUI UX Briefs](plugin-owned-tui-ux-briefs.md).
 
-The current in-repo CLI binary is `voidb-cli`. Some architecture docs use the
+The current in-repo CLI binary is `vb`. Some architecture docs use the
 packaged shorthand `voidb <plugin> tui`; for workspace commands, implement and
-test `voidb-cli <plugin> tui` only after a new plugin-owned TUI is accepted.
+test `vb <plugin> tui` only after a new plugin-owned TUI is accepted.
 
 ## Target Shape
 
@@ -26,7 +26,7 @@ A standalone TUI is owned by its plugin crate:
 | CLI subcommand and preflight output | owning plugin `cli_plugin.rs` |
 | Terminal init, render loop, input, resize, cleanup | owning plugin TUI runtime |
 | Target operations, sessions, workers, reconnect, retries | owning plugin service layer |
-| Profile resolution, credential grants, redaction, launch plan | `voidb-core` and `voidb-cli` contracts |
+| Profile resolution, credential grants, redaction, launch plan | `voidb-core` and `vb` contracts |
 | Router-hosted shell tabs and old factories | removed; do not depend on them |
 
 Do not build new UX by adding another factory to `voidb-tui`. Old router-hosted
@@ -37,7 +37,7 @@ factories and legacy database adapters are not compatibility targets.
 Every accepted TUI exposes a plugin-local command:
 
 ```bash
-voidb-cli <plugin-id> tui --profile <profile-ref>
+vb <plugin-id> tui --profile <profile-ref>
 ```
 
 Common flags:
@@ -53,8 +53,8 @@ Common flags:
 Preflight mode must be secret-free and deterministic enough for tests:
 
 ```bash
-voidb-cli ssh tui --profile prod --format json
-voidb-cli s3 tui --profile objects --purpose browser --format json
+vb ssh tui --profile prod --format json
+vb s3 tui --profile objects --purpose browser --format json
 ```
 
 The JSON envelope should include the command name, plugin id, profile summary,
@@ -252,7 +252,7 @@ profile, credential, launch, audit, or capability contracts.
 
 Before opening a standalone TUI change:
 
-- [ ] `voidb-cli <plugin> tui --profile <profile>` exists.
+- [ ] `vb <plugin> tui --profile <profile>` exists.
 - [ ] `--format json` preflight is secret-free.
 - [ ] Terminal startup, resize, quit, and cleanup are covered by PTY tests.
 - [ ] Target operations use the plugin service layer.

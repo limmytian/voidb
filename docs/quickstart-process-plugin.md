@@ -179,8 +179,8 @@ for line in sys.stdin:
 使用 `VOIDB_PLUGIN_PATH` 环境变量指定开发目录进行扫描：
 
 ```bash
-VOIDB_PLUGIN_PATH=/path/to/parent_of_my_plugin voidb-cli plugin list
-VOIDB_PLUGIN_PATH=/path/to/parent_of_my_plugin voidb-cli plugin describe my-plugin
+VOIDB_PLUGIN_PATH=/path/to/parent_of_my_plugin vb plugin list
+VOIDB_PLUGIN_PATH=/path/to/parent_of_my_plugin vb plugin describe my-plugin
 ```
 
 ### 方式 2：正式安装使用
@@ -192,4 +192,4 @@ mkdir -p ~/.config/voidb/plugins
 cp -r my-plugin ~/.config/voidb/plugins/
 ```
 
-打开 VoidB 或运行 `voidb-cli plugin list`，VoidB 将会自动发现并加载该插件，并在 Connection Manager 中注册可选连接类型！
+打开 VoidB 或运行 `vb plugin list`，VoidB 将会自动发现并加载该插件，并在 Connection Manager 中注册可选连接类型！

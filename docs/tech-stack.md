@@ -14,7 +14,7 @@
 - Lockfile: `Cargo.lock` present and committed
 - Root: `Cargo.toml` (workspace root)
 - Default member: `crates/voidb-tui` (binary crate)
-- 5 workspace members (`voidb-core`, `voidb-tui`, `voidb-cli`, `voidb-process-plugin-sdk`, `voidb-plugin-sync`)
+- 5 workspace members (`voidb-core`, `voidb-tui`, `vb`, `voidb-process-plugin-sdk`, `voidb-plugin-sync`)
 - All 14 domain/database plugins are externalized independent repositories (`voidb-plugin-*`)
 
 ## Frameworks
@@ -34,7 +34,7 @@
 - base64 0.22 - Base64 encoding for encrypted envelope format
 - thiserror 2.0 - Structured error types (`VoidbError` in `crates/voidb-core/src/error.rs`)
 - anyhow 1.0 - Application-level error handling
-- clap 4.5 (features: `derive`) - CLI argument parsing (used in `voidb-cli`)
+- clap 4.5 (features: `derive`) - CLI argument parsing (used in `vb`)
 - tracing 0.1 - Structured logging
 - tracing-subscriber 0.3 (features: `env-filter`) - Log subscriber with env-based filtering
 - jsonschema 0.26 - JSON Schema validation for plugin manifests and configs
@@ -82,7 +82,7 @@ Database and protocol drivers (`mysql_async`, `tokio-postgres`, `rusqlite`, `red
 
 ## Build System
 
-- Binaries: `voidb` (TUI, `crates/voidb-tui/src/main.rs`), `voidb-cli` (`crates/voidb-cli/src/main.rs`)
+- Binaries: `vb-tui` (TUI, `crates/voidb-tui/src/main.rs`), `vb` (`crates/voidb-cli/src/main.rs`)
 - SQLite (`rusqlite`) and DuckDB (`duckdb`) use `bundled` feature — compile C libraries from source
 - Release profile: LTO enabled, single codegen unit, `opt-level = "z"` (size-optimized), strip symbols
 - Feature flags: `voidb-core` has `default = ["mysql"]` feature gate

@@ -167,7 +167,7 @@ main() {
     tar -xzf "$TMP_DIR/$archive_name" -C "$TMP_DIR"
 
     # Install binaries
-    local binaries=("voidb" "voidb-cli")
+    local binaries=("vb-tui" "vb")
     for bin in "${binaries[@]}"; do
         if [[ -f "$TMP_DIR/$bin" ]]; then
             info "Installing ${bin} to ${dest_dir}/${bin}..."
@@ -181,11 +181,11 @@ main() {
     done
 
     # Verify installation
-    if [[ -x "$dest_dir/voidb" ]] && [[ -x "$dest_dir/voidb-cli" ]]; then
+    if [[ -x "$dest_dir/vb-tui" ]] && [[ -x "$dest_dir/vb" ]]; then
         success "VoidB successfully installed!"
         printf "\n"
-        printf "  %s  %s\n" "${BOLD}voidb${NC}:" "Main Interactive Terminal Database Manager"
-        printf "  %s  %s\n" "${BOLD}voidb-cli${NC}:" "CLI & Plugin Manager"
+        printf "  %s  %s\n" "${BOLD}vb-tui${NC}:" "Main Interactive Terminal Database Manager"
+        printf "  %s  %s\n" "${BOLD}vb${NC}:" "CLI & Plugin Manager"
         printf "\n"
 
         # Check if dest_dir is in PATH
@@ -196,10 +196,10 @@ main() {
         fi
 
         info "Quick Start:"
-        printf "  1. Run VoidB TUI:             ${BOLD}voidb${NC}\n"
-        printf "  2. Initialize core plugins:   ${BOLD}voidb-cli plugin install-default${NC}\n"
-        printf "  3. Explore Marketplace:       ${BOLD}voidb-cli plugin search <query>${NC} (or press 'p' inside VoidB TUI)\n"
-        printf "  4. Install extra plugins:     ${BOLD}voidb-cli plugin install s3${NC}\n"
+        printf "  1. Run VoidB TUI:             ${BOLD}vb-tui${NC}\n"
+        printf "  2. Initialize core plugins:   ${BOLD}vb plugin install-default${NC}\n"
+        printf "  3. Explore Marketplace:       ${BOLD}vb plugin search <query>${NC} (or press 'p' inside VoidB TUI)\n"
+        printf "  4. Install extra plugins:     ${BOLD}vb plugin install s3${NC}\n"
         printf "\n"
     else
         error "Installation failed: could not locate voidb binaries in archive."

@@ -204,15 +204,15 @@ Discover the exact schemas and centrally generated presets without unlocking
 profiles:
 
 ```bash
-voidb-cli agent catalog --plugin sync
-voidb-cli invoke describe sync.conflict_resolve
+vb agent catalog --plugin sync
+vb invoke describe sync.conflict_resolve
 ```
 
 The recommended Read-only preset contains exactly `sync.status`,
 `sync.diagnostics`, `sync.plan`, and `sync.diff`:
 
 ```bash
-voidb-cli agent authorize \
+vb agent authorize \
   --profile local \
   --plugin sync \
   --preset read_only
@@ -222,7 +222,7 @@ The Interactive/Execute preset contains exactly `sync.conflict_resolve` and
 `sync.recovery`. It must be explicitly authorized with destructive access:
 
 ```bash
-voidb-cli agent authorize \
+vb agent authorize \
   --profile local \
   --plugin sync \
   --preset interactive_execute \
@@ -234,15 +234,15 @@ Status is offline. Diagnostics can also be forced offline. Plan and diff make
 an authenticated metadata request but never fetch or decrypt ciphertext:
 
 ```bash
-voidb-cli invoke run sync.status \
+vb invoke run sync.status \
   --profile local \
   --input-json '{}'
 
-voidb-cli invoke run sync.diagnostics \
+vb invoke run sync.diagnostics \
   --profile local \
   --input-json '{"check_connectivity":false}'
 
-voidb-cli invoke run sync.plan \
+vb invoke run sync.plan \
   --profile local \
   --input-json '{"direction":"bidirectional","object_kind":"profile"}' \
   --page-limit 100
@@ -269,7 +269,7 @@ temporary JSON file:
 ```
 
 ```bash
-voidb-cli invoke run sync.conflict_resolve \
+vb invoke run sync.conflict_resolve \
   --profile local \
   --dry-run \
   --input-file target/tmp/sync-conflict-preview.json
@@ -285,7 +285,7 @@ never part of capability input:
 ```bash
 read -rs VOIDB_SYNC_PASSWORD
 export VOIDB_SYNC_PASSWORD
-voidb-cli invoke run sync.conflict_resolve \
+vb invoke run sync.conflict_resolve \
   --profile local \
   --yes \
   --input-file target/tmp/sync-conflict-execute.json

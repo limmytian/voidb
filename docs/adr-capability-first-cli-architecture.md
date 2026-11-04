@@ -327,7 +327,7 @@ frontends after the protocol and CLI are stable.
 
 ### Phase 3: CLI Foundation
 
-- Rework `voidb-cli` around connection and capability commands.
+- Rework `vb` around connection and capability commands.
 - Add stable JSON output and structured errors.
 - Add profile creation, listing, testing, and redaction guarantees.
 - Add generic `voidb invoke` support.

@@ -19,7 +19,7 @@ From a clean checkout, run:
 scripts/tui-quality-gate.sh
 ```
 
-The release mode builds `voidb-cli` and `voidb`, generates structural fixture
+The release mode builds `vb` and `vb-tui`, generates structural fixture
 evidence, then runs Connection Manager and the seven retained standalone TUIs
 through real pseudo-terminals. It uses one cold run, one warmup, and five warm
 measured runs in CI. Any journey failure, missing cleanup/restore evidence, or
@@ -42,7 +42,7 @@ To validate staged binaries, pass their paths explicitly:
 ```bash
 scripts/tui-quality-gate.sh \
   --skip-build \
-  --cli-bin /absolute/path/to/voidb-cli \
+  --cli-bin /absolute/path/to/vb \
   --tui-bin /absolute/path/to/voidb \
   --out target/tmp/tui-quality-gate-package
 ```

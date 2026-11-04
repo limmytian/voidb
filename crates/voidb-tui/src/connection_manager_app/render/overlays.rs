@@ -85,7 +85,7 @@ impl ConnectionManagerApp {
             Line::raw("Esc             Cancel · the editor asks before discarding edits"),
             Line::raw("d               Delete selected profile (confirm with y)"),
             Line::raw("i               Install the profile’s missing official plugin"),
-            Line::raw("t               Test through voidb-cli profile test"),
+            Line::raw("t               Test through vb profile test"),
             Line::raw("c               Browse plugin capabilities"),
             Line::raw("a               Agent access · simple/advanced, presets, TTL, uses,"),
             Line::raw("                capability scope, renew/revoke"),

@@ -39,7 +39,7 @@ Options:
                              Defaults to Cargo's package/workspace target dirs,
                              or CARGO_TARGET_DIR when set.
   --tui-bin PATH             Existing default TUI binary to stage.
-  --cli-bin PATH             Existing voidb-cli binary to stage.
+  --cli-bin PATH             Existing vb binary to stage.
   --sync-server-bin PATH     Existing voidb-sync-server binary to stage.
   --no-manifest              Do not generate SHA256SUMS and artifact manifest.
   -h, --help                 Show this help.
@@ -241,8 +241,8 @@ ARTIFACT_ROOT="${OUT_DIR}/voidb-${VERSION}-${PLATFORM}"
 BUILD_INPUTS="${ARTIFACT_ROOT}/.build-inputs.tsv"
 PROFILE_DIR="$(profile_dir)"
 PROFILE_LABEL="$(cargo_profile_label)"
-TUI_NAME="$(binary_name voidb)"
-CLI_NAME="$(binary_name voidb-cli)"
+TUI_NAME="$(binary_name vb-tui)"
+CLI_NAME="$(binary_name vb)"
 SYNC_SERVER_NAME="$(binary_name voidb-sync-server)"
 
 rm -rf "${ARTIFACT_ROOT}"
@@ -258,7 +258,7 @@ if [[ "${BUILD}" -eq 1 ]]; then
   run cargo build "${profile_args[@]}"
   stage_file \
     "voidb-default" \
-    "voidb-tui" \
+    "vb-tui" \
     "crates/voidb-tui/Cargo.toml" \
     "${TUI_NAME}" \
     "${VERSION}" \
@@ -267,16 +267,16 @@ if [[ "${BUILD}" -eq 1 ]]; then
     "cargo build${PROFILE_LABEL}" \
     "voidb-default/${TUI_NAME}"
 
-  run cargo build "${profile_args[@]}" -p voidb-cli
+  run cargo build "${profile_args[@]}" -p vb
   stage_file \
     "cli" \
-    "voidb-cli" \
+    "vb" \
     "crates/voidb-cli/Cargo.toml" \
     "${CLI_NAME}" \
     "${VERSION}" \
     "default" \
     "${TARGET_DIR}/${PROFILE_DIR}/${CLI_NAME}" \
-    "cargo build${PROFILE_LABEL} -p voidb-cli" \
+    "cargo build${PROFILE_LABEL} -p vb" \
     "cli/${CLI_NAME}"
 
   run cargo build "${profile_args[@]}" --manifest-path voidb-sync-server/Cargo.toml
@@ -308,7 +308,7 @@ else
 
   stage_file \
     "cli" \
-    "voidb-cli" \
+    "vb" \
     "crates/voidb-cli/Cargo.toml" \
     "${CLI_NAME}" \
     "${VERSION}" \

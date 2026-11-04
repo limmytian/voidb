@@ -22,7 +22,7 @@ Options:
   --artifact-root DIR     Staged package directory to verify.
   --no-checksums          Skip SHA256SUMS verification.
   --no-manifest           Skip artifact-manifest.json consistency checks.
-  --no-cli                Skip voidb-cli help/version smoke.
+  --no-cli                Skip vb help/version smoke.
   --no-sync-server        Skip voidb-sync-server help/version smoke.
   --no-tui                Skip TUI executable prerequisite checks.
   -h, --help              Show this help.
@@ -221,11 +221,11 @@ fi
 
 if [[ "${CLI}" -eq 1 ]]; then
   cli_bin="$(find_binary \
-    "${ARTIFACT_ROOT}/cli/voidb-cli" \
-    "${ARTIFACT_ROOT}/cli/voidb-cli.exe" \
-    "${ARTIFACT_ROOT}/voidb-cli" \
-    "${ARTIFACT_ROOT}/voidb-cli.exe")" || die "missing voidb-cli artifact"
-  check_executable "voidb-cli" "${cli_bin}"
+    "${ARTIFACT_ROOT}/cli/vb" \
+    "${ARTIFACT_ROOT}/cli/vb.exe" \
+    "${ARTIFACT_ROOT}/vb" \
+    "${ARTIFACT_ROOT}/vb.exe")" || die "missing vb artifact"
+  check_executable "vb" "${cli_bin}"
   run "${cli_bin}" --version >/dev/null
   run "${cli_bin}" --help >/dev/null
   run "${cli_bin}" profile --help >/dev/null

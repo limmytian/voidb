@@ -60,10 +60,10 @@ summaries must not include passwords, passphrases, private key material, raw
 Launch the retained SSH terminal TUI through the plugin command:
 
 ```bash
-voidb-cli ssh tui --profile <profile>
-voidb-cli ssh tui --profile <profile> --format json
-voidb-cli ssh tui --fixture crates/plugins/voidb-plugin-ssh/fixtures/ssh_tui_terminal_core.json
-voidb-cli ssh tui --fixture crates/plugins/voidb-plugin-ssh/fixtures/ssh_tui_terminal_core.json \
+vb ssh tui --profile <profile>
+vb ssh tui --profile <profile> --format json
+vb ssh tui --fixture crates/plugins/voidb-plugin-ssh/fixtures/ssh_tui_terminal_core.json
+vb ssh tui --fixture crates/plugins/voidb-plugin-ssh/fixtures/ssh_tui_terminal_core.json \
   --evidence target/tmp/ssh-tui-fixture-evidence.json
 ```
 
@@ -106,12 +106,12 @@ or render an agent chat. Set `VOIDB_SSH_AGENT_SESSION_DIR` to override the local
 share store for tests or external agent processes. The legacy environment name
 is accepted only for compatibility.
 
-External agents use `voidb-cli ssh session list/show/input` against the same
+External agents use `vb ssh session list/show/input` against the same
 store. The TUI refreshes the shared screen and transcript context non-blockingly
 and opens a compact operation review when the agent requests PTY input. Use
 `j/k` to select an operation, `y` to approve it once, `n` or `x` to deny it, or
 `A` to approve it and allow subsequent current-PTY operations from that exact
-agent principal for the lifetime of the share. `voidb-cli ssh assist` remains a
+agent principal for the lifetime of the share. `vb ssh assist` remains a
 compatibility alias.
 
 Alternate-screen and application-key terminal states are shown as warnings in
@@ -357,7 +357,7 @@ commit fixture passwords, private keys, key passphrases, or generated
 Host-key cases:
 
 1. Unknown host: remove only the fixture entry from `~/.ssh/known_hosts` and
-   confirm `voidb-cli invoke run ssh.test ...` fails with
+   confirm `vb invoke run ssh.test ...` fails with
    `ssh.host_key_unknown`.
 2. Trusted host: accept the key in the TUI prompt or add it with `ssh-keyscan`,
    then confirm `ssh.test` succeeds.
@@ -370,47 +370,47 @@ Host-key cases:
 Run these against the fixture profile before promoting SSH for a release:
 
 ```bash
-voidb-cli invoke list ssh --format json
-voidb-cli invoke describe ssh.exec --format json
-voidb-cli invoke describe ssh.sftp_put --format json
-voidb-cli invoke run ssh.diagnostics \
+vb invoke list ssh --format json
+vb invoke describe ssh.exec --format json
+vb invoke describe ssh.sftp_put --format json
+vb invoke run ssh.diagnostics \
   --profile "$VOIDB_SSH_SMOKE_PROFILE" \
   --input-json '{}' \
   --format json
-voidb-cli invoke run ssh.test \
+vb invoke run ssh.test \
   --profile "$VOIDB_SSH_SMOKE_PROFILE" \
   --input-json '{}' \
   --format json
-voidb-cli invoke run ssh.exec \
+vb invoke run ssh.exec \
   --profile "$VOIDB_SSH_SMOKE_PROFILE" \
   --input-json '{"command":"printf ok; printf err >&2; exit 7","max_stdout_bytes":1024,"max_stderr_bytes":1024}' \
   --yes \
   --format json
-voidb-cli invoke run ssh.sftp_list \
+vb invoke run ssh.sftp_list \
   --profile "$VOIDB_SSH_SMOKE_PROFILE" \
   --input-json '{"path":"."}' \
   --page-limit 20 \
   --format json
-voidb-cli invoke run ssh.sftp_mkdir \
+vb invoke run ssh.sftp_mkdir \
   --profile "$VOIDB_SSH_SMOKE_PROFILE" \
   --input-json '{"path":"voidb-smoke"}' \
   --dry-run \
   --format json
-voidb-cli invoke run ssh.sftp_mkdir \
+vb invoke run ssh.sftp_mkdir \
   --profile "$VOIDB_SSH_SMOKE_PROFILE" \
   --input-json '{"path":"voidb-smoke"}' \
   --yes \
   --format json
-voidb-cli invoke run ssh.sftp_put \
+vb invoke run ssh.sftp_put \
   --profile "$VOIDB_SSH_SMOKE_PROFILE" \
   --input-json "{\"local_root\":\"$PWD/tmp\",\"local_path\":\"voidb-ssh-smoke.txt\",\"remote_path\":\"voidb-smoke/voidb-ssh-smoke.txt\"}" \
   --yes \
   --format json
-voidb-cli invoke run ssh.sftp_get \
+vb invoke run ssh.sftp_get \
   --profile "$VOIDB_SSH_SMOKE_PROFILE" \
   --input-json "{\"remote_path\":\"voidb-smoke/voidb-ssh-smoke.txt\",\"local_root\":\"$PWD/tmp\",\"local_path\":\"voidb-ssh-smoke.downloaded\"}" \
   --format json
-voidb-cli invoke run ssh.sftp_rm \
+vb invoke run ssh.sftp_rm \
   --profile "$VOIDB_SSH_SMOKE_PROFILE" \
   --input-json '{"path":"voidb-smoke/voidb-ssh-smoke.txt"}' \
   --yes \
@@ -477,7 +477,7 @@ preset. Authorize it as an explicit short-lived Custom grant with destructive
 access, and select the terminal capabilities again when opening the session:
 
 ```bash
-voidb-cli agent authorize \
+vb agent authorize \
   --profile id:<profile-id> --plugin ssh --preset custom \
   --capability ssh.terminal_read \
   --capability ssh.terminal_snapshot \
@@ -486,7 +486,7 @@ voidb-cli agent authorize \
   --capability ssh.terminal_signal \
   --allow-destructive --yes --uses 100
 
-voidb-cli agent session open \
+vb agent session open \
   --grant <grant-id> --purpose interactive_terminal \
   --capability ssh.terminal_read \
   --capability ssh.terminal_snapshot \
@@ -495,11 +495,11 @@ voidb-cli agent session open \
   --capability ssh.terminal_signal \
   --input-json '{"cols":120,"rows":40}'
 
-voidb-cli agent session call --grant <grant-id> <session-id> \
+vb agent session call --grant <grant-id> <session-id> \
   --capability ssh.terminal_write \
   --input-json '{"text":"vim /tmp/example.txt","enter":true}' --yes
 
-voidb-cli agent session call --grant <grant-id> <session-id> \
+vb agent session call --grant <grant-id> <session-id> \
   --capability ssh.terminal_snapshot --input-json '{}'
 ```
 
@@ -543,7 +543,7 @@ cargo check -p voidb-plugin-ssh --example fixture_smoke
 cargo test -p voidb-plugin-ssh capabilities
 cargo test -p voidb-plugin-ssh service
 cargo test -p voidb-plugin-ssh
-cargo test -p voidb-cli invoke
+cargo test -p vb invoke
 cargo test -p voidb-core profile_adapter
 cargo test -p voidb-core profile_store
 git diff --check
@@ -555,9 +555,9 @@ changes, also run:
 ```bash
 cargo test -p voidb-core assist
 cargo test -p voidb-core session
-cargo test -p voidb-cli agent_broker
+cargo test -p vb agent_broker
 cargo test -p voidb-plugin-ssh assist
-cargo run -p voidb-cli -- ssh tui \
+cargo run -p vb -- ssh tui \
   --fixture crates/plugins/voidb-plugin-ssh/fixtures/ssh_tui_terminal_core.json \
   --evidence target/tmp/ssh-tui-fixture-evidence.json
 ```

@@ -36,7 +36,7 @@ cargo test     # Run tests
 cargo clippy   # Lint
 ```
 
-Binary name: `voidb`
+Binary names: `vb` (CLI dispatcher) and `vb-tui` (connection manager); legacy `voidb-cli`/`voidb` work via compatibility links
 
 Validation is tiered. Use [docs/ci-checks.md](docs/ci-checks.md) for the current
 fast and full command sets. Focused changes should run the relevant fast crate

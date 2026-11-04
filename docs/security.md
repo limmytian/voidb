@@ -15,7 +15,7 @@ master password is used.
      Connection Manager prompt).
   2. **Per-installation secret** — when no master password is configured, VoidB
      generates a random per-installation secret on first use and stores it in
-     the OS keyring (service `voidb`, account `config-install-key`). When no
+     the OS keyring (service `vb-tui`, account `config-install-key`). When no
      usable keyring backend exists (headless machines, CI), a `0600`
      `install-key` file next to the config is used instead.
   3. **Legacy decrypt-only fallback** — the compiled default passphrase was
@@ -58,7 +58,7 @@ only user-passphrase protection is.
 The detailed setup, unlock, forget, recovery, and state-transition rules are in
 [Master Password UX and Credential Protection State](master-password-ux.md).
 The current CLI re-encryption flow is
-`voidb-cli credential master reencrypt --new-password-env VOIDB_MASTER_PASSWORD --yes`.
+`vb credential master reencrypt --new-password-env VOIDB_MASTER_PASSWORD --yes`.
 After re-encryption, protected saves require `VOIDB_MASTER_PASSWORD` to be set
 for the current process.
 

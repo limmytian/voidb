@@ -23,7 +23,7 @@ def main():
         archive = args.artifacts / f'voidb-{args.version}-{platform}.tar.gz'
         with tarfile.open(archive) as package:
             members = package.getmembers()
-            if len(members) != 2 or {member.name for member in members} != {'voidb', 'voidb-cli'} or not all(member.isfile() for member in members):
+            if len(members) != 2 or {member.name for member in members} != {'voidb', 'vb'} or not all(member.isfile() for member in members):
                 raise ValueError(f'{archive.name} must contain only the two regular core binaries')
         checksums[platform] = hashlib.sha256(archive.read_bytes()).hexdigest()
     formula = args.formula.read_text()
@@ -36,7 +36,7 @@ def main():
         formula, count = re.subn(pattern, replacement, formula)
         if count != 1:
             raise ValueError(f'Formula must have exactly one archive for {platform}')
-    if 'pkgshare' in formula or 'bin.install "voidb-cli"' not in formula:
+    if 'pkgshare' in formula or 'bin.install "vb"' not in formula:
         raise ValueError('Formula must install only the core binaries')
     args.output.write_text(formula)
     print(f'Rendered verified v{args.version} formula: {args.output}')

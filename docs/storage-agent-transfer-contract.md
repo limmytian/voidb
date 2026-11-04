@@ -274,7 +274,7 @@ Focused checks for contract changes:
 cargo test -p voidb-core transfer
 cargo test -p voidb-plugin-s3
 cargo test -p voidb-plugin-webdav
-cargo test -p voidb-cli storage_plugins_map_to_one_fail_closed_transfer_lifecycle
+cargo test -p vb storage_plugins_map_to_one_fail_closed_transfer_lifecycle
 scripts/check-local-filesystem-boundaries.sh
 scripts/check-external-agent-interaction.sh
 git diff --check
