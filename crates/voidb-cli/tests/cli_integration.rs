@@ -12,7 +12,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Run the built `voidb-cli` binary with the given arguments.
 fn run_cli(args: &[&str], extra_env: &[(&str, &str)]) -> Output {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_voidb-cli"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_vb"));
     command.args(args);
     for (key, value) in extra_env {
         command.env(key, value);
