@@ -146,6 +146,16 @@ Profile IDs:
 vb agent exec jenkins.jobs --profile prod-jenkins --input-json '{}'
 ```
 
+Short top-level aliases keep the frequent authorization operations easy to
+type from a human shell:
+
+```bash
+vb grants            # agent list: grant lifecycle table (--format table)
+vb inbox             # agent request inbox: pending approval queue
+vb approve <id>      # agent request review: interactive human review
+vb auth <profile>    # agent authorize: grant scoped access directly
+```
+
 If no current grant permits an operation, an identified interactive agent
 creates one exact JIT request and waits briefly for review in the Connection
 Manager (`p`). Destructive calls still require specific approval and `--yes`.

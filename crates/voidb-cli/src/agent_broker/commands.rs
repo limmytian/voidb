@@ -54,6 +54,19 @@ use super::{
     BROKER_CHILD_ENV, BROKER_PROBE_TIMEOUT, GRANT_VERSION,
 };
 
+/// Short top-level verbs that expand into the agent command tree, so the
+/// highest-frequency authorization operations stay easy to type
+/// (`vb approve <id>` = `vb agent request review <id>`). Names must not
+/// collide with builtin subcommands or installed plugin ids.
+pub(crate) const AGENT_TOP_LEVEL_ALIASES: &[(&str, &[&str])] = &[
+    ("approve", &["request", "review"]),
+    ("inbox", &["request", "inbox"]),
+    ("grants", &["list"]),
+    ("auth", &["authorize"]),
+    ("catalog", &["catalog"]),
+    ("exec", &["exec"]),
+];
+
 pub async fn handle_early(args: Vec<String>) -> anyhow::Result<Option<i32>> {
     let Some(command) = args.get(1).map(String::as_str) else {
         return Ok(None);
@@ -65,10 +78,23 @@ pub async fn handle_early(args: Vec<String>) -> anyhow::Result<Option<i32>> {
         run_broker(Path::new(grant_file)).await?;
         return Ok(Some(0));
     }
+    if let Some((_, expansion)) = AGENT_TOP_LEVEL_ALIASES
+        .iter()
+        .find(|(alias, _)| *alias == command)
+    {
+        // Rewrite `[bin, alias, rest...]` into `[bin, "agent", ...expansion, rest...]`.
+        let mut rewritten = vec![args[0].clone(), "agent".to_string()];
+        rewritten.extend(expansion.iter().map(|word| (*word).to_string()));
+        rewritten.extend(args[2..].iter().cloned());
+        return dispatch_agent(rewritten).await;
+    }
     if command != "agent" {
         return Ok(None);
     }
+    dispatch_agent(args).await
+}
 
+async fn dispatch_agent(args: Vec<String>) -> anyhow::Result<Option<i32>> {
     let matches = match agent_command().try_get_matches_from(args) {
         Ok(matches) => matches,
         Err(error)
@@ -124,7 +150,10 @@ pub(crate) fn agent_command() -> Command {
 /// pre-clap agent broker.
 pub(crate) fn agent_subcommand() -> Command {
     Command::new("agent")
-        .about("Manage short-lived, scoped agent access")
+        .about(
+            "Manage short-lived, scoped agent access (short forms: vb approve <id> · vb inbox · \
+             vb grants · vb auth <profile> · vb catalog · vb exec)",
+        )
         .subcommand_required(true)
         .subcommand(with_hidden_optional_principal_args(
             Command::new("exec")
