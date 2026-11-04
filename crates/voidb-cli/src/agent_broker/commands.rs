@@ -2462,6 +2462,7 @@ async fn run_granted(matches: &ArgMatches) -> anyhow::Result<i32> {
 }
 
 async fn execute_granted_command(grant: AgentGrantFile, argv: Vec<String>) -> anyhow::Result<i32> {
+    warn_grant_nearly_exhausted(&grant);
     let response = send_request(
         &grant,
         BrokerRequest::Run {
@@ -2477,4 +2478,39 @@ async fn execute_granted_command(grant: AgentGrantFile, argv: Vec<String>) -> an
         eprintln!("Agent broker rejected command: {error}");
     }
     Ok(response.exit_code)
+}
+
+/// Explain "why did my grant stop working" before it stops working: warn on
+/// stderr when the selected grant is inside the expiring window or has at
+/// most two calls left. stderr keeps agent stdout parseable.
+fn warn_grant_nearly_exhausted(grant: &AgentGrantFile) {
+    let now = Utc::now();
+    match grant
+        .clone()
+        .public(AgentBrokerHealth::Online, 0)
+        .status_at(now)
+    {
+        AgentGrantStatus::Expiring => {
+            let remaining = (grant.expires_at - now).num_seconds().max(0);
+            eprintln!(
+                "warning: grant {} expires in {remaining}s; renew with `vb agent renew {}`",
+                grant.id, grant.id
+            );
+        }
+        AgentGrantStatus::Exhausted => {
+            eprintln!(
+                "warning: grant {} has no uses left; renew with `vb agent renew {}`",
+                grant.id, grant.id
+            );
+        }
+        _ => {}
+    }
+    if let Some(remaining) = grant.remaining_uses
+        && remaining <= 2
+    {
+        eprintln!(
+            "warning: grant {} has {remaining} use(s) left; renew with `vb agent renew {}`",
+            grant.id, grant.id
+        );
+    }
 }
