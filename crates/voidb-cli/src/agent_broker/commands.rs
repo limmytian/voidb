@@ -22,8 +22,8 @@ use voidb_core::{
     AgentAuthorizationCapability, AgentAuthorizationPluginCatalog,
     AgentAuthorizationPresetDefinition, AgentAuthorizationPresetKind,
     AgentAuthorizationProfileSummary, AgentAuthorizationScope, AgentAuthorizationSupportStatus,
-    AgentAuthorizationSupportSummary, AgentBrokerHealth, AgentPrincipal, AppConfig, AuditOperation,
-    CapabilityDefinition, CapabilityExecutionMode, ConnectionProfile,
+    AgentAuthorizationSupportSummary, AgentBrokerHealth, AgentGrantStatus, AgentPrincipal,
+    AppConfig, AuditOperation, CapabilityDefinition, CapabilityExecutionMode, ConnectionProfile,
     DEFAULT_AGENT_GRANT_TTL_MINUTES, DEFAULT_AGENT_GRANT_USES, FrontendAgentGrant,
     LocalProfileStore, MAX_AGENT_GRANT_TTL_MINUTES, MAX_AGENT_GRANT_USES, PluginSessionPurpose,
     VOIDB_MASTER_PASSWORD_ENV, normalize_agent_operation, profile_names_equal,
@@ -340,7 +340,14 @@ pub(crate) fn agent_subcommand() -> Command {
             Command::new("list")
                 .about("List frontend-safe agent grant and broker summaries")
                 .arg(Arg::new("profile").long("profile"))
-                .arg(Arg::new("plugin").long("plugin")),
+                .arg(Arg::new("plugin").long("plugin"))
+                .arg(
+                    Arg::new("format")
+                        .long("format")
+                        .default_value("json")
+                        .value_parser(["json", "table"])
+                        .help("Output format; json is stable for agents, table is human-readable"),
+                ),
         )
         .subcommand(
             Command::new("renew")
@@ -508,6 +515,60 @@ fn list_authorization_catalog(matches: &ArgMatches) -> anyhow::Result<i32> {
         }))?
     );
     Ok(0)
+}
+
+/// Human-readable grant table for `agent list --format table`.
+fn agent_grants_table(grants: &[FrontendAgentGrant], now: DateTime<Utc>) -> String {
+    let mut lines =
+        vec!["GRANT\tPROFILE\tPLUGIN\tSTATUS\tEXPIRES\tUSES\tSESSIONS\tRISK".to_string()];
+    for grant in grants {
+        lines.push(format!(
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+            sanitize_table_cell(&grant.id),
+            sanitize_table_cell(&grant.profile_name),
+            sanitize_table_cell(&grant.plugin_id),
+            grant_status_label(grant.status_at(now)),
+            relative_expiry(grant.expires_at, now),
+            grant
+                .remaining_uses
+                .map(|uses| uses.to_string())
+                .unwrap_or_else(|| "-".into()),
+            grant.active_session_count,
+            if grant.destructive_acknowledged {
+                "DESTRUCTIVE"
+            } else {
+                "-"
+            },
+        ));
+    }
+    lines.join("\n")
+}
+
+/// Stable short label for a grant lifecycle status.
+fn grant_status_label(status: AgentGrantStatus) -> &'static str {
+    match status {
+        AgentGrantStatus::Active => "ACTIVE",
+        AgentGrantStatus::Expiring => "EXPIRING",
+        AgentGrantStatus::Exhausted => "EXHAUSTED",
+        AgentGrantStatus::Expired => "EXPIRED",
+        AgentGrantStatus::Stale => "STALE",
+        AgentGrantStatus::BrokerOffline => "BROKER OFFLINE",
+    }
+}
+
+/// Relative expiry for humans: "in 12m", "in 1h05m", or "expired 5m ago".
+fn relative_expiry(expires_at: DateTime<Utc>, now: DateTime<Utc>) -> String {
+    let delta = expires_at - now;
+    if delta.num_seconds() <= 0 {
+        return format!("expired {}m ago", (-delta).num_minutes().max(0));
+    }
+    let hours = delta.num_hours();
+    let minutes = delta.num_minutes() % 60;
+    if hours > 0 {
+        format!("in {hours}h{minutes:02}m")
+    } else {
+        format!("in {}m", delta.num_minutes().max(1))
+    }
 }
 
 pub(super) fn authorization_catalog_table(definitions: &[&CapabilityDefinition]) -> String {
@@ -1693,15 +1754,21 @@ async fn list_grants(matches: &ArgMatches) -> anyhow::Result<i32> {
         })
         .collect::<Vec<_>>();
     let mut public_grants = Vec::with_capacity(grants.len());
+    let mut table_grants = Vec::with_capacity(grants.len());
     let mut grouped = BTreeMap::<(String, String), Vec<FrontendAgentGrant>>::new();
     for grant in &grants {
         let inspection = inspect_grant(grant).await;
         let public = grant.public(inspection.broker_health, inspection.active_session_count);
+        table_grants.push(public.clone());
         public_grants.push(frontend_grant_value(&public, Utc::now())?);
         grouped
             .entry((grant.profile_id.clone(), grant.plugin_id.clone()))
             .or_default()
             .push(grant.public(inspection.broker_health, inspection.active_session_count));
+    }
+    if matches.get_one::<String>("format").map(String::as_str) == Some("table") {
+        println!("{}", agent_grants_table(&table_grants, Utc::now()));
+        return Ok(0);
     }
     let mut profiles = Vec::with_capacity(grouped.len());
     for ((_profile_id, _plugin_id), mut grants) in grouped {
