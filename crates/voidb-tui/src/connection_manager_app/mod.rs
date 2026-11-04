@@ -19,7 +19,8 @@ use anyhow::Result;
 use crossterm::event;
 use futures::StreamExt;
 use ratatui::DefaultTerminal;
-use ratatui::widgets::ListState;
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
+use ratatui::widgets::{Block, Borders, ListState};
 use serde_json::{Value, json};
 use voidb_core::{
     AgentAuthorizationPresetKind, AppConfig, ConnectionConfig, ConnectionProfile,
@@ -96,6 +97,51 @@ fn authorization_refresh_interval(mode: ScreenMode) -> Duration {
     } else {
         AUTHORIZATION_IDLE_REFRESH_INTERVAL
     }
+}
+
+/// Vertical terminal layout shared by rendering and mouse hit-testing so the
+/// two can never drift apart.
+fn terminal_layout(area: Rect) -> (Rect, Rect, Rect) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3),
+            Constraint::Min(10),
+            Constraint::Length(3),
+        ])
+        .split(area);
+    (chunks[0], chunks[1], chunks[2])
+}
+
+/// Horizontal split of the main area shared by rendering and mouse hit-testing.
+fn main_columns(main: Rect) -> (Rect, Rect) {
+    let columns = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(42), Constraint::Percentage(58)])
+        .split(main);
+    (columns[0], columns[1])
+}
+
+/// Inner (post-border) viewport of the profile list used for mouse hit-testing.
+/// `None` when the terminal is too small to render the two-pane layout.
+fn profile_list_inner_area(area: Rect) -> Option<Rect> {
+    if area.width < MIN_WIDTH || area.height < MIN_HEIGHT {
+        return None;
+    }
+    let (_, main, _) = terminal_layout(area);
+    let (profiles, _) = main_columns(main);
+    let inner = Block::default().borders(Borders::ALL).inner(profiles);
+    (inner.width > 0 && inner.height > 0).then_some(inner)
+}
+
+/// Map a terminal row to a profile list index: `offset` rows are scrolled off
+/// the top of `inner`, and only indexes below `total` name a real profile.
+fn profile_row_index(inner: Rect, offset: usize, total: usize, row: u16) -> Option<usize> {
+    if inner.height == 0 || row < inner.y || row >= inner.y + inner.height {
+        return None;
+    }
+    let index = offset + usize::from(row - inner.y);
+    (index < total).then_some(index)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -863,6 +909,9 @@ pub struct ConnectionManagerApp {
     filtered_indices: Vec<usize>,
     selected: usize,
     list_state: ListState,
+    /// Most recent terminal viewport, refreshed on every render; mouse events
+    /// hit-test against it because crossterm reports viewport-relative rows.
+    last_frame_area: Rect,
     mode: ScreenMode,
     search: String,
     editor: Option<ProfileEditor>,
@@ -917,6 +966,7 @@ impl ConnectionManagerApp {
             filtered_indices: Vec::new(),
             selected: 0,
             list_state: ListState::default(),
+            last_frame_area: Rect::ZERO,
             mode: ScreenMode::Browse,
             search: String::new(),
             editor: None,
@@ -964,8 +1014,10 @@ impl ConnectionManagerApp {
         let mut events = event::EventStream::new();
         // Adaptive background cadence: poll at 10 Hz while background work is
         // producing changes, backing off to ~1.25 Hz when idle so the loop
-        // meets the docs/tui-interaction-performance.md idle budget. Key and
-        // paste events always wake the loop immediately via the event stream.
+        // meets the docs/tui-interaction-performance.md idle budget. Key,
+        // paste, and mouse events always wake the loop immediately via the
+        // event stream, and every woken branch still drains background work
+        // so no event class can starve it.
         let mut idle_polls: u32 = 0;
         let mut applied_bucket: u32 = 0;
         let mut tick = tokio::time::interval(Self::poll_interval(applied_bucket));
@@ -987,21 +1039,29 @@ impl ConnectionManagerApp {
                     dirty
                 }
                 next = events.next() => {
-                    match next {
+                    let event_dirty = match next {
                         Some(Ok(event::Event::Key(key)))
                             if key.kind == event::KeyEventKind::Press
-                                || key.kind == event::KeyEventKind::Repeat => self.handle_key(key),
-                        Some(Ok(event::Event::Paste(text))) => self.handle_paste(&text),
-                        Some(Ok(event::Event::Resize(_, _))) => {}
-                        Some(Ok(_)) => continue,
+                                || key.kind == event::KeyEventKind::Repeat => {
+                            self.handle_key(key);
+                            true
+                        }
+                        Some(Ok(event::Event::Paste(text))) => {
+                            self.handle_paste(&text);
+                            true
+                        }
+                        Some(Ok(event::Event::Mouse(mouse))) => self.handle_mouse(mouse),
+                        // Resize always needs a repaint even though no state changed.
+                        Some(Ok(event::Event::Resize(_, _))) => true,
+                        Some(Ok(_)) => false,
                         Some(Err(error)) => return Err(error.into()),
                         None => break,
-                    }
+                    };
                     self.poll_background();
                     idle_polls = 0;
                     applied_bucket = 0;
                     tick = tokio::time::interval(Self::poll_interval(applied_bucket));
-                    true
+                    event_dirty
                 }
             };
             if dirty {

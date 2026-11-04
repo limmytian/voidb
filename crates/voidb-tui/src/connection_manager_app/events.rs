@@ -1,7 +1,7 @@
 use std::sync::mpsc;
 use std::time::Instant;
 
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use serde_json::Value;
 
 use super::ConnectionManagerApp;
@@ -9,6 +9,7 @@ use super::background::{can_install_missing_plugin, installed_plugin_states, run
 use super::{
     AUTHORIZATION_TTL_OPTIONS, AUTHORIZATION_USE_OPTIONS, AgentAuthorizationPresetKind,
     AuthorizationAction, EditorView, JitApprovalDialog, JitDecision, ScreenMode,
+    profile_list_inner_area, profile_row_index,
 };
 
 impl ConnectionManagerApp {
@@ -501,6 +502,50 @@ impl ConnectionManagerApp {
                 }
             }
             _ => {}
+        }
+    }
+
+    /// Minimal mouse support: left click selects the profile row under the
+    /// cursor and the wheel navigates the list while Browse or Search is
+    /// active. Overlay modes stay keyboard-only, and motion/drag events never
+    /// change state (callers skip repaints when nothing changed). Mouse
+    /// capture is enabled globally, so these handlers are what keep clicks
+    /// from being swallowed by the terminal.
+    /// Returns whether the state changed.
+    pub(super) fn handle_mouse(&mut self, mouse: MouseEvent) -> bool {
+        if !matches!(self.mode, ScreenMode::Browse | ScreenMode::Search) {
+            return false;
+        }
+        match mouse.kind {
+            MouseEventKind::Down(MouseButton::Left) => {
+                let Some(inner) = profile_list_inner_area(self.last_frame_area) else {
+                    return false;
+                };
+                match profile_row_index(
+                    inner,
+                    self.list_state.offset(),
+                    self.filtered_indices.len(),
+                    mouse.row,
+                ) {
+                    Some(index) if index != self.selected => {
+                        self.selected = index;
+                        self.list_state.select(Some(self.selected));
+                        true
+                    }
+                    _ => false,
+                }
+            }
+            MouseEventKind::ScrollUp => {
+                let before = self.selected;
+                self.move_selection(false);
+                self.selected != before
+            }
+            MouseEventKind::ScrollDown => {
+                let before = self.selected;
+                self.move_selection(true);
+                self.selected != before
+            }
+            _ => false,
         }
     }
 

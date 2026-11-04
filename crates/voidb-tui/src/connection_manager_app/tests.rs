@@ -59,6 +59,40 @@ fn authorization_snapshot_refresh_is_short_only_while_authorization_is_visible()
 }
 
 #[test]
+fn profile_list_inner_area_respects_minimal_terminal_size() {
+    // Too small: no hit area at all.
+    assert_eq!(profile_list_inner_area(Rect::new(0, 0, 40, 10)), None);
+    assert_eq!(
+        profile_list_inner_area(Rect::new(0, 0, MIN_WIDTH - 1, MIN_HEIGHT)),
+        None
+    );
+    // The exact minimum still renders, so it hit-tests.
+    assert!(profile_list_inner_area(Rect::new(0, 0, MIN_WIDTH, MIN_HEIGHT)).is_some());
+
+    let (_, main, _) = terminal_layout(Rect::new(0, 0, 100, 30));
+    let (profiles, _) = main_columns(main);
+    let expected = Block::default().borders(Borders::ALL).inner(profiles);
+    assert_eq!(profile_list_inner_area(Rect::new(0, 0, 100, 30)), Some(expected));
+}
+
+#[test]
+fn profile_row_index_maps_visible_rows_and_rejects_off_list_rows() {
+    let inner = Rect::new(0, 4, 30, 5);
+    // Above the list and below the list are misses.
+    assert_eq!(profile_row_index(inner, 0, 8, 3), None);
+    assert_eq!(profile_row_index(inner, 0, 8, 9), None);
+    // Rows inside the list map to offset + row delta.
+    assert_eq!(profile_row_index(inner, 0, 8, 4), Some(0));
+    assert_eq!(profile_row_index(inner, 0, 8, 6), Some(2));
+    // Scrolled list: offset shifts the mapping.
+    assert_eq!(profile_row_index(inner, 3, 8, 4), Some(3));
+    // A hit that maps past the end of the item list is not a row.
+    assert_eq!(profile_row_index(inner, 4, 8, 8), None);
+    // Empty list never maps.
+    assert_eq!(profile_row_index(inner, 0, 0, 4), None);
+}
+
+#[test]
 fn contextual_install_only_accepts_missing_official_plugins() {
     assert!(can_install_missing_plugin("mysql", None));
     assert!(!can_install_missing_plugin("../mysql", None));

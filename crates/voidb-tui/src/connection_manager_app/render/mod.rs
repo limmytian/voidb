@@ -17,6 +17,7 @@ mod overlays;
 impl ConnectionManagerApp {
     pub(super) fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
+        self.last_frame_area = area;
         if area.width < MIN_WIDTH || area.height < MIN_HEIGHT {
             frame.render_widget(
                 Paragraph::new(format!(
@@ -30,17 +31,10 @@ impl ConnectionManagerApp {
             return;
         }
 
-        let chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Length(3),
-                Constraint::Min(10),
-                Constraint::Length(3),
-            ])
-            .split(area);
-        self.render_header(frame, chunks[0]);
-        self.render_main(frame, chunks[1]);
-        self.render_footer(frame, chunks[2]);
+        let (header, main, footer) = super::terminal_layout(area);
+        self.render_header(frame, header);
+        self.render_main(frame, main);
+        self.render_footer(frame, footer);
 
         match self.mode {
             ScreenMode::Edit => self.render_editor(frame, area),
@@ -88,10 +82,7 @@ impl ConnectionManagerApp {
     }
 
     fn render_main(&mut self, frame: &mut Frame, area: Rect) {
-        let columns = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(42), Constraint::Percentage(58)])
-            .split(area);
+        let (profiles_area, details_area) = super::main_columns(area);
         let items = self
             .filtered_indices
             .iter()
@@ -119,7 +110,7 @@ impl ConnectionManagerApp {
                     "INSTALLING"
                 } else {
                     match self.plugin_states.get(&profile.plugin_id) {
-                        None if columns[0].width < 40 => "MISSING",
+                        None if profiles_area.width < 40 => "MISSING",
                         None => "NOT INSTALLED",
                         Some(ProcessPluginCandidateState::Available) => authorization,
                         Some(state) => state.as_str(),
@@ -155,7 +146,7 @@ impl ConnectionManagerApp {
             .block(Block::default().title(title).borders(Borders::ALL))
             .highlight_symbol("▶ ")
             .highlight_style(Style::default().bg(Color::Rgb(30, 50, 65)).fg(Color::White));
-        frame.render_stateful_widget(list, columns[0], &mut self.list_state);
+        frame.render_stateful_widget(list, profiles_area, &mut self.list_state);
 
         let details = if let Some(profile) = self.selected_profile() {
             let display = profile.display_name.as_deref().unwrap_or(&profile.name);
@@ -253,7 +244,7 @@ impl ConnectionManagerApp {
                     .title(" Profile details ")
                     .borders(Borders::ALL),
             ),
-            columns[1],
+            details_area,
         );
     }
 
