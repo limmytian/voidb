@@ -65,189 +65,177 @@ impl ConnectionManagerApp {
         }
         self.start_authorization_status_refresh();
 
-        if let Some(rx) = &self.test_rx {
-            match rx.try_recv() {
-                Ok(Ok(message)) => {
-                    self.set_status_success(message);
-                    self.test_rx = None;
+        match drain(&self.test_rx) {
+            Drained::Empty => {}
+            Drained::Value(Ok(message)) => {
+                self.set_status_success(message);
+                self.test_rx = None;
 
-                    changed = true;
-                }
-                Ok(Err(message)) => {
-                    self.set_status_error(format!("Test failed: {message}"));
-                    self.test_rx = None;
+                changed = true;
+            }
+            Drained::Value(Err(message)) => {
+                self.set_status_error(format!("Test failed: {message}"));
+                self.test_rx = None;
 
-                    changed = true;
-                }
-                Err(mpsc::TryRecvError::Disconnected) => {
-                    self.set_status_error("Profile test worker stopped".to_string());
-                    self.test_rx = None;
+                changed = true;
+            }
+            Drained::Disconnected => {
+                self.set_status_error("Profile test worker stopped".to_string());
+                self.test_rx = None;
 
-                    changed = true;
-                }
-                Err(mpsc::TryRecvError::Empty) => {}
+                changed = true;
             }
         }
-        if let Some(rx) = &self.capability_rx {
-            match rx.try_recv() {
-                Ok(Ok(payload)) => {
-                    self.capabilities = parse_capabilities(&payload);
+        match drain(&self.capability_rx) {
+            Drained::Empty => {}
+            Drained::Value(Ok(payload)) => {
+                self.capabilities = parse_capabilities(&payload);
 
-                    self.set_status_success(format!(
-                        "Loaded {} capabilities",
-                        self.capabilities.len()
-                    ));
-                    self.capability_rx = None;
+                self.set_status_success(format!("Loaded {} capabilities", self.capabilities.len()));
+                self.capability_rx = None;
 
-                    changed = true;
-                }
-                Ok(Err(message)) => {
-                    self.set_status_error(format!("Capability discovery failed: {message}"));
-                    self.capability_rx = None;
+                changed = true;
+            }
+            Drained::Value(Err(message)) => {
+                self.set_status_error(format!("Capability discovery failed: {message}"));
+                self.capability_rx = None;
 
-                    changed = true;
-                }
-                Err(mpsc::TryRecvError::Disconnected) => {
-                    self.set_status_error("Capability discovery worker stopped".to_string());
-                    self.capability_rx = None;
+                changed = true;
+            }
+            Drained::Disconnected => {
+                self.set_status_error("Capability discovery worker stopped".to_string());
+                self.capability_rx = None;
 
-                    changed = true;
-                }
-                Err(mpsc::TryRecvError::Empty) => {}
+                changed = true;
             }
         }
-        if let Some(rx) = &self.authorization_catalog_rx {
-            match rx.try_recv() {
-                Ok(Ok(payload)) => {
-                    let capabilities = parse_capabilities(&payload);
+        match drain(&self.authorization_catalog_rx) {
+            Drained::Empty => {}
+            Drained::Value(Ok(payload)) => {
+                let capabilities = parse_capabilities(&payload);
 
-                    if let Some(dialog) = &mut self.authorization_dialog {
-                        dialog.capabilities = capabilities;
-                        dialog.loading = false;
-                        dialog.message = if dialog.capabilities.is_empty() {
-                            Some("This profile has no agent-ready capabilities".into())
-                        } else {
-                            None
-                        };
-                    }
-                    self.authorization_catalog_rx = None;
-
-                    changed = true;
+                if let Some(dialog) = &mut self.authorization_dialog {
+                    dialog.capabilities = capabilities;
+                    dialog.loading = false;
+                    dialog.message = if dialog.capabilities.is_empty() {
+                        Some("This profile has no agent-ready capabilities".into())
+                    } else {
+                        None
+                    };
                 }
-                Ok(Err(message)) => {
-                    if let Some(dialog) = &mut self.authorization_dialog {
-                        dialog.loading = false;
-                        dialog.message = Some(format!("Capability catalog unavailable: {message}"));
-                    }
-                    self.authorization_catalog_rx = None;
+                self.authorization_catalog_rx = None;
 
-                    changed = true;
+                changed = true;
+            }
+            Drained::Value(Err(message)) => {
+                if let Some(dialog) = &mut self.authorization_dialog {
+                    dialog.loading = false;
+                    dialog.message = Some(format!("Capability catalog unavailable: {message}"));
                 }
-                Err(mpsc::TryRecvError::Disconnected) => {
-                    if let Some(dialog) = &mut self.authorization_dialog {
-                        dialog.loading = false;
-                        dialog.message = Some("Capability catalog worker stopped".into());
-                    }
-                    self.authorization_catalog_rx = None;
+                self.authorization_catalog_rx = None;
 
-                    changed = true;
+                changed = true;
+            }
+            Drained::Disconnected => {
+                if let Some(dialog) = &mut self.authorization_dialog {
+                    dialog.loading = false;
+                    dialog.message = Some("Capability catalog worker stopped".into());
                 }
-                Err(mpsc::TryRecvError::Empty) => {}
+                self.authorization_catalog_rx = None;
+
+                changed = true;
             }
         }
-        if let Some(rx) = &self.authorization_operation_rx {
-            match rx.try_recv() {
-                Ok(Ok(message)) => {
-                    self.set_status_success(message);
+        match drain(&self.authorization_operation_rx) {
+            Drained::Empty => {}
+            Drained::Value(Ok(message)) => {
+                self.set_status_success(message);
 
-                    self.authorization_operation_rx = None;
+                self.authorization_operation_rx = None;
 
-                    self.authorization_dialog = None;
+                self.authorization_dialog = None;
 
-                    self.jit_approval_dialog = None;
+                self.jit_approval_dialog = None;
 
-                    if self.mode != ScreenMode::AuthorizationInbox {
-                        self.mode = ScreenMode::Browse;
-                    }
-                    self.next_authorization_refresh = Instant::now();
-
-                    self.start_authorization_status_refresh();
-
-                    changed = true;
+                if self.mode != ScreenMode::AuthorizationInbox {
+                    self.mode = ScreenMode::Browse;
                 }
-                Ok(Err(message)) => {
-                    if let Some(dialog) = &mut self.authorization_dialog {
-                        dialog.review_action = None;
-                        dialog.message = Some(format!("Authorization operation failed: {message}"));
-                    }
-                    if let Some(dialog) = &mut self.jit_approval_dialog {
-                        dialog.confirm = false;
-                        dialog.message = Some(format!("Authorization decision failed: {message}"));
-                    }
-                    self.authorization_operation_rx = None;
+                self.next_authorization_refresh = Instant::now();
 
-                    changed = true;
-                }
-                Err(mpsc::TryRecvError::Disconnected) => {
-                    if let Some(dialog) = &mut self.authorization_dialog {
-                        dialog.review_action = None;
-                        dialog.message = Some("Authorization operation worker stopped".into());
-                    }
-                    if let Some(dialog) = &mut self.jit_approval_dialog {
-                        dialog.confirm = false;
-                        dialog.message = Some("Authorization decision worker stopped".into());
-                    }
-                    self.authorization_operation_rx = None;
+                self.start_authorization_status_refresh();
 
-                    changed = true;
+                changed = true;
+            }
+            Drained::Value(Err(message)) => {
+                if let Some(dialog) = &mut self.authorization_dialog {
+                    dialog.review_action = None;
+                    dialog.message = Some(format!("Authorization operation failed: {message}"));
                 }
-                Err(mpsc::TryRecvError::Empty) => {}
+                if let Some(dialog) = &mut self.jit_approval_dialog {
+                    dialog.confirm = false;
+                    dialog.message = Some(format!("Authorization decision failed: {message}"));
+                }
+                self.authorization_operation_rx = None;
+
+                changed = true;
+            }
+            Drained::Disconnected => {
+                if let Some(dialog) = &mut self.authorization_dialog {
+                    dialog.review_action = None;
+                    dialog.message = Some("Authorization operation worker stopped".into());
+                }
+                if let Some(dialog) = &mut self.jit_approval_dialog {
+                    dialog.confirm = false;
+                    dialog.message = Some("Authorization decision worker stopped".into());
+                }
+                self.authorization_operation_rx = None;
+
+                changed = true;
             }
         }
-        if let Some(rx) = &self.authorization_status_rx {
-            match rx.try_recv() {
-                Ok(Ok(payload)) => {
-                    self.authorization_statuses = parse_agent_statuses(&payload);
+        match drain(&self.authorization_status_rx) {
+            Drained::Empty => {}
+            Drained::Value(Ok(snapshot)) => {
+                self.authorization_statuses = snapshot.statuses;
 
-                    self.authorization_supported_plugins = parse_agent_supported_plugins(&payload);
+                self.authorization_supported_plugins = snapshot.supported_plugins;
 
-                    self.authorization_capability_catalog = parse_capabilities(&payload)
-                        .into_iter()
-                        .map(|capability| (capability.id.clone(), capability))
-                        .collect();
+                self.authorization_capability_catalog = snapshot
+                    .capabilities
+                    .into_iter()
+                    .map(|capability| (capability.id.clone(), capability))
+                    .collect();
 
-                    self.pending_authorization_requests = parse_pending_authorizations(&payload);
+                self.pending_authorization_requests = snapshot.pending_requests;
 
-                    self.grant_revisions = parse_grant_revisions(&payload);
+                self.grant_revisions = snapshot.grant_revisions;
 
-                    self.authorization_observed_at = parse_authorization_observed_at(&payload);
+                self.authorization_observed_at = snapshot.observed_at;
 
-                    self.authorization_snapshot_error = None;
+                self.authorization_snapshot_error = None;
 
-                    self.authorization_inbox_selected = self
-                        .authorization_inbox_selected
-                        .min(self.pending_authorization_requests.len().saturating_sub(1));
+                self.authorization_inbox_selected = self
+                    .authorization_inbox_selected
+                    .min(self.pending_authorization_requests.len().saturating_sub(1));
 
-                    self.authorization_status_rx = None;
+                self.authorization_status_rx = None;
 
-                    changed = true;
-                }
-                Ok(Err(message)) => {
-                    self.authorization_snapshot_error = Some(message);
+                changed = true;
+            }
+            Drained::Value(Err(message)) => {
+                self.authorization_snapshot_error = Some(message);
 
-                    self.authorization_status_rx = None;
+                self.authorization_status_rx = None;
 
-                    changed = true;
-                }
-                Err(mpsc::TryRecvError::Disconnected) => {
-                    self.authorization_snapshot_error =
-                        Some("authorization snapshot worker stopped".into());
+                changed = true;
+            }
+            Drained::Disconnected => {
+                self.authorization_snapshot_error =
+                    Some("authorization snapshot worker stopped".into());
 
-                    self.authorization_status_rx = None;
+                self.authorization_status_rx = None;
 
-                    changed = true;
-                }
-                Err(mpsc::TryRecvError::Empty) => {}
+                changed = true;
             }
         }
         changed
@@ -568,7 +556,7 @@ fn run_agent_list() -> std::result::Result<String, String> {
     String::from_utf8(output.stdout).map_err(|error| error.to_string())
 }
 
-pub(super) fn run_authorization_snapshot() -> std::result::Result<String, String> {
+pub(super) fn run_authorization_snapshot() -> std::result::Result<AuthorizationSnapshot, String> {
     let grants: Value = serde_json::from_str(&run_agent_list()?)
         .map_err(|_| "voidb-cli agent list returned invalid JSON".to_string())?;
 
@@ -587,7 +575,8 @@ pub(super) fn run_authorization_snapshot() -> std::result::Result<String, String
 
     let inbox: Value = serde_json::from_slice(&inbox_output.stdout)
         .map_err(|_| String::from_utf8_lossy(&inbox_output.stderr).into_owned())?;
-    Ok(json!({ "agent": grants, "catalog": catalog, "inbox": inbox }).to_string())
+    let payload = json!({ "agent": grants, "catalog": catalog, "inbox": inbox }).to_string();
+    Ok(build_authorization_snapshot(&payload))
 }
 
 pub(super) fn run_jit_authorization_decision(
@@ -681,6 +670,48 @@ fn parse_jit_decision_output(
             .and_then(Value::as_str)
             .unwrap_or("voidb-cli rejected the authorization decision")
             .to_string())
+    }
+}
+
+/// Parsed authorization state produced by one snapshot payload parse on the
+/// worker thread, so the UI thread never re-parses the same JSON.
+pub(super) struct AuthorizationSnapshot {
+    pub(super) statuses: HashMap<(String, String), AuthorizationStatusView>,
+    pub(super) supported_plugins: BTreeSet<String>,
+    pub(super) capabilities: Vec<CapabilityItem>,
+    pub(super) pending_requests: Vec<PendingAuthorizationView>,
+    pub(super) grant_revisions: Vec<GrantRevisionView>,
+    pub(super) observed_at: Option<String>,
+}
+
+/// Parse the snapshot payload exactly once.
+pub(super) fn build_authorization_snapshot(payload: &str) -> AuthorizationSnapshot {
+    AuthorizationSnapshot {
+        statuses: parse_agent_statuses(payload),
+        supported_plugins: parse_agent_supported_plugins(payload),
+        capabilities: parse_capabilities(payload),
+        pending_requests: parse_pending_authorizations(payload),
+        grant_revisions: parse_grant_revisions(payload),
+        observed_at: parse_authorization_observed_at(payload),
+    }
+}
+
+/// Generic drain over an optional worker channel: collapses the repeated
+/// try_recv Empty/Disconnected arms that every poll block used to re-write.
+pub(super) enum Drained<T> {
+    Value(T),
+    Disconnected,
+    Empty,
+}
+
+pub(super) fn drain<T>(rx: &Option<mpsc::Receiver<T>>) -> Drained<T> {
+    let Some(rx) = rx else {
+        return Drained::Empty;
+    };
+    match rx.try_recv() {
+        Ok(value) => Drained::Value(value),
+        Err(mpsc::TryRecvError::Empty) => Drained::Empty,
+        Err(mpsc::TryRecvError::Disconnected) => Drained::Disconnected,
     }
 }
 

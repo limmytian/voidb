@@ -333,13 +333,11 @@ impl ProfileEditor {
                 Some("Plugin type is immutable; create a new profile to change it".into());
             return;
         }
-        self.plugin_index = if forward {
-            (self.plugin_index + 1) % PLUGINS.len()
-        } else if self.plugin_index == 0 {
-            PLUGINS.len() - 1
-        } else {
-            self.plugin_index - 1
-        };
+        self.plugin_index = stepped_selection(
+            self.plugin_index,
+            PLUGINS.len(),
+            if forward { 1 } else { -1 },
+        );
         if self.existing_profile_id.is_none() {
             self.config = default_plugin_config(self.plugin_id());
             self.schema = profile_form_schema(self.plugin_id());
@@ -545,13 +543,7 @@ impl ProfileEditor {
                     .iter()
                     .position(|option| option.matches_config(&field.path, &self.config))
                     .unwrap_or(0);
-                let next = if forward {
-                    (current + 1) % options.len()
-                } else if current == 0 {
-                    options.len() - 1
-                } else {
-                    current - 1
-                };
+                let next = stepped_selection(current, options.len(), if forward { 1 } else { -1 });
                 set_json_pointer(&mut self.config, &field.path, options[next].stored_value());
                 self.active_field = self.active_field.min(self.field_count().saturating_sub(1));
                 self.message = None;
@@ -869,13 +861,7 @@ impl AuthorizationDialog {
             .iter()
             .position(|preset| *preset == self.preset)
             .unwrap_or(0);
-        let next = if forward {
-            (current + 1) % presets.len()
-        } else if current == 0 {
-            presets.len() - 1
-        } else {
-            current - 1
-        };
+        let next = stepped_selection(current, presets.len(), if forward { 1 } else { -1 });
         self.preset = presets[next];
         self.destructive_acknowledged = false;
         self.review_action = None;
@@ -996,13 +982,7 @@ impl JitDecision {
             vec![Self::Once, Self::Bounded, Self::Deny]
         };
         let index = choices.iter().position(|value| *value == self).unwrap_or(0);
-        let next = if forward {
-            (index + 1) % choices.len()
-        } else if index == 0 {
-            choices.len() - 1
-        } else {
-            index - 1
-        };
+        let next = stepped_selection(index, choices.len(), if forward { 1 } else { -1 });
         choices[next]
     }
 }
@@ -1080,7 +1060,9 @@ pub struct ConnectionManagerApp {
     authorization_dialog: Option<AuthorizationDialog>,
     authorization_catalog_rx: Option<BackgroundResult>,
     authorization_operation_rx: Option<BackgroundResult>,
-    authorization_status_rx: Option<BackgroundResult>,
+    authorization_status_rx: Option<
+        std::sync::mpsc::Receiver<std::result::Result<background::AuthorizationSnapshot, String>>,
+    >,
     authorization_statuses: HashMap<(String, String), AuthorizationStatusView>,
     authorization_supported_plugins: BTreeSet<String>,
     authorization_capability_catalog: HashMap<String, CapabilityItem>,
@@ -1166,7 +1148,7 @@ impl ConnectionManagerApp {
             should_quit: false,
         };
         app.refresh_profiles()?;
-        if app.config.requires_master_password() && app.active_master_password.is_none() {
+        if app.credentials_locked() {
             app.set_status("Profile credentials are locked; press m to unlock");
         } else if app.profiles.is_empty() {
             app.set_status("No native profiles yet; press n to create one");
@@ -1293,6 +1275,12 @@ impl ConnectionManagerApp {
     /// Move the selection one step, wrapping around both ends.
     fn move_selection(&mut self, down: bool) {
         self.move_selection_by(if down { 1 } else { -1 });
+    }
+
+    /// Whether profile credentials need an unlock before credential-backed
+    /// operations (editing, testing, authorizing) may proceed.
+    fn credentials_locked(&self) -> bool {
+        self.config.requires_master_password() && self.active_master_password.is_none()
     }
 
     /// Replace the status line with a neutral informational message.

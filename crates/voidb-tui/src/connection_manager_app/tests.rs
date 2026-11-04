@@ -3,8 +3,9 @@ use ratatui::backend::TestBackend;
 
 use super::actions::create_profile_editor;
 use super::background::{
-    AgentAuthorizeRequest, agent_authorize_args, can_install_missing_plugin, capability_list_args,
-    parse_agent_statuses, parse_agent_supported_plugins, parse_capabilities, parse_grant_revisions,
+    AgentAuthorizeRequest, agent_authorize_args, build_authorization_snapshot,
+    can_install_missing_plugin, capability_list_args, parse_agent_statuses,
+    parse_agent_supported_plugins, parse_capabilities, parse_grant_revisions,
     parse_pending_authorizations, parse_plugin_install_response,
 };
 use super::events::paste_into_editor;
@@ -564,6 +565,46 @@ fn authorization_snapshot_classifies_supported_and_unsupported_plugins() {
     assert!(supported.contains("ssh"));
     assert!(supported.contains("sqlite"));
     assert!(!supported.contains("sync"));
+}
+
+#[test]
+fn snapshot_payload_parses_once_into_all_views() {
+    let payload = json!({
+        "agent": { "data": { "grants": [] } },
+        "catalog": {
+            "data": {
+                "capabilities": [
+                    { "plugin_id": "ssh", "id": "exec" }
+                ]
+            }
+        },
+        "inbox": { "data": {
+            "observed_at": "2026-11-04T00:00:00Z",
+            "requests": [{
+                "id": "auth-request:00000000-0000-4000-8000-000000000001",
+                "principal_fingerprint": "agent-principal:abc",
+                "profile_id": "profile:ssh",
+                "plugin_id": "ssh",
+                "scope": { "kind": "capability", "capability_id": "ssh.exec" },
+                "risk": "low",
+                "purpose": "triage",
+                "status": "pending",
+                "created_at": "2026-11-04T00:00:00Z",
+                "expires_at": "2026-11-04T00:05:00Z"
+            }]
+        } }
+    })
+    .to_string();
+    let snapshot = build_authorization_snapshot(&payload);
+    assert!(snapshot.supported_plugins.contains("ssh"));
+    assert_eq!(snapshot.capabilities.len(), 1);
+    assert_eq!(snapshot.pending_requests.len(), 1);
+    assert_eq!(
+        snapshot.observed_at.as_deref(),
+        Some("2026-11-04T00:00:00Z")
+    );
+    assert!(snapshot.statuses.is_empty());
+    assert!(snapshot.grant_revisions.is_empty());
 }
 
 #[test]

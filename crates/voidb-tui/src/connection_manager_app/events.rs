@@ -489,10 +489,12 @@ impl ConnectionManagerApp {
                     dialog.decision = dialog.decision.cycle(true, dialog.grant_id.is_some())
                 }
                 KeyCode::Char('t') => {
-                    dialog.ttl_index = (dialog.ttl_index + 1) % AUTHORIZATION_TTL_OPTIONS.len()
+                    dialog.ttl_index =
+                        stepped_selection(dialog.ttl_index, AUTHORIZATION_TTL_OPTIONS.len(), 1)
                 }
                 KeyCode::Char('u') => {
-                    dialog.uses_index = (dialog.uses_index + 1) % AUTHORIZATION_USE_OPTIONS.len()
+                    dialog.uses_index =
+                        stepped_selection(dialog.uses_index, AUTHORIZATION_USE_OPTIONS.len(), 1)
                 }
                 KeyCode::Char('c')
                     if !matches!(dialog.decision, JitDecision::Deny)
@@ -504,6 +506,9 @@ impl ConnectionManagerApp {
                     dialog.editing_constraints = true;
                 }
                 KeyCode::Enter => {
+                    // Inline check: this arm holds a mutable borrow of the
+                    // JIT dialog, so the credentials_locked helper (which
+                    // takes &self) is not callable here.
                     if self.config.requires_master_password()
                         && self.active_master_password.is_none()
                     {

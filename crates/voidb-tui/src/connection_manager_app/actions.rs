@@ -49,7 +49,7 @@ impl ConnectionManagerApp {
             return;
         };
 
-        if self.config.requires_master_password() && self.active_master_password.is_none() {
+        if self.credentials_locked() {
             self.set_status(
                 "Press m to unlock credentials before authorizing an agent".to_string(),
             );
@@ -185,7 +185,7 @@ impl ConnectionManagerApp {
             return;
         };
 
-        if self.config.requires_master_password() && self.active_master_password.is_none() {
+        if self.credentials_locked() {
             self.set_status("Press m to unlock profile credentials before editing".to_string());
             return;
         }
@@ -214,7 +214,7 @@ impl ConnectionManagerApp {
     }
 
     pub(super) fn save_editor(&mut self) {
-        if self.config.requires_master_password() && self.active_master_password.is_none() {
+        if self.credentials_locked() {
             if let Some(editor) = &mut self.editor {
                 editor.message = Some("Unlock credentials with m before saving".to_string());
             }
@@ -440,7 +440,7 @@ impl ConnectionManagerApp {
             return;
         };
 
-        if self.config.requires_master_password() && self.active_master_password.is_none() {
+        if self.credentials_locked() {
             self.set_status("Press m to unlock profile credentials before testing".to_string());
             return;
         }
