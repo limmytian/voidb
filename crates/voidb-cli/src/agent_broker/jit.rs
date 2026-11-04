@@ -984,6 +984,45 @@ pub(super) async fn review_jit_request(request_id: &str) -> anyhow::Result<i32> 
     println!("Expires:  {}", request.expires_at.to_rfc3339());
     println!("--------------------------------------------------");
 
+    // Verify the master password before any decision is collected: a wrong
+    // password must not throw away the whole decision flow.
+    let mut password = rpassword::prompt_password("VoidB master password: ")?;
+    if password.is_empty() {
+        return print_jit_error(
+            JIT_EXIT_INVALID,
+            "authentication_failed",
+            "master password is required",
+            None,
+        );
+    }
+    let verified = AppConfig::load_with_password(Some(&password));
+    if verified.is_err() {
+        password.clear();
+        return print_jit_error(
+            JIT_EXIT_INVALID,
+            "authentication_failed",
+            "master password verification failed",
+            None,
+        );
+    }
+    let profile_store = LocalProfileStore::default_store()?;
+    let profile = resolve_profile(
+        &profile_store.load_profiles()?,
+        &request.profile_id,
+        &request.plugin_id,
+    );
+    let credentials_verified =
+        profile.and_then(|profile| verify_profile_credentials(&profile_store, &profile, &password));
+    if credentials_verified.is_err() {
+        password.clear();
+        return print_jit_error(
+            JIT_EXIT_INVALID,
+            "authentication_failed",
+            "master password or target profile credential verification failed",
+            None,
+        );
+    }
+
     let action_str = prompt_tty_line(
         "Decision [b=time-bounded (recommended, Enter), o=once, a=add-to-grant, d=deny]: ",
     )?;
@@ -1046,43 +1085,6 @@ pub(super) async fn review_jit_request(request_id: &str) -> anyhow::Result<i32> 
         .ok_or_else(|| anyhow!("capability authorization declaration is no longer available"))?;
     if let Err(error) = validate_declared_jit_scope(definition, &approved_scope) {
         return print_jit_error(JIT_EXIT_INVALID, "invalid_scope", &error.to_string(), None);
-    }
-
-    let mut password = rpassword::prompt_password("VoidB master password: ")?;
-    if password.is_empty() {
-        return print_jit_error(
-            JIT_EXIT_INVALID,
-            "authentication_failed",
-            "master password is required",
-            None,
-        );
-    }
-    let verified = AppConfig::load_with_password(Some(&password));
-    if verified.is_err() {
-        password.clear();
-        return print_jit_error(
-            JIT_EXIT_INVALID,
-            "authentication_failed",
-            "master password verification failed",
-            None,
-        );
-    }
-    let profile_store = LocalProfileStore::default_store()?;
-    let profile = resolve_profile(
-        &profile_store.load_profiles()?,
-        &request.profile_id,
-        &request.plugin_id,
-    );
-    let credentials_verified =
-        profile.and_then(|profile| verify_profile_credentials(&profile_store, &profile, &password));
-    if credentials_verified.is_err() {
-        password.clear();
-        return print_jit_error(
-            JIT_EXIT_INVALID,
-            "authentication_failed",
-            "master password or target profile credential verification failed",
-            None,
-        );
     }
 
     let revision = match store.approve(request_id, approved_scope, amendment, Utc::now()) {
