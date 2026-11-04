@@ -975,10 +975,6 @@ pub(super) async fn review_jit_request(request_id: &str) -> anyhow::Result<i32> 
     println!("Risk:     {}", risk_label);
     println!("Purpose:  {}", sanitize_terminal_text(&request.purpose));
     println!("Scope:    {}", scope_summary);
-    println!(
-        "Raw scope:\n{}",
-        serde_json::to_string_pretty(&request.scope)?
-    );
     println!("Expires:  {}", request.expires_at.to_rfc3339());
     println!("--------------------------------------------------");
 

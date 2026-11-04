@@ -1,8 +1,9 @@
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
-use ratatui::text::{Line, Text};
+use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap};
+use serde_json::Value;
 
 use super::centered_rect;
 use crate::connection_manager_app::{
@@ -238,7 +239,11 @@ impl ConnectionManagerApp {
                     } else {
                         "[ ]"
                     };
-                    ListItem::new(format!("{checked} {} [{}]", capability.id, capability.risk))
+                    ListItem::new(Line::from(vec![
+                        Span::raw(format!("{checked} {} [", capability.id)),
+                        Span::styled(capability.risk.as_str(), risk_style(&capability.risk)),
+                        Span::raw("]"),
+                    ]))
                 })
                 .collect()
         };
@@ -414,7 +419,7 @@ impl ConnectionManagerApp {
                     "Created: {} · Expires: {}\nRequested scope: {}\nImmutable revisions: {}",
                     request.created_at,
                     request.expires_at,
-                    serde_json::to_string(&request.scope).unwrap_or_else(|_| "invalid".into()),
+                    describe_scope(&request.scope),
                     if revisions.is_empty() {
                         "none".into()
                     } else {
@@ -508,8 +513,7 @@ impl ConnectionManagerApp {
             dialog.request.capability_id(),
             dialog.request.risk,
             sanitize_display_text(&dialog.request.purpose),
-            serde_json::to_string_pretty(&dialog.request.scope)
-                .unwrap_or_else(|_| "invalid".into()),
+            describe_scope(&dialog.request.scope),
             schema,
             dialog.decision.label(),
             decision_detail,
@@ -517,16 +521,19 @@ impl ConnectionManagerApp {
             confirm,
             dialog.message.as_deref().unwrap_or_default(),
         );
+        let border = if dialog.confirm {
+            Color::Yellow
+        } else if dialog.decision == JitDecision::Deny {
+            Color::Red
+        } else {
+            Color::Cyan
+        };
         frame.render_widget(
             Paragraph::new(content).wrap(Wrap { trim: false }).block(
                 Block::default()
                     .title(" Core-owned JIT approval review ")
                     .borders(Borders::ALL)
-                    .border_style(Style::default().fg(if dialog.confirm {
-                        Color::Yellow
-                    } else {
-                        Color::Cyan
-                    })),
+                    .border_style(Style::default().fg(border)),
             ),
             popup,
         );
@@ -539,4 +546,45 @@ fn sanitize_display_text(value: &str) -> String {
         .filter(|character| !character.is_control())
         .take(240)
         .collect()
+}
+
+/// Color grade a capability risk: destructive red, mutating amber, rest dim.
+fn risk_style(risk: &str) -> Style {
+    match risk {
+        "destructive" | "external_side_effect" => Style::default().fg(Color::Red),
+        "mutating" => Style::default().fg(Color::Yellow),
+        _ => Style::default().fg(Color::DarkGray),
+    }
+}
+
+/// One-line human summary of a request scope value; replaces raw JSON dumps.
+fn describe_scope(scope: &Value) -> String {
+    let capability = scope
+        .get("capability_id")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    match scope.get("kind").and_then(Value::as_str) {
+        Some("constrained") => {
+            let constraints = scope
+                .get("constraints")
+                .and_then(Value::as_object)
+                .map(|entries| {
+                    entries
+                        .keys()
+                        .map(String::as_str)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                })
+                .unwrap_or_default();
+            format!("Capability '{capability}' with constraints: {constraints}")
+        }
+        Some("exact_invocation") => {
+            let fingerprint = scope
+                .get("invocation_fingerprint")
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            format!("Exact invocation of '{capability}' (fingerprint {fingerprint}…)")
+        }
+        _ => format!("Capability '{capability}' (all invocations allowed)"),
+    }
 }
