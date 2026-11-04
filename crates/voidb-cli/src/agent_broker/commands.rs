@@ -112,12 +112,16 @@ async fn dispatch_agent(args: Vec<String>) -> anyhow::Result<Option<i32>> {
         .subcommand()
         .expect("agent command requires a subcommand");
     let exit_code = match matches.subcommand() {
-        Some(("authorize", sub_matches)) => authorize(sub_matches).await?,
-        Some(("authorize-batch", sub_matches)) => authorize_batch(sub_matches).await?,
-        Some(("catalog", sub_matches)) => list_authorization_catalog(sub_matches)?,
-        Some(("list", sub_matches)) => list_grants(sub_matches).await?,
-        Some(("renew", sub_matches)) => renew_grant(sub_matches).await?,
-        Some(("revoke", sub_matches)) => revoke(sub_matches).await?,
+        Some(("authorize", sub_matches)) => management_command_result(authorize(sub_matches).await),
+        Some(("authorize-batch", sub_matches)) => {
+            management_command_result(authorize_batch(sub_matches).await)
+        }
+        Some(("catalog", sub_matches)) => {
+            management_command_result(list_authorization_catalog(sub_matches))
+        }
+        Some(("list", sub_matches)) => management_command_result(list_grants(sub_matches).await),
+        Some(("renew", sub_matches)) => management_command_result(renew_grant(sub_matches).await),
+        Some(("revoke", sub_matches)) => management_command_result(revoke(sub_matches).await),
         Some(("exec", sub_matches)) => exec_capability(sub_matches).await?,
         Some(("run", sub_matches)) => run_granted(sub_matches).await?,
         Some(("session", sub_matches)) => run_session_command(sub_matches).await?,
@@ -125,6 +129,28 @@ async fn dispatch_agent(args: Vec<String>) -> anyhow::Result<Option<i32>> {
         _ => unreachable!("clap enforces agent subcommands"),
     };
     Ok(Some(exit_code))
+}
+
+/// Human-facing management commands report failures through the same
+/// structured JSON envelope the agent-facing commands use, instead of plain
+/// anyhow text, so scripts and humans get one failure shape.
+fn management_command_result(result: anyhow::Result<i32>) -> i32 {
+    match result {
+        Ok(code) => code,
+        Err(error) => {
+            println!(
+                "{}",
+                serde_json::json!({
+                    "ok": false,
+                    "error": {
+                        "code": "command_failed",
+                        "message": error.to_string(),
+                    }
+                })
+            );
+            1
+        }
+    }
 }
 
 pub async fn take_broker_child_password() -> anyhow::Result<Option<String>> {
@@ -917,7 +943,7 @@ pub(super) async fn authorize(matches: &ArgMatches) -> anyhow::Result<i32> {
     let existing = grants_for_profile(&load_grants(false)?, &profile.id, plugin_id);
     if !existing.is_empty() && !matches.get_flag("replace") {
         bail!(
-            "profile already has an agent grant; inspect it or pass --replace to close its sessions and replace it"
+            "profile already has an agent grant; inspect it or pass --replace to close its sessions and replace it. Next step: run `vb grants` to review the active grant, or rerun with --replace."
         );
     }
     let now = Utc::now();
