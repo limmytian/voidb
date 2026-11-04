@@ -175,7 +175,11 @@ fn plugin_list_hides_invalid_manifests_unless_requested() {
     let env = [("VOIDB_PLUGIN_PATH", root.0.to_str().expect("utf8 path"))];
 
     let default_run = run_cli(&["plugin", "list"], &env);
-    assert!(default_run.status.success(), "stderr: {}", stderr(&default_run));
+    assert!(
+        default_run.status.success(),
+        "stderr: {}",
+        stderr(&default_run)
+    );
     let default_out = stdout(&default_run);
     assert!(default_out.contains("valid-fixture"), "got: {default_out}");
     assert!(

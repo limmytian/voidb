@@ -426,7 +426,6 @@ fn print_protocol_error(
     Err(VoidbError::CliExit { code })
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

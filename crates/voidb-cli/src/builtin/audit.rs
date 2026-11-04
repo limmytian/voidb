@@ -2,13 +2,13 @@
 
 use std::collections::BTreeMap;
 
+use crate::builtin::json_output::print_json;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use clap::{Arg, ArgMatches, Command};
 use serde::Serialize;
 use serde_json::Value;
 use voidb_core::plugin::cli::{CliContext, CliPlugin};
-use crate::builtin::json_output::print_json;
 use voidb_core::{
     ActorType, AuditEvent, AuditQuery, AuditQueryPage, AuditQueryResult, AuditSourceFile,
     CapabilityErrorCategory, LocalAuditStore, PolicyDecisionOutcome, RedactionStatus, VoidbError,
@@ -416,7 +416,6 @@ fn success_envelope<T: Serialize>(data: T) -> JsonSuccessEnvelope<T> {
     }
 }
 
-
 #[derive(Debug, Serialize)]
 struct JsonSuccessEnvelope<T> {
     ok: bool,
@@ -549,16 +548,17 @@ fn summarize_events(events: &[AuditEvent]) -> AuditSummary {
             durations.push(duration_ms);
         }
         if let Some(error) = &event.error {
-            increment(&mut error_category_counts, stable_json_label(error.category));
+            increment(
+                &mut error_category_counts,
+                stable_json_label(error.category),
+            );
             increment(&mut error_code_counts, error.code.clone());
         }
         if let Some(outcome) = audit_policy_outcome(event) {
             increment(&mut policy_outcome_counts, outcome.to_string());
         }
         for category in security_signal_categories(event) {
-            let entry = security_signals
-                .entry(category.to_string())
-                .or_default();
+            let entry = security_signals.entry(category.to_string()).or_default();
             entry.count += 1;
             if entry.sample_event_ids.len() < 5 {
                 entry.sample_event_ids.push(event.id.clone());
@@ -742,8 +742,7 @@ mod tests {
     use super::*;
     use serde_json::json;
     use voidb_core::{
-        AuditEventStatus, AuditOperation, CapabilityError, CapabilityErrorCategory,
-        RedactionStatus,
+        AuditEventStatus, AuditOperation, CapabilityError, CapabilityErrorCategory, RedactionStatus,
     };
 
     #[test]
@@ -855,8 +854,7 @@ mod tests {
 
     #[test]
     fn support_bundle_includes_redacted_contract_and_summary() {
-        let mut event =
-            AuditEvent::new(AuditOperation::CapabilityInvoke, AuditEventStatus::Failed);
+        let mut event = AuditEvent::new(AuditOperation::CapabilityInvoke, AuditEventStatus::Failed);
         event.id = "audit-support-1".into();
         event.plugin_id = Some("postgres".into());
         event.capability_id = Some("query".into());
@@ -909,18 +907,22 @@ mod tests {
             "capability_invoke"
         );
         assert_eq!(value["bundle"]["redaction"]["status"], "applied");
-        assert!(value["bundle"]["redaction"]["excluded"]
-            .as_array()
-            .expect("excluded list")
-            .iter()
-            .any(|entry| entry == "plaintext credentials"));
+        assert!(
+            value["bundle"]["redaction"]["excluded"]
+                .as_array()
+                .expect("excluded list")
+                .iter()
+                .any(|entry| entry == "plaintext credentials")
+        );
         assert!(!serialized.contains("super-secret"));
     }
 
     #[test]
     fn summary_counts_latency_errors_policy_and_security_signals() {
-        let mut success =
-            AuditEvent::new(AuditOperation::CapabilityInvoke, AuditEventStatus::Succeeded);
+        let mut success = AuditEvent::new(
+            AuditOperation::CapabilityInvoke,
+            AuditEventStatus::Succeeded,
+        );
         success.id = "audit-success".into();
         success.plugin_id = Some("sqlite".into());
         success.capability_id = Some("query".into());
@@ -950,8 +952,10 @@ mod tests {
             redaction: RedactionStatus::NotRequired,
         });
 
-        let mut redaction_failure =
-            AuditEvent::new(AuditOperation::CredentialSyncUnavailable, AuditEventStatus::Failed);
+        let mut redaction_failure = AuditEvent::new(
+            AuditOperation::CredentialSyncUnavailable,
+            AuditEventStatus::Failed,
+        );
         redaction_failure.id = "audit-redaction".into();
         redaction_failure.redaction = RedactionStatus::FailedClosed;
         redaction_failure.error = Some(CapabilityError {
@@ -971,19 +975,13 @@ mod tests {
         assert_eq!(summary.latency.min_duration_ms, Some(10));
         assert_eq!(summary.latency.max_duration_ms, Some(30));
         assert_eq!(summary.latency.average_duration_ms, Some(20));
-        assert_eq!(
-            count_for(&summary.error_category_counts, "policy"),
-            Some(1)
-        );
+        assert_eq!(count_for(&summary.error_category_counts, "policy"), Some(1));
         assert_eq!(
             count_for(&summary.error_category_counts, "credential"),
             Some(1)
         );
         assert_eq!(
-            count_for(
-                &summary.policy_outcome_counts,
-                "requires_acknowledgement"
-            ),
+            count_for(&summary.policy_outcome_counts, "requires_acknowledgement"),
             Some(1)
         );
         assert_eq!(

@@ -426,12 +426,7 @@ async fn data_search_live_sessions_pass_shared_conformance() {
             .or_default() += 1;
     }
 
-    assert_eq!(
-        family_counts,
-        BTreeMap::from([
-            ("redis".into(), 3),
-        ])
-    );
+    assert_eq!(family_counts, BTreeMap::from([("redis".into(), 3),]));
 }
 
 #[test]

@@ -1,11 +1,11 @@
 //! Built-in credential management CLI.
 
+use crate::builtin::json_output::print_json;
 use async_trait::async_trait;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use serde::Serialize;
 use serde_json::json;
 use voidb_core::plugin::cli::{CliContext, CliPlugin};
-use crate::builtin::json_output::print_json;
 use voidb_core::{
     AppConfig, CapabilityErrorCategory, ConfigReencryptResult, CredentialProtectionMode,
     LocalProfileStore, MasterPasswordSessionState, VOIDB_MASTER_PASSWORD_ENV, VoidbError,
@@ -268,7 +268,6 @@ fn success_envelope<T: Serialize>(data: T) -> JsonSuccessEnvelope<T> {
         warnings: Vec::new(),
     }
 }
-
 
 #[derive(Debug, Serialize)]
 struct JsonSuccessEnvelope<T> {

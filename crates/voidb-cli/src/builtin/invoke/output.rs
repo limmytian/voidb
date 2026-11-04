@@ -59,7 +59,6 @@ pub(super) fn success_envelope<T: Serialize>(data: T) -> JsonSuccessEnvelope<T> 
     }
 }
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum InvokeOutputFormat {
     Json,

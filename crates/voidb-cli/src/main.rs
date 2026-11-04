@@ -24,7 +24,6 @@ fn run_development_fixture_in_child(test_name: &str) -> bool {
     true
 }
 
-
 use clap::{ArgMatches, Command};
 use voidb_core::config::AppConfig;
 use voidb_core::plugin::cli::{CliContext, CliPluginManager};
@@ -78,6 +77,15 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
+    // Reaching clap with `agent` means the pre-clap broker was bypassed; the
+    // registration above exists for help visibility only, so print the real
+    // agent help instead of running config loading for a foreign tree.
+    if let Some(("agent", _)) = matches.subcommand() {
+        let mut agent_app = agent_broker::agent_command();
+        let _ = agent_app.print_help();
+        return Ok(());
+    }
+
     // Broker children receive the password through an anonymous pipe, never
     // through argv, grant files, socket messages, or their environment.
     let broker_password = agent_broker::take_broker_child_password().await?;
@@ -107,7 +115,10 @@ fn dispatch_external_plugin(
     let binary = candidate.resolved_runtime_command.as_ref().ok_or_else(|| {
         std::io::Error::new(
             std::io::ErrorKind::NotFound,
-            format!("No resolved executable binary found for plugin '{}'", candidate.id),
+            format!(
+                "No resolved executable binary found for plugin '{}'",
+                candidate.id
+            ),
         )
     })?;
 
@@ -138,7 +149,7 @@ fn build_cli_app(
     cli_manager: &CliPluginManager,
     discovery: &voidb_core::process_plugin::ProcessPluginDiscovery,
 ) -> Command {
-    let mut app = Command::new("voidb")
+    let mut app = Command::new("voidb-cli")
         .about("VoidB - Terminal Database Management Tool")
         .version(env!("CARGO_PKG_VERSION"))
         .subcommand_required(true)
@@ -147,6 +158,10 @@ fn build_cli_app(
     for cmd in cli_manager.build_commands() {
         app = app.subcommand(cmd);
     }
+
+    // The agent tree is intercepted pre-clap by the agent broker; it is
+    // registered here only so `--help` and shell completions list it.
+    app = app.subcommand(agent_broker::agent_subcommand());
 
     app = app.subcommand(
         Command::new("completions")
@@ -395,22 +410,24 @@ mod tests {
                 trust_level: voidb_core::process_plugin::ProcessPluginTrustLevel::UserInstalled,
                 precedence: 100,
             };
-            discovery.candidates.push(voidb_core::process_plugin::ProcessPluginCandidate {
-                id: "ssh".to_string(),
-                name: Some("SSH".to_string()),
-                version: Some("0.3.2".to_string()),
-                protocol_version: Some("1".to_string()),
-                manifest_path: PathBuf::from("/mock/plugin.toml"),
-                source,
-                state: voidb_core::process_plugin::ProcessPluginCandidateState::Available,
-                transport: Some("stdio-jsonrpc".to_string()),
-                capability_count: 0,
-                tui: true,
-                diagnostics: Vec::new(),
-                manifest: Some(manifest),
-                resolved_runtime_command: Some(PathBuf::from("/mock/bin/ssh")),
-                resolved_schema_paths: BTreeMap::new(),
-            });
+            discovery
+                .candidates
+                .push(voidb_core::process_plugin::ProcessPluginCandidate {
+                    id: "ssh".to_string(),
+                    name: Some("SSH".to_string()),
+                    version: Some("0.3.2".to_string()),
+                    protocol_version: Some("1".to_string()),
+                    manifest_path: PathBuf::from("/mock/plugin.toml"),
+                    source,
+                    state: voidb_core::process_plugin::ProcessPluginCandidateState::Available,
+                    transport: Some("stdio-jsonrpc".to_string()),
+                    capability_count: 0,
+                    tui: true,
+                    diagnostics: Vec::new(),
+                    manifest: Some(manifest),
+                    resolved_runtime_command: Some(PathBuf::from("/mock/bin/ssh")),
+                    resolved_schema_paths: BTreeMap::new(),
+                });
         }
         let mut argv = vec!["voidb"];
         argv.extend_from_slice(args);
@@ -664,10 +681,7 @@ mod tests {
     #[test]
     fn cli_aliases_resolve_to_canonical_builtins() {
         let credential = parse_cli(&["cred", "master", "reencrypt"]);
-        assert_eq!(
-            credential.subcommand().expect("subcommand").0,
-            "credential"
-        );
+        assert_eq!(credential.subcommand().expect("subcommand").0, "credential");
 
         let connections = parse_cli(&["conn", "list"]);
         assert_eq!(
@@ -684,9 +698,10 @@ mod tests {
         let cli_manager = build_cli_manager();
         let discovery = voidb_core::process_plugin::discover_process_plugins();
         let app = build_cli_app(&cli_manager, &discovery);
-        assert!(app
-            .try_get_matches_from(vec!["voidb", "completions"])
-            .is_err());
+        assert!(
+            app.try_get_matches_from(vec!["voidb", "completions"])
+                .is_err()
+        );
 
         let matches = parse_cli(&["completions", "fish"]);
         assert_eq!(matches.subcommand().expect("subcommand").0, "completions");
@@ -722,7 +737,9 @@ mod tests {
             tui: true,
             diagnostics: Vec::new(),
             manifest: None,
-            resolved_runtime_command: Some(PathBuf::from("/test/kubernetes/bin/voidb-plugin-kubernetes")),
+            resolved_runtime_command: Some(PathBuf::from(
+                "/test/kubernetes/bin/voidb-plugin-kubernetes",
+            )),
             resolved_schema_paths: Default::default(),
         };
         let discovery = voidb_core::process_plugin::ProcessPluginDiscovery {
@@ -731,8 +748,10 @@ mod tests {
         };
 
         let app = build_cli_app(&cli_manager, &discovery);
-        let subcommands: Vec<String> = app.get_subcommands().map(|c| c.get_name().to_string()).collect();
+        let subcommands: Vec<String> = app
+            .get_subcommands()
+            .map(|c| c.get_name().to_string())
+            .collect();
         assert!(subcommands.contains(&"kubernetes".to_string()));
     }
 }
-

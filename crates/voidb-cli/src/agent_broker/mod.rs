@@ -21,6 +21,7 @@ mod wire;
 #[cfg(test)]
 mod tests;
 
+pub(crate) use commands::{agent_command, agent_subcommand};
 pub use commands::{handle_early, take_broker_child_password};
 
 const GRANT_VERSION: u32 = 1;

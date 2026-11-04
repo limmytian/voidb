@@ -19,7 +19,6 @@ use super::audit::{
     append_credential_grant_success_audit, append_invoke_error_audit, append_invoke_success_audit,
 };
 use super::discovery::supported_capabilities;
-use crate::builtin::json_output::print_json;
 use super::execution::{
     InvokeRunOptions, ParsedInvokeRunOptions, next_invocation_id, preview_effective_timeout_ms,
     resolve_capability, run_invocation_with_id,
@@ -34,6 +33,7 @@ use super::{
     INVOCATION_CANCEL_GRACE_MS, INVOCATION_STREAM_CHANNEL_CAPACITY, INVOKE_CLI_SCHEMA_VERSION,
     MAX_PUBLIC_CONTROL_ID_BYTES,
 };
+use crate::builtin::json_output::print_json;
 
 pub(super) fn handle_matrix(matches: &ArgMatches) -> Result<(), VoidbError> {
     #[cfg(not(feature = "full"))]

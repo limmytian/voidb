@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::builtin::json_output::print_json;
 use async_trait::async_trait;
 use chrono::Utc;
 use clap::{Arg, ArgAction, ArgMatches, Command};
@@ -12,7 +13,6 @@ use serde::Serialize;
 use serde_json::{Value, json};
 use voidb_core::capability::{CapabilityErrorCategory, RedactionStatus};
 use voidb_core::plugin::cli::{CliContext, CliPlugin};
-use crate::builtin::json_output::print_json;
 use voidb_core::{
     DEFAULT_OFFICIAL_REGISTRY_URL, PluginCategory, PluginRegistryIndex, ProcessPluginCandidate,
     ProcessPluginCandidateState, ProcessPluginDiagnostic, ProcessPluginDiscovery,
@@ -2755,7 +2755,6 @@ fn print_plugin_error(error: PluginError) -> Result<(), VoidbError> {
         error,
     })
 }
-
 
 #[derive(Debug, Clone, Copy)]
 struct PluginListOptions {

@@ -677,7 +677,6 @@ fn security_warnings_for_config(config: &AppConfig) -> Vec<ProfileWarning> {
     }]
 }
 
-
 #[derive(Debug, Serialize)]
 struct JsonSuccessEnvelope<T> {
     ok: bool,

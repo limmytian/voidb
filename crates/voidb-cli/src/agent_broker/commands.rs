@@ -113,282 +113,287 @@ pub async fn take_broker_child_password() -> anyhow::Result<Option<String>> {
     Ok(Some(password))
 }
 
-pub(super) fn agent_command() -> Command {
+pub(crate) fn agent_command() -> Command {
     Command::new("voidb-cli")
         .subcommand_required(true)
+        .subcommand(agent_subcommand())
+}
+
+/// The `agent` subtree on its own. The top-level clap app registers it so
+/// `--help` lists the command family, even though dispatch stays with the
+/// pre-clap agent broker.
+pub(crate) fn agent_subcommand() -> Command {
+    Command::new("agent")
+        .about("Manage short-lived, scoped agent access")
+        .subcommand_required(true)
+        .subcommand(with_hidden_optional_principal_args(
+            Command::new("exec")
+                .about("Run one capability through matching access or request exact approval")
+                .arg(
+                    Arg::new("capability")
+                        .required(true)
+                        .value_name("PLUGIN.CAPABILITY")
+                        .help("Qualified capability, for example docker.list_containers"),
+                )
+                .arg(
+                    Arg::new("profile")
+                        .long("profile")
+                        .short('p')
+                        .required(true)
+                        .value_name("PROFILE")
+                        .help("Friendly profile name, name:<name>, or id:<profile-id>"),
+                )
+                .arg(
+                    Arg::new("input-json")
+                        .long("input-json")
+                        .default_value("{}")
+                        .value_name("JSON")
+                        .help("Inline capability input JSON"),
+                )
+                .arg(
+                    Arg::new("purpose")
+                        .long("purpose")
+                        .visible_alias("reason")
+                        .value_name("TEXT")
+                        .help(
+                            "Specific intended use shown to the user if authorization is required",
+                        ),
+                )
+                .arg(
+                    Arg::new("wait-timeout-ms")
+                        .long("wait-timeout-ms")
+                        .default_value("30000")
+                        .value_name("MILLISECONDS")
+                        .value_parser(clap::value_parser!(u64))
+                        .help("How long to wait for an automatic JIT decision"),
+                )
+                .arg(
+                    Arg::new("request-ttl-seconds")
+                        .long("request-ttl-seconds")
+                        .default_value("300")
+                        .value_name("SECONDS")
+                        .value_parser(clap::value_parser!(u64))
+                        .help("Lifetime of an automatic JIT request"),
+                )
+                .arg(
+                    Arg::new("timeout-ms")
+                        .long("timeout-ms")
+                        .value_name("MILLISECONDS")
+                        .value_parser(clap::value_parser!(u64)),
+                )
+                .arg(
+                    Arg::new("page-limit")
+                        .long("page-limit")
+                        .value_name("LIMIT")
+                        .value_parser(clap::value_parser!(u32)),
+                )
+                .arg(
+                    Arg::new("page-cursor")
+                        .long("page-cursor")
+                        .value_name("CURSOR"),
+                )
+                .arg(
+                    Arg::new("dry-run")
+                        .long("dry-run")
+                        .action(ArgAction::SetTrue),
+                )
+                .arg(
+                    Arg::new("yes")
+                        .long("yes")
+                        .action(ArgAction::SetTrue),
+                )
+                .arg(
+                    Arg::new("no-request")
+                        .long("no-request")
+                        .action(ArgAction::SetTrue)
+                        .help("Fail with authorization_required instead of creating a JIT request"),
+                ),
+        ))
         .subcommand(
-            Command::new("agent")
-                .about("Manage short-lived, scoped agent access")
-                .subcommand_required(true)
-                .subcommand(with_hidden_optional_principal_args(
-                    Command::new("exec")
-                        .about("Run one capability through matching access or request exact approval")
-                        .arg(
-                            Arg::new("capability")
-                                .required(true)
-                                .value_name("PLUGIN.CAPABILITY")
-                                .help("Qualified capability, for example docker.list_containers"),
-                        )
-                        .arg(
-                            Arg::new("profile")
-                                .long("profile")
-                                .short('p')
-                                .required(true)
-                                .value_name("PROFILE")
-                                .help("Friendly profile name, name:<name>, or id:<profile-id>"),
-                        )
-                        .arg(
-                            Arg::new("input-json")
-                                .long("input-json")
-                                .default_value("{}")
-                                .value_name("JSON")
-                                .help("Inline capability input JSON"),
-                        )
-                        .arg(
-                            Arg::new("purpose")
-                                .long("purpose")
-                                .visible_alias("reason")
-                                .value_name("TEXT")
-                                .help(
-                                    "Specific intended use shown to the user if authorization is required",
-                                ),
-                        )
-                        .arg(
-                            Arg::new("wait-timeout-ms")
-                                .long("wait-timeout-ms")
-                                .default_value("30000")
-                                .value_name("MILLISECONDS")
-                                .value_parser(clap::value_parser!(u64))
-                                .help("How long to wait for an automatic JIT decision"),
-                        )
-                        .arg(
-                            Arg::new("request-ttl-seconds")
-                                .long("request-ttl-seconds")
-                                .default_value("300")
-                                .value_name("SECONDS")
-                                .value_parser(clap::value_parser!(u64))
-                                .help("Lifetime of an automatic JIT request"),
-                        )
-                        .arg(
-                            Arg::new("timeout-ms")
-                                .long("timeout-ms")
-                                .value_name("MILLISECONDS")
-                                .value_parser(clap::value_parser!(u64)),
-                        )
-                        .arg(
-                            Arg::new("page-limit")
-                                .long("page-limit")
-                                .value_name("LIMIT")
-                                .value_parser(clap::value_parser!(u32)),
-                        )
-                        .arg(
-                            Arg::new("page-cursor")
-                                .long("page-cursor")
-                                .value_name("CURSOR"),
-                        )
-                        .arg(
-                            Arg::new("dry-run")
-                                .long("dry-run")
-                                .action(ArgAction::SetTrue),
-                        )
-                        .arg(
-                            Arg::new("yes")
-                                .long("yes")
-                                .action(ArgAction::SetTrue),
-                        )
-                        .arg(
-                            Arg::new("no-request")
-                                .long("no-request")
-                                .action(ArgAction::SetTrue)
-                                .help("Fail with authorization_required instead of creating a JIT request"),
-                        ),
-                ))
-                .subcommand(
-                    Command::new("authorize")
-                        .about("Authorize time-bounded agent access to one profile")
-                        .arg(Arg::new("profile").long("profile").required(true))
-                        .arg(Arg::new("plugin").long("plugin").required(true))
-                        .arg(
-                            Arg::new("execution-mode")
-                                .long("execution-mode")
-                                .default_value("stateless")
-                                .value_parser(["stateless", "session_only", "both"])
-                                .help("Grant one-shot, persistent-session, or explicitly combined transport access"),
-                        )
-                        .arg(
-                            Arg::new("preset")
-                                .long("preset")
-                                .value_parser([
-                                    "read_only",
-                                    "interactive_execute",
-                                    "full_access",
-                                    "custom",
-                                ])
-                                .help("Resolve and record a shared preset; explicit capabilities without this flag infer Custom"),
-                        )
-                        .arg(
-                            Arg::new("capability")
-                                .long("capability")
-                                .action(ArgAction::Append)
-                                .help("Exact qualified capability; without --preset explicit values infer Custom"),
-                        )
-                        .arg(
-                            Arg::new("ttl-minutes")
-                                .long("ttl-minutes")
-                                .default_value("15")
-                                .value_parser(clap::value_parser!(u64)),
-                        )
-                        .arg(
-                            Arg::new("uses")
-                                .long("uses")
-                                .value_parser(clap::value_parser!(u32))
-                                .help("Optional accepted-command limit; omit for time-only access"),
-                        )
-                        .arg(
-                            Arg::new("allow-destructive")
-                                .long("allow-destructive")
-                                .action(ArgAction::SetTrue)
-                                .requires("yes"),
-                        )
-                        .arg(
-                            Arg::new("yes")
-                                .long("yes")
-                                .action(ArgAction::SetTrue)
-                                .help("Confirm an authorization that permits --yes operations"),
-                        )
-                        .arg(
-                            Arg::new("password-stdin")
-                                .long("password-stdin")
-                                .action(ArgAction::SetTrue)
-                                .hide(true),
-                        )
-                        .arg(
-                            Arg::new("replace")
-                                .long("replace")
-                                .action(ArgAction::SetTrue)
-                                .help("Replace existing grants for the same immutable profile and plugin"),
-                        ),
+            Command::new("authorize")
+                .about("Authorize time-bounded agent access to one profile")
+                .arg(Arg::new("profile").long("profile").required(true))
+                .arg(Arg::new("plugin").long("plugin").required(true))
+                .arg(
+                    Arg::new("execution-mode")
+                        .long("execution-mode")
+                        .default_value("stateless")
+                        .value_parser(["stateless", "session_only", "both"])
+                        .help("Grant one-shot, persistent-session, or explicitly combined transport access"),
                 )
-                .subcommand(
-                    Command::new("authorize-batch")
-                        .about("Review and authorize multiple profile-scoped grants at once")
-                        .arg(
-                            Arg::new("spec")
-                                .long("spec")
-                                .required(true)
-                                .value_name("PATH")
-                                .help("Local JSON file containing a grants array"),
-                        )
-                        .arg(
-                            Arg::new("ttl-minutes")
-                                .long("ttl-minutes")
-                                .default_value("15")
-                                .value_parser(clap::value_parser!(u64)),
-                        )
-                        .arg(
-                            Arg::new("uses")
-                                .long("uses")
-                                .value_parser(clap::value_parser!(u32))
-                                .help("Optional accepted-command limit per grant; omit for time-only access"),
-                        )
-                        .arg(
-                            Arg::new("allow-destructive")
-                                .long("allow-destructive")
-                                .action(ArgAction::SetTrue)
-                                .help("Permit reviewed grants containing non-read-only capabilities"),
-                        )
-                        .arg(
-                            Arg::new("yes")
-                                .long("yes")
-                                .action(ArgAction::SetTrue)
-                                .help("Accept the rendered batch review non-interactively"),
-                        )
-                        .arg(
-                            Arg::new("replace")
-                                .long("replace")
-                                .action(ArgAction::SetTrue)
-                                .help("Replace existing grants for matching immutable profile scopes"),
-                        ),
+                .arg(
+                    Arg::new("preset")
+                        .long("preset")
+                        .value_parser([
+                            "read_only",
+                            "interactive_execute",
+                            "full_access",
+                            "custom",
+                        ])
+                        .help("Resolve and record a shared preset; explicit capabilities without this flag infer Custom"),
                 )
-                .subcommand(
-                    Command::new("catalog")
-                        .about("List the password-free central authorization capability catalog")
-                        .arg(Arg::new("plugin").long("plugin"))
-                        .arg(
-                            Arg::new("execution-mode")
-                                .long("execution-mode")
-                                .value_parser(["stateless", "session_only", "both"])
-                                .action(ArgAction::Append)
-                                .help("Filter capabilities by supported execution mode and presets by grant mode; repeat to select multiple modes"),
-                        )
-                        .arg(
-                            Arg::new("format")
-                                .long("format")
-                                .default_value("json")
-                                .value_parser(["json", "table"])
-                                .help("Output format; json is stable for agents, table is human-readable"),
-                        ),
+                .arg(
+                    Arg::new("capability")
+                        .long("capability")
+                        .action(ArgAction::Append)
+                        .help("Exact qualified capability; without --preset explicit values infer Custom"),
                 )
-                .subcommand(jit_request_command())
-                .subcommand(
-                    Command::new("list")
-                        .about("List frontend-safe agent grant and broker summaries")
-                        .arg(Arg::new("profile").long("profile"))
-                        .arg(Arg::new("plugin").long("plugin")),
+                .arg(
+                    Arg::new("ttl-minutes")
+                        .long("ttl-minutes")
+                        .default_value("15")
+                        .value_parser(clap::value_parser!(u64)),
                 )
-                .subcommand(
-                    Command::new("renew")
-                        .about("Renew one grant without changing its profile, plugin, or capability scope")
-                        .arg(Arg::new("grant").value_name("GRANT_ID").required(true))
-                        .arg(
-                            Arg::new("ttl-minutes")
-                                .long("ttl-minutes")
-                                .default_value("15")
-                                .value_parser(clap::value_parser!(u64)),
-                        )
-                        .arg(
-                            Arg::new("uses")
-                                .long("uses")
-                                .value_parser(clap::value_parser!(u32))
-                                .help("Optional renewed use limit; omit for time-only access"),
-                        ),
+                .arg(
+                    Arg::new("uses")
+                        .long("uses")
+                        .value_parser(clap::value_parser!(u32))
+                        .help("Optional accepted-command limit; omit for time-only access"),
                 )
-                .subcommand(
-                    Command::new("revoke")
-                        .about("Revoke one grant, one immutable profile scope, or all grants")
-                        .arg(Arg::new("grant").value_name("GRANT_ID"))
-                        .arg(
-                            Arg::new("profile")
-                                .long("profile")
-                                .requires("plugin")
-                                .conflicts_with_all(["grant", "all"]),
-                        )
-                        .arg(
-                            Arg::new("plugin")
-                                .long("plugin")
-                                .requires("profile")
-                                .conflicts_with_all(["grant", "all"]),
-                        )
-                        .arg(
-                            Arg::new("all")
-                                .long("all")
-                                .action(ArgAction::SetTrue)
-                                .conflicts_with_all(["grant", "profile", "plugin"]),
-                        ),
+                .arg(
+                    Arg::new("allow-destructive")
+                        .long("allow-destructive")
+                        .action(ArgAction::SetTrue)
+                        .requires("yes"),
                 )
-                .subcommand(with_optional_principal_args(
-                    Command::new("run")
-                        .about("Run a scoped VoidB command through an active grant")
-                        .arg(Arg::new("grant").long("grant"))
-                        .arg(
-                            Arg::new("command")
-                                .required(true)
-                                .trailing_var_arg(true)
-                                .num_args(1..),
-                        ),
-                ))
-                .subcommand(with_optional_principal_args(session_command())),
+                .arg(
+                    Arg::new("yes")
+                        .long("yes")
+                        .action(ArgAction::SetTrue)
+                        .help("Confirm an authorization that permits --yes operations"),
+                )
+                .arg(
+                    Arg::new("password-stdin")
+                        .long("password-stdin")
+                        .action(ArgAction::SetTrue)
+                        .hide(true),
+                )
+                .arg(
+                    Arg::new("replace")
+                        .long("replace")
+                        .action(ArgAction::SetTrue)
+                        .help("Replace existing grants for the same immutable profile and plugin"),
+                ),
         )
+        .subcommand(
+            Command::new("authorize-batch")
+                .about("Review and authorize multiple profile-scoped grants at once")
+                .arg(
+                    Arg::new("spec")
+                        .long("spec")
+                        .required(true)
+                        .value_name("PATH")
+                        .help("Local JSON file containing a grants array"),
+                )
+                .arg(
+                    Arg::new("ttl-minutes")
+                        .long("ttl-minutes")
+                        .default_value("15")
+                        .value_parser(clap::value_parser!(u64)),
+                )
+                .arg(
+                    Arg::new("uses")
+                        .long("uses")
+                        .value_parser(clap::value_parser!(u32))
+                        .help("Optional accepted-command limit per grant; omit for time-only access"),
+                )
+                .arg(
+                    Arg::new("allow-destructive")
+                        .long("allow-destructive")
+                        .action(ArgAction::SetTrue)
+                        .help("Permit reviewed grants containing non-read-only capabilities"),
+                )
+                .arg(
+                    Arg::new("yes")
+                        .long("yes")
+                        .action(ArgAction::SetTrue)
+                        .help("Accept the rendered batch review non-interactively"),
+                )
+                .arg(
+                    Arg::new("replace")
+                        .long("replace")
+                        .action(ArgAction::SetTrue)
+                        .help("Replace existing grants for matching immutable profile scopes"),
+                ),
+        )
+        .subcommand(
+            Command::new("catalog")
+                .about("List the password-free central authorization capability catalog")
+                .arg(Arg::new("plugin").long("plugin"))
+                .arg(
+                    Arg::new("execution-mode")
+                        .long("execution-mode")
+                        .value_parser(["stateless", "session_only", "both"])
+                        .action(ArgAction::Append)
+                        .help("Filter capabilities by supported execution mode and presets by grant mode; repeat to select multiple modes"),
+                )
+                .arg(
+                    Arg::new("format")
+                        .long("format")
+                        .default_value("json")
+                        .value_parser(["json", "table"])
+                        .help("Output format; json is stable for agents, table is human-readable"),
+                ),
+        )
+        .subcommand(jit_request_command())
+        .subcommand(
+            Command::new("list")
+                .about("List frontend-safe agent grant and broker summaries")
+                .arg(Arg::new("profile").long("profile"))
+                .arg(Arg::new("plugin").long("plugin")),
+        )
+        .subcommand(
+            Command::new("renew")
+                .about("Renew one grant without changing its profile, plugin, or capability scope")
+                .arg(Arg::new("grant").value_name("GRANT_ID").required(true))
+                .arg(
+                    Arg::new("ttl-minutes")
+                        .long("ttl-minutes")
+                        .default_value("15")
+                        .value_parser(clap::value_parser!(u64)),
+                )
+                .arg(
+                    Arg::new("uses")
+                        .long("uses")
+                        .value_parser(clap::value_parser!(u32))
+                        .help("Optional renewed use limit; omit for time-only access"),
+                ),
+        )
+        .subcommand(
+            Command::new("revoke")
+                .about("Revoke one grant, one immutable profile scope, or all grants")
+                .arg(Arg::new("grant").value_name("GRANT_ID"))
+                .arg(
+                    Arg::new("profile")
+                        .long("profile")
+                        .requires("plugin")
+                        .conflicts_with_all(["grant", "all"]),
+                )
+                .arg(
+                    Arg::new("plugin")
+                        .long("plugin")
+                        .requires("profile")
+                        .conflicts_with_all(["grant", "all"]),
+                )
+                .arg(
+                    Arg::new("all")
+                        .long("all")
+                        .action(ArgAction::SetTrue)
+                        .conflicts_with_all(["grant", "profile", "plugin"]),
+                ),
+        )
+        .subcommand(with_optional_principal_args(
+            Command::new("run")
+                .about("Run a scoped VoidB command through an active grant")
+                .arg(Arg::new("grant").long("grant"))
+                .arg(
+                    Arg::new("command")
+                        .required(true)
+                        .trailing_var_arg(true)
+                        .num_args(1..),
+                ),
+        ))
+        .subcommand(with_optional_principal_args(session_command()))
 }
 
 pub(super) async fn spawn_agent_broker(
