@@ -73,6 +73,8 @@ impl ConnectionManagerApp {
         frame.render_widget(Clear, popup);
         let text = Text::from(vec![
             Line::raw("j/k or ↑/↓     Move selection"),
+            Line::raw("Mouse           Click selects a profile · wheel navigates the list"),
+            Line::raw("/               Filter profiles · Esc clears, again exits search"),
             Line::raw("n               Create native profile"),
             Line::raw("e               Edit selected profile"),
             Line::raw("Tab / Shift+Tab Navigate profile form fields"),
@@ -80,6 +82,7 @@ impl ConnectionManagerApp {
             Line::raw("Ctrl+U          Clear the active text or numeric field"),
             Line::raw("F2              Toggle interactive form / advanced JSON"),
             Line::raw("Ctrl+S          Validate and save the profile"),
+            Line::raw("Esc in editor   Confirm before discarding unsaved edits"),
             Line::raw("d               Delete selected profile"),
             Line::raw("i               Install the selected profile’s missing official plugin"),
             Line::raw("t               Test through voidb-cli profile test"),
@@ -89,11 +92,12 @@ impl ConnectionManagerApp {
             Line::raw("x               Review explicit revoke-all action"),
             Line::raw("a in access     Toggle simple and advanced authorization controls"),
             Line::raw("Advanced access Presets, TTL, uses, capabilities, renew/revoke"),
-            Line::raw("/               Filter profiles"),
             Line::raw("m               Unlock or set master password"),
             Line::raw("r               Reload profile store"),
             Line::raw("Enter           Show copyable CLI guidance"),
-            Line::raw("Ctrl+Q          Quit"),
+            Line::raw("Esc             Close overlay or cancel"),
+            Line::raw("q               Quit (profile list)"),
+            Line::raw("Ctrl+C / Ctrl+Q Quit"),
             Line::raw(""),
             Line::styled(
                 "Grant status is authorization; active sessions are counted separately.",

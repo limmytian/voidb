@@ -251,7 +251,7 @@ impl ConnectionManagerApp {
 
     fn render_footer(&self, frame: &mut Frame, area: Rect) {
         let help = match self.mode {
-            ScreenMode::Search => "Type to filter · Enter/Esc finish · ↑↓ navigate",
+            ScreenMode::Search => "Type to filter · Esc clears · Enter applies · ↑↓ navigate",
             _ => {
                 "n/e/d profile · i install plugin · t test · c capabilities · a manage agent access · x review revoke-all · m credentials · ? help"
             }

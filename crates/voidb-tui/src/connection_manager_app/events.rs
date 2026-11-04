@@ -84,7 +84,17 @@ impl ConnectionManagerApp {
 
     fn handle_search_key(&mut self, key: KeyEvent) {
         match key.code {
-            KeyCode::Esc | KeyCode::Enter => self.mode = ScreenMode::Browse,
+            // Esc clears a non-empty filter first and only then exits, so a
+            // mistyped filter never forces re-entering search mode.
+            KeyCode::Esc => {
+                if self.search.is_empty() {
+                    self.mode = ScreenMode::Browse;
+                } else {
+                    self.search.clear();
+                    self.refilter();
+                }
+            }
+            KeyCode::Enter => self.mode = ScreenMode::Browse,
             KeyCode::Backspace => {
                 self.search.pop();
                 self.refilter();

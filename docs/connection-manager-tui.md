@@ -136,7 +136,7 @@ Keyboard vocabulary:
 | `x` | Open a separate review step for the explicit secondary revoke-all action. |
 | `r` | Refresh from the native profile store. |
 | `?` | Show local help. |
-| `:q` or `Ctrl+Q` | Quit the standalone app. |
+| `q` or `Ctrl+Q` | Quit the standalone app from the profile list (`Ctrl+C` also quits). |
 
 States:
 
