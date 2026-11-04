@@ -143,7 +143,7 @@ short facade command without handling grant IDs, plugin IDs, or immutable
 Profile IDs:
 
 ```bash
-vb agent exec jenkins.jobs --profile prod-jenkins --input-json '{}'
+vb agent exec jenkins.jobs --profile prod-jenkins --purpose 'deploy release' --input-json '{}'
 ```
 
 Short top-level aliases keep the frequent authorization operations easy to
