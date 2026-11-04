@@ -5,6 +5,30 @@ All notable changes to VoidB will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.8] - 2026-11-04
+
+### Added
+- Minimal mouse support in the Connection Manager: left click selects a profile row and the wheel navigates while Browse or Search is active; mouse hit-testing shares the render layout geometry so the two can never drift.
+- `Enter` copies the selected profile's CLI guidance (test and launch commands) to the clipboard through the existing `voidb-core` clipboard helper; the details pane, help overlay, and keymap docs advertise it, and the clipboard-unavailable fallback keeps the printed guidance.
+- Caret editing for the profile editor's name/display fields: `Left`/`Right`/`Home`/`End`/`Delete` with a rendered inverted caret cell, chars inserting at the caret, and pasted text landing at the caret instead of always appending.
+- Paging keys across the app: `PageUp`/`PageDown` (±10, matching the plugin TUI family), `Home`/`End`, and vim `g`/`G` on the profile list, capability browser, authorization capability list, and JIT inbox; `j`/`k` now wrap at both ends via one shared selection stepper.
+
+### Fixed
+- The idle authorization snapshot no longer spawns three sequential `voidb-cli` subprocesses every 2 s regardless of context; the 2 s cadence applies only while an authorization surface is visible and falls back to a 60 s cadence for Browse badges, restoring the idle budget in docs/tui-interaction-performance.md.
+- Mouse capture is no longer dead: mouse events are handled, and every event class drains the background poll (mouse motion used to skip it entirely, starving test/install/snapshot workers).
+- `Esc` in the profile editor with unsaved work opens a non-default discard confirmation instead of silently discarding, per the no-silent-loss rule in docs/standalone-tui-ux-acceptance.md.
+- `Esc` in search clears a non-empty filter first (the documented behavior) and exits only from an empty filter; `Enter` still applies the filter and returns to Browse.
+- Destructive confirmations no longer default on `Enter`: profile delete and plugin install require the explicit `y`, with dialog copy matching the new mapping, per the non-default confirmation rule in docs/standalone-tui-ux-acceptance.md.
+- The help overlay fits on a 30-row terminal again (it had grown past its popup and truncated silently) and now lists `q`, `Esc` semantics, `Ctrl+C`, the discard confirmation, and the mouse support.
+- The JSON editor's cursor no longer drifts on CJK/wide input: caret columns measure display width (`unicode-width`) and long lines truncate instead of reflowing; `Delete` and line-wise `Home`/`End` work in the JSON view.
+- Pasted line breaks no longer dispatch as `Enter` keys (which cycled select/boolean values in the Form view); they are dropped outside the JSON text field, and the JIT constraints editor accepts pasted JSON.
+
+### Changed
+- The footer status line carries a severity (info/success/error) rendered green/red respectively; background results (test, install, capability discovery, authorization operations, save, delete, clipboard copy) report the matching class instead of one indistinguishable yellow string.
+- The authorization snapshot is parsed once on its worker thread into a typed snapshot instead of six serde passes per refresh on the UI thread; the five single-direction `try_recv` poll blocks share one generic drain helper; the four cycle-with-wrap implementations and the TTL/uses steppers reuse the shared selection stepper; the master-password gate repeated across action handlers is one `credentials_locked` helper.
+- Removed the unused direct `arboard` and `tui-textarea` dependencies from `voidb-tui`.
+- Replaced the vacuous e2e simulation tests, which only recorded key events for the removed embedded data grid, with a real headless driver: key/paste/mouse flows against a temp-store app plus `TestBackend` render assertions for Browse, the help overlay, and the small-terminal notice. The driver caught the help-overlay fit bug fixed above.
+
 ## [0.3.7] - 2026-10-30
 
 ### Fixed
