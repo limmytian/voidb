@@ -345,6 +345,9 @@ impl ConnectionManagerApp {
         let items = if self.pending_authorization_requests.is_empty() {
             vec![ListItem::new("No authorization requests")]
         } else {
+            // The projection sorts by (principal, profile) first, so a group
+            // starts wherever the pair changes from the previous row.
+            let mut previous_group: Option<(String, String)> = None;
             self.pending_authorization_requests
                 .iter()
                 .map(|request| {
@@ -363,8 +366,21 @@ impl ConnectionManagerApp {
                                 format!("\n    Decision: {}", sanitize_display_text(reason))
                             })
                     };
+                    let group = (
+                        request.principal_fingerprint.clone(),
+                        request.profile_id.clone(),
+                    );
+                    let group_header = if previous_group.as_ref() == Some(&group) {
+                        String::new()
+                    } else {
+                        previous_group = Some(group);
+                        format!(
+                            "\u{25c6} agent {principal} · profile {}\n",
+                            request.profile_id
+                        )
+                    };
                     ListItem::new(format!(
-                        "[{}] {} · {}/{} · {} · agent {}\n    {}{}",
+                        "{group_header}[{}] {} · {}/{} · {} · agent {}\n    {}{}",
                         request.status.to_uppercase(),
                         request.capability_id(),
                         request.plugin_id,

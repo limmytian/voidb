@@ -838,7 +838,16 @@ pub(super) fn parse_pending_authorizations(payload: &str) -> Vec<PendingAuthoriz
             })
         })
         .collect::<Vec<_>>();
-    requests.sort_by_key(|request| (!request.is_pending(), request.created_at.clone()));
+    // Group adjacency: requests from the same principal on the same profile
+    // land together so the inbox can render them as one group.
+    requests.sort_by_key(|request| {
+        (
+            request.principal_fingerprint.clone(),
+            request.profile_id.clone(),
+            !request.is_pending(),
+            request.created_at.clone(),
+        )
+    });
     requests
 }
 
