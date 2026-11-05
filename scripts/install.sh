@@ -180,6 +180,12 @@ main() {
         fi
     done
 
+    # Compatibility links: the binaries were renamed in v0.3.9
+    # (voidb-cli -> vb, voidb -> vb-tui); keep the legacy names working for
+    # scripts and muscle memory, matching the homebrew formula.
+    ln -sf "$dest_dir/vb" "$dest_dir/voidb-cli"
+    ln -sf "$dest_dir/vb-tui" "$dest_dir/voidb"
+
     # Verify installation
     if [[ -x "$dest_dir/vb-tui" ]] && [[ -x "$dest_dir/vb" ]]; then
         success "VoidB successfully installed!"
@@ -202,7 +208,7 @@ main() {
         printf "  4. Install extra plugins:     ${BOLD}vb plugin install s3${NC}\n"
         printf "\n"
     else
-        error "Installation failed: could not locate voidb binaries in archive."
+        error "Installation failed: could not locate vb/vb-tui binaries in archive."
     fi
 }
 
