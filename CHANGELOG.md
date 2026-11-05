@@ -5,6 +5,20 @@ All notable changes to VoidB will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.10] - 2026-11-05
+
+### Added
+- `agent grants`: a one-screen answer to "what can agents do right now" - grant lifecycle counts (active/expiring/exhausted/offline), the pending JIT approval count, and the grants table; `--watch` re-renders every 2 seconds like the TUI cadence. The top-level `vb grants` alias now points at the summary while `agent list` keeps the full JSON/table contract.
+- One-command approvals: `agent request decide` prompts for the hidden master password on an interactive terminal instead of hard-requiring `--password-stdin`, so `vb agent request decide <id> --decision bounded` works as a single local command; automation keeps the stdin path.
+- Interactive add-to-grant picker in `agent request review`: the principal's grants on the same profile and plugin are listed numbered with their expiry (Enter picks the first), and a number or a full id is accepted; manual entry remains the fallback.
+- Short aliases for wordy subcommands: `agent authorize-batch` = `batch`, `agent request inbox` = `in`, builtin `invoke` = `ix` and `context` = `ctx`, plus top-level verbs `decide`, `renew`, `revoke`, and `run`.
+- Short flags for high-frequency agent options: `-p` profile, `-c` capability, `-w` wait-timeout-ms, `-t` ttl-minutes/ttl-seconds, `-y` yes, `-f` format across exec/authorize/authorize-batch/catalog/list/renew/revoke and request create/decide/inbox.
+- Quick-authorize guidance in `invoke run`: policy denials (capability denied, destructive denied by default, approval required) now carry the same `quick_authorize` data block as `agent exec` - a TUI hint plus a ready-to-run `vb agent authorize` argv for the profile, plugin, and capability.
+- A confirmation gate for multi-grant `agent revoke`: more than one grant selected prints exactly what would be closed (id, profile, capabilities) and requires typing `revoke` on a TTY or `--yes` for scripts; single-grant revokes stay one-step.
+
+### Fixed
+- The JIT approval inbox now really groups requests by principal and immutable profile: the projection sorts by (principal, profile) first and the inbox renders a header on the first row of each group, matching the documented promise while keeping the 1:1 selection mapping.
+
 ## [0.3.9] - 2026-11-04
 
 ### Added
