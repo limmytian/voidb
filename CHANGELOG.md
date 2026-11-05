@@ -5,6 +5,15 @@ All notable changes to VoidB will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-11-05
+
+### Added
+- **Ambient approval notifications**: `agent watch` (top-level `vb watch`) polls the JIT store and announces each new pending request with a terminal bell and a one-line alert carrying the review command; `--notify` additionally fires best-effort desktop notifications (osascript on macOS, notify-send on Linux, silently skipped when unavailable), `--interval-seconds` tunes the cadence, and Ctrl+C exits. Humans no longer need the agent to tell them or the TUI open.
+- **Schema-driven constraint narrowing in the CLI review**: the per-field form lists the plugin's declared approval fields (label, path, value type, constraint kind, required), parses and validates each value by its declared type, and keeps raw JSON as the explicit fallback; secret-typed fields fail closed and cannot constrain an approval.
+- **Templated constraints in the TUI JIT dialog**: `c` prefills the editor with one key per declared approval field so values are edited in place instead of authoring JSON from scratch; declarations render structurally and raw JSON stays available for undeclared fields.
+- **Unified grant lifecycle screen** in the Connection Manager (press `L`): every grant with its lifecycle status, relative expiry, and destructive flag on the left; the selected grant's revisions and that profile's pending requests on the right. `r` refreshes, `v` prints the exact revoke command, and the screen keeps the 2-second snapshot cadence.
+- Builtin `invoke` and `context` commands gained the short aliases `ix` and `ctx` (0.3.7 `conn`/`cred` precedent).
+
 ## [0.3.10] - 2026-11-05
 
 ### Added
