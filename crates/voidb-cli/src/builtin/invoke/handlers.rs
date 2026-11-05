@@ -120,9 +120,34 @@ pub(super) fn handle_describe(matches: &ArgMatches) -> Result<(), VoidbError> {
             schema_version: INVOKE_CLI_SCHEMA_VERSION,
             command: "invoke",
             exit_code: exit_code_for_error(&error),
+            data: None,
             error: *error,
         }),
     }
+}
+
+/// Next-step authorization guidance for policy denials, mirroring the
+/// agent exec authorization_required envelope: a policy block is something
+/// the user can usually lift by granting the profile scoped access.
+fn quick_authorize_data(error: &InvokeRunError) -> Option<serde_json::Value> {
+    if !error.error.code.starts_with("policy.") {
+        return None;
+    }
+    let grant = error.grant.as_ref()?;
+    Some(serde_json::json!({
+        "profile": grant.profile,
+        "plugin": grant.plugin_id,
+        "capability": grant.capability_id,
+        "quick_authorize": {
+            "tui": "Select this profile in the Connection Manager, press a, then confirm the preset that covers this capability.",
+            "cli_args": [
+                "vb", "agent", "authorize",
+                "--profile", serde_json::to_value(&grant.profile).unwrap_or_default(),
+                "--plugin", grant.plugin_id,
+                "--capability", grant.capability_id,
+            ]
+        }
+    }))
 }
 
 pub(super) fn execution_mode_filters(matches: &ArgMatches) -> Vec<CapabilityExecutionMode> {
@@ -189,6 +214,7 @@ pub(super) async fn handle_run(matches: &ArgMatches, ctx: &CliContext) -> Result
                 schema_version: INVOKE_CLI_SCHEMA_VERSION,
                 command: "invoke",
                 exit_code: exit_code_for_error(&error),
+                data: None,
                 error: *error,
             };
             return print_run_error(output_format, ndjson.as_mut(), envelope);
@@ -284,12 +310,14 @@ pub(super) async fn handle_run(matches: &ArgMatches, ctx: &CliContext) -> Result
                 &error,
             )?;
             let exit_code = exit_code_for_error(&error);
+            let data = quick_authorize_data(&error);
             let error = error.into_error();
             let envelope = JsonErrorEnvelope {
                 ok: false,
                 schema_version: INVOKE_CLI_SCHEMA_VERSION,
                 command: "invoke",
                 exit_code,
+                data,
                 error,
             };
             print_run_error(output_format, ndjson.as_mut(), envelope)

@@ -182,6 +182,10 @@ pub(super) struct JsonErrorEnvelope {
     pub(super) schema_version: u32,
     pub(super) command: &'static str,
     pub(super) exit_code: u8,
+    /// Optional next-step guidance for policy denials the user can lift by
+    /// authorizing (mirrors the agent exec authorization_required envelope).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) data: Option<serde_json::Value>,
     pub(super) error: CapabilityError,
 }
 
