@@ -36,9 +36,11 @@ Verified against this repository at the start of the iteration:
 - `AgentLiveSessionKind` already contains the needed kinds — `Subscription`
   for mailbox observation and `Transfer` for storage transfers — so no core
   enum changes are required.
-- External process plugins host semantic sessions through broker protocol 1.1
-  (implemented in adoption slice 3), which is the hosting path for all three
-  workstreams.
+- External process plugins host semantic sessions through broker protocol 1.1.
+  At iteration start the production broker registered no factories (Slice A
+  finding 1); the host-side bridge over `ProcessPluginSessionRuntime` now
+  exists, and the plugin-side session handles are the remaining external-repo
+  work for all three workstreams.
 - The transfer contract references reliability proofs
   (`scripts/s3-fixture-smoke.sh`, `scripts/webdav-fixture-smoke.sh`) that do
   not exist in this repository yet.
@@ -48,24 +50,37 @@ Verified against this repository at the start of the iteration:
   declarations for the three plugins live in `registry/index.json` and are
   verified through conformance runs, not the committed matrix.
 
-### Slice A — Current-state reconciliation audit
+### Slice A — Current-state reconciliation audit (completed 2026-11-05)
 
-Before building, reconcile the two statements that disagree: the adoption
-matrix says fail-closed while the transfer contract says the plugins "now
-implement the contract through plugin-owned `FileTransfer` sessions".
+The audit is complete. Findings that reshape this roadmap:
 
-- Run the existing conformance surface against installed plugin builds
-  (`vb invoke list`, `vb invoke describe` per capability, agent session open
-  against `s3.transfer`, `webdav.transfer`, `email.idle` with an active grant
-  and record the exact failure codes).
-- Record, per plugin, whether session execution exists in the external plugin
-  repository, is partially implemented, or is absent.
-- Update this roadmap with findings and open the corresponding work items in
-  the external plugin repositories (`voidb-plugin-email`, `voidb-plugin-s3`,
-  `voidb-plugin-webdav`).
-- After the audit, `docs/persistent-agent-session-adoption.md` is the single
-  source of truth for classification changes; contract documents describe the
-  target, not the shipped state.
+1. **The production broker registered no session factories at all.** The
+   non-test `register_session_factories` in the broker runtime was an empty
+   stub, so `agent session open` failed closed with `session.unsupported` for
+   every plugin — not only Email/S3/WebDAV but also the adoption matrix rows
+   marked "implemented" (SQL transactions, Redis streams, MongoDB cursors,
+   Docker/Kubernetes/Jenkins live families). The plugin-side factories moved
+   into the external plugin repositories during the extraction, and the host
+   side never received their protocol 1.1 counterpart. The postgres session
+   fixture smoke exercises the plugin repository's own example, so CI stayed
+   green while production was fail-closed.
+2. **The host-side bridge is now wired** (this iteration): an external-plugin
+   session factory over `ProcessPluginSessionRuntime` registers into the
+   production broker for every non-built-in plugin with an installed
+   candidate and matching profile, keeping fail-closed `Unsupported` for
+   plugins that do not negotiate session protocol 1.1. Plugin-side session
+   methods (Email IDLE, S3/WebDAV transfer handles) remain external-repo
+   work in Workstreams 1 and 2.
+3. **The three-way documentation contradiction is reconciled** in the docs:
+   the transfer contract, capability examples, and session capability docs
+   now describe declared-but-fail-closed state; the adoption matrix documents
+   the host-wiring status; phantom evidence references were removed from the
+   release and CI docs.
+
+Verification obligation for Workstreams 1 and 2 (unchanged): after each
+plugin-side session handle lands in its repository, run `vb invoke describe`
+against the capability and open an agent session under a scoped grant,
+record the exact behavior, and flip the adoption-matrix row only then.
 
 ## Workstream 1 — Email IDLE Agent Live Session
 
@@ -147,7 +162,7 @@ In this repository:
   byte-range cancellation/resume, stale-lock isolation, lock release on
   close, explicit unsupported-feature degradation).
 - Keep `cargo test -p voidb-core transfer`,
-  `cargo test -p vb storage_plugins_map_to_one_fail_closed_transfer_lifecycle`
+  `cargo test -p voidb-cli storage_plugins_map_to_one_fail_closed_transfer_lifecycle`
   (renamed if the fail-closed gate becomes a success path), and
   `scripts/check-local-filesystem-boundaries.sh` /
   `scripts/check-external-agent-interaction.sh` green.
