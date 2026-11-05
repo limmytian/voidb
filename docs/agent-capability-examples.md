@@ -6,8 +6,9 @@ key-value workflows. MySQL and PostgreSQL expose the shared networked SQL
 baseline, and DuckDB now follows the same baseline for local analytics profiles.
 S3 and WebDAV extend the same model to storage operations with bounded read
 output and destructive-operation gates. Email exposes bounded, privacy-aware
-mailbox reads, guarded mutations, attachment transfers, and agent-owned IDLE
-sessions. Docker and Kubernetes now
+mailbox reads, guarded mutations, and attachment transfers; the declared
+`email.idle` capability targets an agent-owned observation session that the
+0.4.1 session slice delivers. Docker and Kubernetes now
 expose agent-facing operations capabilities with bounded read paths and
 destructive-operation gates. MongoDB and Elasticsearch expose agent-facing
 document/search capabilities with bounded read paths, payload summaries, and
@@ -137,8 +138,11 @@ vb invoke describe email.idle --format json
 `email.fetch` uses the service's read-only fetch path and does not mark IMAP
 messages read. `email.send`, `email.move`, `email.delete`, and `email.flag`
 require redacted previews, dry-run/acknowledgement policy, and stable mailbox
-identity checks. Attachment downloads are restricted to approved local roots,
-and `email.idle` runs only in an agent-owned, bounded, cancellable session.
+identity checks. Attachment downloads are restricted to approved local roots.
+`email.idle` is declared session-only and is intended to run in an agent-owned,
+bounded, cancellable observation session; until the 0.4.1 session slice lands,
+the broker host fails closed for it and stateless `email.idle` invocation is
+rejected.
 Message bodies, recipient lists, credentials, and attachment contents remain
 out of default audit summaries.
 
@@ -785,9 +789,10 @@ vb invoke run webdav.copy --profile dav --dry-run \
   --format json
 ```
 
-Long-running `s3.transfer` and `webdav.transfer` capabilities are session-only.
-Their catalog entries provide a `file_transfer` handoff family; direct
-stateless invocation returns `unavailable.session_required`.
+Long-running `s3.transfer` and `webdav.transfer` capabilities are session-only
+by declaration. Their catalog entries provide a `file_transfer` handoff family;
+until the 0.4.1 session slice wires the broker host, session opens fail closed
+and stateless invocation of these session-only capabilities is rejected.
 
 Directory creation is destructive and stays denied by default unless the
 invocation uses `--dry-run`, the profile explicitly allows it, or the user

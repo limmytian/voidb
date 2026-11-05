@@ -137,7 +137,7 @@ version before continuing.
 
 ## 6. Invoke Through VoidB
 
-Generic invocation uses `voidb invoke run <plugin>.<capability>`.
+Generic invocation uses `vb invoke run <plugin>.<capability>`.
 
 ```bash
 VOIDB_PLUGIN_PATH=examples/process-plugins \
@@ -156,13 +156,13 @@ Side-effecting capabilities should be exercised in both dry-run and confirmed
 forms:
 
 ```bash
-voidb invoke run hello-storage.delete \
+vb invoke run hello-storage.delete \
   --profile name:hello-dev \
   --input-json '{"key":"hello.txt"}' \
   --dry-run \
   --format json
 
-voidb invoke run hello-storage.delete \
+vb invoke run hello-storage.delete \
   --profile name:hello-dev \
   --input-json '{"key":"hello.txt"}' \
   --yes \
@@ -208,7 +208,7 @@ be recorded as skipped live checks with a clear opt-in fixture, not hidden.
 
 ## 8. Package For Installation
 
-Until `voidb plugin install` lands, installation is a local copy into a
+Until `vb plugin install` lands, installation is a local copy into a
 documented plugin root or an explicit `VOIDB_PLUGIN_PATH` development root.
 
 Package checklist:
@@ -228,9 +228,9 @@ directory.
 Before asking VoidB to promote a plugin:
 
 - `cargo test -p voidb-process-plugin-sdk` passes if using the Rust SDK;
-- `VOIDB_PLUGIN_PATH=<root> voidb plugin list --format json` reports
+- `VOIDB_PLUGIN_PATH=<root> vb plugin list --format json` reports
   `available`;
-- `voidb plugin describe <id> --include capabilities,schemas,diagnostics`
+- `vb plugin describe <id> --include capabilities,schemas,diagnostics`
   shows no blocking diagnostics;
 - direct protocol smoke covers initialize, health, success, structured error,
   and timeout paths;

@@ -8,8 +8,7 @@ server. The capability-first boundary for when sync may become a stable product
 contract is defined in
 [Sync Boundary Under The Capability Model](sync-boundary.md), with the concrete
 target object contract in [Object-Level Sync Model](object-level-sync-model.md).
-Beta evidence is recorded in Sync Beta Readiness, and
-release smoke gates are defined in Release Sync Smoke.
+Release smoke gates are defined by `scripts/release-sync-smoke.sh`.
 
 - **Client**: `crates/plugins/voidb-plugin-sync/` (`voidb-plugin-sync` in the
   plugin registry, id `sync`)

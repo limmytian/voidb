@@ -9,7 +9,7 @@ for capability-first VoidB plugins. It complements:
   `stdio-jsonrpc` messages after a process is started.
 - [Secret Brokering and Redaction Policy](secret-brokering-redaction-policy.md),
   which defines what may cross process and agent boundaries.
-- [Future Plugin Installation Model](plugin-installation-model.md), which
+- [Plugin Installation Model](plugin-installation-model.md), which
   defines how plugin directories are installed, updated, disabled, and removed.
 
 ## Scope
@@ -21,7 +21,7 @@ focused stdio JSON-RPC runtime host used by generic process-plugin invocation.
 It does not implement installation commands, marketplace behavior, long-lived
 process pooling, or a hosted plugin catalog. Installation lifecycle rules are
 documented separately in
-[Future Plugin Installation Model](plugin-installation-model.md).
+[Plugin Installation Model](plugin-installation-model.md).
 
 The current in-workspace Rust plugin factories remain the v4 TUI mechanism
 during migration. Process plugin discovery is the target contract for the new
@@ -152,7 +152,7 @@ rules:
   version.
 
 Invalid manifests must not be partially loaded. Core may display validation
-errors in `voidb plugin list --format json`, but errors must not include
+errors in `vb plugin list --format json`, but errors must not include
 plaintext secrets, environment values, plugin stderr, or unredacted filesystem
 content.
 

@@ -8,8 +8,9 @@ rules.
 The current sync plugin is beta-certified but still opt-in. It has an
 object-level MVP for profile and encrypted credential records, while the older
 encrypted full-directory bundle remains a recovery and compatibility path. The
-bundle is not the stable object sync API. See
-Sync Beta Readiness for the release-facing decision.
+bundle is not the stable object sync API. The release-facing decision is the
+opt-in boundary in
+[Sync Boundary Under The Capability Model](sync-boundary.md).
 
 ## Goals
 

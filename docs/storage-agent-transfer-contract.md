@@ -1,10 +1,15 @@
 # Storage Agent Transfer Contract
 
 This document defines the shared machine-readable transfer lifecycle for S3
-and WebDAV. The S3 and WebDAV plugins now implement the contract through
-plugin-owned `FileTransfer` sessions registered by the Agent broker.
+and WebDAV. The shared Rust types are implemented in `voidb_core::transfer`,
+and the S3/WebDAV plugins declare the session-only `transfer`,
+`transfer_status`, and WebDAV lock capabilities, but agent-session execution
+is not shipped yet: session-only operations fail closed in the broker host
+until the 0.4.1 session slice lands. See
+[Persistent Agent Session Adoption](persistent-agent-session-adoption.md) and
+the [0.4.1 Iteration Roadmap](roadmap-0.4.1.md) for delivery status.
 
-The shared Rust types live in `voidb_core::transfer`. S3 and WebDAV publish
+S3 and WebDAV publish
 driver-free policy mappings through `s3_transfer_contract()` and
 `webdav_transfer_contract()`. Capability discovery publishes structured
 session handoff metadata; stateless invocation of session-only operations
@@ -252,15 +257,17 @@ appear in the portable event.
 
 S3 publishes `buckets`, native continuation-token `list`, verified `copy` and
 `move`, bounded `presign`, plus session-only `transfer` and `transfer_status`.
-The session supports bounded multipart upload, byte-range download, scoped
-resume tokens, cancellation checkpoints, destination verification, and
-cleanup on close.
+When the 0.4.1 session slice ships, the session will support bounded multipart
+upload, byte-range download, scoped resume tokens, cancellation checkpoints,
+destination verification, and cleanup on close. Today those capabilities fail
+closed in the broker host.
 
 WebDAV publishes `probe`, conditional `copy` and `move`, plus session-only
-`transfer`, `transfer_status`, `lock_acquire`, and `lock_release`. The session
-keeps lock tokens private, returns opaque lock references, releases owned locks
-on close, and uses byte ranges only when the server advertises and honors
-them. Unsupported partial upload and range behavior is reported explicitly.
+`transfer`, `transfer_status`, `lock_acquire`, and `lock_release`. The target
+session keeps lock tokens private, returns opaque lock references, releases
+owned locks on close, and uses byte ranges only when the server advertises and
+honors them; unsupported partial upload and range behavior is reported
+explicitly. Today those capabilities fail closed in the broker host.
 
 The direct storage CLI transfer commands expose `human`, `json`, and `ndjson`
 lifecycle views and treat Ctrl-C as a cancellation with fail-closed remote
@@ -280,19 +287,15 @@ scripts/check-external-agent-interaction.sh
 git diff --check
 ```
 
-Run the live reliability proofs with:
-
-```bash
-scripts/s3-fixture-smoke.sh \
-  --report target/tmp/s3-transfer-reliability.md
-scripts/webdav-fixture-smoke.sh \
-  --report target/tmp/webdav-transfer-reliability.md
-```
-
-The S3 wrapper proves provider discovery, prefix-marker pagination, no-overwrite
-conflicts, server-side copy/move, expired presigns, SHA-256 mismatch rejection,
-multipart cancellation/resume, exact byte round-trip, and retained multipart
-cleanup on close. The WebDAV wrapper proves conditional COPY/MOVE against
-rclone, SHA-256 mismatch rejection, byte-range cancellation/resume, stale lock
-isolation, lock release on close, exact byte round-trip, and explicit
-unsupported-feature degradation.
+The live reliability proofs (`scripts/s3-fixture-smoke.sh` and
+`scripts/webdav-fixture-smoke.sh`) are planned deliverables of the
+[0.4.1 Iteration Roadmap](roadmap-0.4.1.md) Workstream 2 and do not exist
+yet. The S3 wrapper will prove provider discovery, prefix-marker pagination,
+no-overwrite conflicts, server-side copy/move, expired presigns, SHA-256
+mismatch rejection, multipart cancellation/resume, exact byte round-trip, and
+retained multipart cleanup on close. The WebDAV wrapper will prove
+conditional COPY/MOVE against rclone, SHA-256 mismatch rejection, byte-range
+cancellation/resume, stale lock isolation, lock release on close, exact byte
+round-trip, and explicit unsupported-feature degradation. Until they land,
+contract validation relies on the `voidb-core` transfer tests and the
+fail-closed gates above.

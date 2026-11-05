@@ -2,14 +2,15 @@
 
 This document records the package and distribution contract for VoidB release
 candidates. It complements the release-candidate gate matrix in
-[Release Candidate Checklist](release-candidate-checklist.md) and the
-cross-platform job contract in Package CI Matrix.
+[Release Candidate Checklist](release-candidate-checklist.md), and the
+cross-platform job contract is defined by the release workflow
+(`.github/workflows/release.yml`) and the build matrix in this document.
 
 ## Build Matrix
 
 | Artifact | Command | Output | Notes |
 |---|---|---|---|
-| Default TUI | `cargo build --release` | `target/release/voidb` | The workspace `default-members` list only includes `crates/voidb-tui`, so this is the lightweight default TUI build. |
+| Default TUI | `cargo build --release` | `target/release/vb-tui` | The workspace `default-members` list only includes `crates/voidb-tui`, so this is the lightweight default TUI build. |
 | CLI | `cargo build --release -p vb` | `target/release/vb` | Builds the machine-readable command surface and all CLI plugin command families. It is not produced by the default workspace build. |
 | Standalone sync server | `cargo build --release --manifest-path voidb-sync-server/Cargo.toml` | `voidb-sync-server/target/release/voidb-sync-server` | Separate crate with its own workspace. Build only when shipping or validating sync server deployment artifacts. |
 
@@ -25,10 +26,11 @@ test builds.
 - A native C/C++ build toolchain for bundled database dependencies such as
   SQLite and DuckDB.
 - Platform support for the plugin dependencies included in the selected
-  artifact. The 2026-07-04 package-readiness run was performed on macOS arm64.
+  artifact.
 - No live service secrets are required for these build commands.
 - Cross-platform package CI should use the platform labels, runner
-  prerequisites, and skip rules in Package CI Matrix.
+  prerequisites, and skip rules defined in the release workflow
+  (`.github/workflows/release.yml`).
 
 ## Artifact Naming
 
@@ -251,14 +253,14 @@ Manual TUI package smoke must run from a real terminal, not a non-interactive
 shell:
 
 ```bash
-target/package/voidb-<version>-darwin-arm64/voidb-default/voidb
+target/package/voidb-<version>-darwin-arm64/voidb-default/vb-tui
 ```
 
 Record the following before promoting the artifact:
 
 - the platform label, runner OS/architecture, Rust/Cargo versions, artifact
-  root, commands, and SHA256SUMS are captured in the evidence entry described in
-  [Package CI Matrix](package-ci-matrix.md#package-evidence-format);
+  root, commands, and SHA256SUMS are captured in a dated evidence entry under
+  `target/tmp/`;
 - default TUI starts, opens the Connection Manager, and exits with `Ctrl+Q`;
 - shell escape menu opens with `Ctrl+\`;
 - tab manager opens with `Ctrl+L`;
@@ -347,184 +349,25 @@ sections, and artifact names disagree.
 - Live S3, WebDAV, SSH, MySQL, external hosted Sync, native Linux x64 runner
   package smoke, macOS x64 package smoke, Windows x64 package smoke, and Linux
   arm64 package smoke require disposable external fixtures, credentials, or
-  platforms and may be skipped only when recorded in release notes. Docker
-  fixture smoke completed in
-  Fixture-Backed Operations Plugin Promotion Smoke 2026-07-05.
-  Redis local fixture-backed capability smoke completed in Req61; rerun
-  `scripts/redis-fixture-smoke.sh` if Redis capabilities change before tag.
-  Email local fixture-backed capability smoke now covers bounded reads, guarded
-  mutations, attachment safety, and IDLE cancellation; rerun
-  `scripts/email-fixture-smoke.sh` if those capabilities change before tag.
-  Kubernetes local kind fixture-backed capability smoke completed in Req67;
-  rerun `scripts/kubernetes-fixture-smoke.sh` if Kubernetes capabilities,
-  namespace isolation, destructive safeguards, bounded output, or kubeconfig
-  redaction behavior change before tag.
-  MongoDB local fixture-backed capability smoke completed in Req68; rerun
-  `scripts/mongodb-fixture-smoke.sh` if MongoDB capabilities, destructive
-  safeguards, pagination, aggregation policy, or diagnostics redaction behavior
-  change before tag.
-  Elasticsearch local fixture-backed capability smoke completed in Req69; rerun
-  `scripts/elasticsearch-fixture-smoke.sh` if Elasticsearch capabilities,
-  destructive safeguards, pagination, mapping output, or endpoint/auth
-  redaction behavior change before tag.
-  Jenkins local fixture-backed capability smoke completed in Req70; rerun
-  `scripts/jenkins-fixture-smoke.sh` if Jenkins capabilities, destructive
-  safeguards, console bounds, target-error redaction, or fixture setup changes
-  before tag.
-- The current sync plugin is beta-certified but opt-in. Req60 completed the
-  local object-level and hosted-process smoke gate; external hosted deployment
-  smoke still requires release-specific infrastructure evidence. The
-  full-directory bundle is useful for compatibility backup, but it is not the
-  stable object-level profile/credential sync contract. Stable/default
-  promotion still requires release-owner acceptance of the gate in
-  Sync Beta Readiness.
-- Req71 removed the inherited `imap-proto v0.10.2` future-incompatibility
-  warning by upgrading Email to exact-pinned `imap 3.0.0-alpha.15`; current
-  Email future-incompat checks report zero dependency notices.
-- The 2026-07-04 package-readiness run found version/tag mismatch: shipped
-  crates and binaries still reported `0.1.0` while `CHANGELOG.md` already
-  contained a historical `0.2.0` section. Requirement 53 resolved this for
-  `<version>`; treat the 2026-07-04 mismatch as historical evidence only.
-
-Historical package-smoke sections below predate Requirement 77 and may mention
-legacy TUI artifacts or `legacy-db-tui` build commands. They are retained as
-dated evidence only; current packaging no longer builds or stages those
-artifacts.
-
-## 2026-07-05 Req74 Linux Docker Package Smoke
-
-Task Weaver requirement 74 added a Docker-backed Linux package smoke path and
-ran it for `linux-x64` from a Docker-capable host:
-
-```bash
-scripts/linux-package-smoke.sh \
-  --docker-platform linux/amd64 \
-  --package-platform linux-x64 \
-  --report target/tmp/linux-package-smoke-evidence.md
-```
-
-Evidence summary:
-
-| Field | Value |
-|---|---|
-| Commit | `f1e9db0` |
-| Result | Passed |
-| Docker image | `rust:1-bookworm` |
-| Docker platform | `linux/amd64` |
-| Package platform label | `linux-x64` |
-| Artifact root | `target/package-linux/voidb-<version>-linux-x64` |
-| Evidence path | `target/tmp/linux-package-smoke-evidence.md` |
-
-Linux Docker staged checksums:
-
-| Artifact | Path | SHA-256 |
-|---|---|---|
-| Default TUI | `voidb-default/voidb` | `4cfbcbdf9077d27db153b00c9254dfde202ff1aa93511ec6d23e22123af17ab4` |
-| CLI | `cli/vb` | `3c6edf827d53b916e1ac44cd91e8189c101eed654f075e5b84b9f3e98ff4c3cb` |
-| Legacy database TUI | `voidb-legacy/voidb` | `3c478326abc6722346704a5362250eae03b673c9b4227bd7a78c79461bcb2cfd` |
-| Sync server | `sync-server/voidb-sync-server` | `559a159e9090044ef3b82acf6020da64cf7c525ed5fb1ac5fd5d09a4be3b084d` |
-
-This is valid Linux x64 Docker package-smoke evidence. It is not native Linux
-x64 runner evidence unless the same package contract is rerun on a native
-Linux x86_64 runner.
-
-## 2026-07-05 Req53 Final Tag Readiness Package Smoke
-
-Task Weaver requirement 53 rebuilt and staged release-candidate artifacts at:
-
-`target/package/voidb-<version>-darwin-arm64`
-
-| Check | Command | Result | Observed artifact |
-|---|---|---|---|
-| Default TUI release build | `cargo build --release` | passed | `target/package/voidb-<version>-darwin-arm64/voidb-default/voidb`, macOS arm64 |
-| CLI release build | `cargo build --release -p vb` | passed | `target/package/voidb-<version>-darwin-arm64/cli/vb`, macOS arm64 |
-| Legacy database TUI release build | `cargo build --release -p voidb-tui --features legacy-db-tui` | passed | `target/package/voidb-<version>-darwin-arm64/voidb-legacy/voidb`, macOS arm64 |
-| Sync server release build | `cargo build --release --manifest-path voidb-sync-server/Cargo.toml` | passed | `target/package/voidb-<version>-darwin-arm64/sync-server/voidb-sync-server`, macOS arm64 |
-| CLI entry point smoke | CLI version and command-family help | passed | `voidb <version>` |
-| Sync server entry point smoke | Sync server version and help | passed | `voidb-sync-server <version>` |
-| Default TUI real-terminal smoke | Packaged default `vb-tui` with disposable `HOME` | passed | Connection Manager, credential masking, profile CRUD/test/open, tab manager, shell escape, and terminal restore. |
-| Legacy TUI real-terminal smoke | Packaged legacy `vb-tui` with disposable `HOME` | passed after fix | SQLite connection opened the legacy browser surface. |
-| Staged artifact checksums | `shasum -a 256 ...` | passed | Checksums below. |
-
-Final staged checksums:
-
-| Artifact | Path | Size | SHA-256 |
-|---|---|---:|---|
-| Default TUI | `target/package/voidb-<version>-darwin-arm64/voidb-default/voidb` | 15,187,584 | `0ec55001254216eaa7fb2fabdaf435dcf024372018078b15bb002e2d27db0295` |
-| CLI | `target/package/voidb-<version>-darwin-arm64/cli/vb` | 37,649,200 | `c080ccb34f96fc0173fbb5f04ccbdca53d70928b6884793f4a5ede2f4f3f2d00` |
-| Legacy database TUI | `target/package/voidb-<version>-darwin-arm64/voidb-legacy/voidb` | 37,813,408 | `40cd27696ad2a267896ea897ccf918f84fbbba49586acd19389f74f4d6f2baf4` |
-| Sync server | `target/package/voidb-<version>-darwin-arm64/sync-server/voidb-sync-server` | 6,500,576 | `27e54dfcc9e7f4f13308a1d08fd957865b67ba8444a28ae628142d8419ec287f` |
-
-Refresh notes:
-
-- This Req53 package smoke originally retained the inherited
-  `imap-proto v0.10.2` future-incompatibility warning. Req71 later superseded
-  that residual risk with the exact-pinned Email `imap 3.0.0-alpha.15` upgrade.
-- The first legacy TUI package smoke exposed a composite-key lookup bug in
-  legacy database factories. Requirement 53 fixed SQLite, PostgreSQL, and
-  DuckDB factories to accept both composite keys and legacy display names.
-- Version/tag consistency is resolved for `<version>`: crate versions,
-  `Cargo.lock`, `vb --version`, `voidb-sync-server --version`,
-  changelog section, artifact directory, and intended tag agree.
-
-## 2026-07-04 Package-Readiness Run
-
-Local logs were written under
-`target/tmp/package-readiness-2026-07-04/` and are not committed.
-
-| Check | Command | Result | Duration | Observed artifact |
-|---|---|---|---|---|
-| Default TUI release build | `cargo build --release` | passed | 3m 15s | `target/release/voidb`, 14M, Mach-O arm64 |
-| CLI release build | `cargo build --release -p vb` | passed | 5m 03s | `target/release/vb`, 34M, Mach-O arm64 |
-| CLI entry point smoke | `./target/release/vb --help` | passed | <1s | Listed command families including `connections`, `credential`, `profile`, `plugin`, `invoke`, and protocol plugins. |
-| Legacy database TUI release build | `cargo build --release -p voidb-tui --features legacy-db-tui` | passed | 2m 27s | `target/release/voidb`, 36M, Mach-O arm64 |
-| Sync server release build | `cargo build --release --manifest-path voidb-sync-server/Cargo.toml` | passed | 36.92s | `voidb-sync-server/target/release/voidb-sync-server`, 5.9M, Mach-O arm64 |
-| Sync server entry point smoke | `./voidb-sync-server/target/release/voidb-sync-server --help` | passed | <1s | Help and version output reported `voidb-sync-server 0.1.0`. |
-| Staged package smoke | commands in `Packaging Smoke` | passed | <1s | Verified executable bits, CLI command-family help, sync server help/version. |
-| Staged artifact checksums | `shasum -a 256 ...` | passed | <1s | Checksums generated for default TUI, legacy TUI, CLI, and sync server artifacts. |
-
-Known warning:
-
-- Cargo reported inherited future-incompatibility risk for `imap-proto v0.10.2`.
-  This matched the release rehearsal warning set and did not fail the build.
-  Req71 later superseded this historical warning with the exact-pinned Email
-  `imap 3.0.0-alpha.15` upgrade.
-- Manual TUI package smoke was not rerun as part of the staged artifact smoke;
-  the release-candidate checklist still requires real-terminal TUI coverage
-  before tagging.
-
-## 2026-07-04 Requirement 34 Package Smoke Refresh
-
-Requirement 34 slice 2 reran package smoke after Sync conflict UX and plugin
-readiness updates landed. Local logs were written to
-`/tmp/voidb-r34-package-smoke.log` and are not committed.
-
-| Check | Command | Result | Duration | Observed artifact |
-|---|---|---|---|---|
-| Default TUI release build | `cargo build --release` | passed | 1m 38s | `target/package/voidb-default/voidb`, 14M, macOS arm64 |
-| CLI release build | `cargo build --release -p vb` | passed | 1m 50s | `target/package/cli/vb`, 35M, macOS arm64 |
-| Legacy database TUI release build | `cargo build --release -p voidb-tui --features legacy-db-tui` | passed | 1m 55s | `target/package/voidb-legacy/voidb`, 36M, macOS arm64 |
-| Sync server release build | `cargo build --release --manifest-path voidb-sync-server/Cargo.toml` | passed | 4.07s | `voidb-sync-server/target/release/voidb-sync-server`, 6.2M, macOS arm64 |
-| Staged executable smoke | executable bits, CLI help/version, sync-server help/version | passed | <1s | CLI reported `voidb 0.1.0`; sync server reported `voidb-sync-server 0.1.0`. |
-| Staged artifact checksums | `shasum -a 256 ...` | passed | <1s | Checksums generated for default TUI, legacy TUI, CLI, and sync server artifacts. |
-
-Refreshed staged checksums:
-
-| Artifact | Path | SHA-256 |
-|---|---|---|
-| Default TUI | `target/package/voidb-default/voidb` | `614cb77e14294f838e359ed64906b64676f9432a20b0ce15afd4933b27c36ecf` |
-| CLI | `target/package/cli/vb` | `52795513c9f9bd3addf9a72e49dc344fe9988a5e4e3415a84fd3afd4818bd5c8` |
-| Legacy database TUI | `target/package/voidb-legacy/voidb` | `01f7b12eeb92495f2688e94ed8b188e9c404c2a278ed61d2b0d20f4003f04abd` |
-| Sync server | `voidb-sync-server/target/release/voidb-sync-server` | `e8d5ca0223bcc5afb4a4df69c0bac2fd1d6f8b966cf309f25cc6a8ea12c4648c` |
-
-Refresh notes:
-
-- This refresh originally retained the inherited `imap-proto v0.10.2`
-  future-incompatibility warning. Req71 later superseded that historical
-  package-warning note with the exact-pinned Email `imap 3.0.0-alpha.15`
-  upgrade.
-- The TUI binary still has no `--help` or `--version` path, so default and
-  legacy TUI artifacts still need real-terminal startup and key-routing smoke.
-- The refreshed staged smoke did not reconcile release versions. All shipped
-  crates and binary output still report `0.1.0`, while `CHANGELOG.md` already
-  contains a historical `0.2.0` section.
+  platforms and may be skipped only when recorded in release notes. Existing
+  local fixture wrappers in `scripts/` rerun before tag when the matching
+  plugin capabilities change (`scripts/ssh-fixture-smoke.sh`,
+  `scripts/mysql-fixture-smoke.sh`, `scripts/redis-fixture-smoke.sh`,
+  `scripts/postgres-session-fixture-smoke.sh`). The Email, S3, and WebDAV
+  fixture wrappers are 0.4.1 deliverables (see the
+  [0.4.1 Iteration Roadmap](roadmap-0.4.1.md)); until they land, exercise
+  those plugins inside their own repositories.
+- The current sync plugin is beta-certified but opt-in. The local object-level
+  and hosted-process smoke gate runs through `scripts/release-sync-smoke.sh`;
+  external hosted deployment smoke still requires release-specific
+  infrastructure evidence. The full-directory bundle is useful for
+  compatibility backup, but it is not the stable object-level
+  profile/credential sync contract. Stable/default promotion still requires
+  release-owner acceptance of that gate and the boundary in
+  [Sync Boundary Under The Capability Model](sync-boundary.md).
+- Email pins `imap 3.0.0-alpha.15` exactly, which removed the inherited
+  `imap-proto` future-incompatibility warning; current Email future-incompat
+  checks report zero dependency notices.
+- Version/tag consistency: shipped crates, binaries, `CHANGELOG.md` sections,
+  and tag names must agree before tagging. Historical mismatches are recorded
+  in git history only.

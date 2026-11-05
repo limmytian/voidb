@@ -215,7 +215,8 @@ Use this checklist when reviewing new or changed TUI work:
 
 ## Follow-Up Impact
 
-The database TUI downscoping slice should use this boundary to decide which SQL
-browser/table editor paths are retained as thin adapters, paused, or moved
-behind CLI-first capability work. That concrete guidance is defined in
-Database TUI Downscoping Plan.
+The database TUI downscoping slice is complete: database data-inspector
+surfaces are CLI-first through shared capabilities, and any future plugin-owned
+TUI must pass the plugin-owned TUI gate
+([Plugin-Owned TUI Development Guide](plugin-owned-tui-development-guide.md),
+[Standalone TUI UX Acceptance Criteria](standalone-tui-ux-acceptance.md)).

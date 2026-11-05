@@ -11,9 +11,8 @@ It complements:
 - [Plugin-Owned TUI Launch Contract](plugin-owned-tui-launch-contract.md);
 - [Standalone TUI UX Acceptance Criteria](standalone-tui-ux-acceptance.md).
 
-The current in-repo CLI binary is `vb`. Some architecture docs use the
-packaged shorthand `voidb <plugin> tui`; for workspace commands, implement and
-test `vb <plugin> tui` only after a new plugin-owned TUI is accepted.
+The current in-repo CLI binary is `vb`; retained plugin TUIs launch through
+`vb <plugin> tui` only after a new plugin-owned TUI is accepted.
 
 ## Target Shape
 

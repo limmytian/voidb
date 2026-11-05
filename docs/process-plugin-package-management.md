@@ -27,23 +27,23 @@ or device state.
 Install a package:
 
 ```bash
-voidb plugin install ./redis-0.1.0.voidb-plugin.tar.zst --format json
-voidb plugin install ./target/process-plugins/redis --format table
+vb plugin install ./redis-0.1.0.voidb-plugin.tar.zst --format json
+vb plugin install ./target/process-plugins/redis --format table
 ```
 
 Update an installed package:
 
 ```bash
-voidb plugin update redis --from ./redis-0.2.0.voidb-plugin.tar.zst --format json
-voidb plugin update redis --from ./redis-0.1.0.voidb-plugin.tar.zst --allow-downgrade --format json
+vb plugin update redis --from ./redis-0.2.0.voidb-plugin.tar.zst --format json
+vb plugin update redis --from ./redis-0.1.0.voidb-plugin.tar.zst --allow-downgrade --format json
 ```
 
 Lifecycle operations:
 
 ```bash
-voidb plugin disable redis --format json
-voidb plugin enable redis --format json
-voidb plugin uninstall redis --keep-profiles --format json
+vb plugin disable redis --format json
+vb plugin enable redis --format json
+vb plugin uninstall redis --keep-profiles --format json
 ```
 
 `--install-root <path>` is available for explicit local testing and automation.

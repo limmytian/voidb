@@ -252,12 +252,12 @@ explicit migration workflow in
 The CLI exposes installation as local package management:
 
 ```bash
-voidb plugin install ./mysql-1.2.3.voidb-plugin.tar.zst --format json
-voidb plugin install ./target/plugin/mysql --format json
-voidb plugin update mysql --from ./mysql-1.2.4.voidb-plugin.tar.zst --format json
-voidb plugin disable mysql --format json
-voidb plugin enable mysql --format json
-voidb plugin uninstall mysql --keep-profiles --format json
+vb plugin install ./mysql-1.2.3.voidb-plugin.tar.zst --format json
+vb plugin install ./target/plugin/mysql --format json
+vb plugin update mysql --from ./mysql-1.2.4.voidb-plugin.tar.zst --format json
+vb plugin disable mysql --format json
+vb plugin enable mysql --format json
+vb plugin uninstall mysql --keep-profiles --format json
 ```
 
 JSON output should include:

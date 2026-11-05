@@ -24,9 +24,9 @@ Delegates authentication to your running SSH agent (via `SSH_AUTH_SOCK`). No cre
 ## Agent Capability Surface
 
 The SSH plugin exposes the following generic invoke capabilities for agents and
-automation. Release-facing evidence is recorded in
-[Release Plugin Smoke](release-plugin-smoke.md#ssh-live-smoke) and
-SSH Release Readiness.
+automation. Release-facing evidence is recorded by
+`scripts/release-plugin-smoke.sh` and
+`scripts/ssh-fixture-smoke.sh`.
 
 | Capability | Purpose | Effective risk | Dry-run |
 |---|---|---|---|
@@ -569,8 +569,9 @@ clippy tiers from [CI Check Tiers](ci-checks.md).
 
 Live SSH smoke remains fixture-dependent and is intentionally not part of the
 default unit-test tier because it needs a disposable SSH server, generated host
-keys, and local credential setup. Req63 records local OpenSSH fixture-backed
-password and public-key coverage in SSH Release Readiness.
+keys, and local credential setup. `scripts/ssh-fixture-smoke.sh` records
+local OpenSSH fixture-backed password and public-key coverage as a dated
+evidence entry under `target/tmp/`.
 Release notes should still state whether SSH-agent auth and manual TUI checks
 for `Ctrl+]`, external-agent session share/input, current-PTY revoke, forwarding
 panel UI, and SFTP path persistence were run.

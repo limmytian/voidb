@@ -11,25 +11,7 @@ It complements:
 - [Agent and TUI Aggregate Release Gate](agent-tui-release-gate.md)
 - [CI Check Tiers](ci-checks.md)
 - [Security Release Checklist](security-release-checklist.md)
-- Release Plugin Smoke
-- Release Sync Smoke
-- Legacy TUI Removal Boundary
-- [Data Inspector CLI-First Decisions](data-inspector-cli-first-decisions.md)
-- Plugin-Owned TUI Release Readiness 2026-07-06
-- Retained TUI Smoke Evidence 2026-07-07
-- New TUI Generation Release Notes 2026-07-07
 - [Release Packaging](release-packaging.md)
-- SSH Release Readiness
-- External-Agent Interaction Evidence 2026-07-13
-- S3 Release Readiness
-- WebDAV Release Readiness
-- MySQL Release Readiness
-- Kubernetes Release Readiness
-- MongoDB Release Readiness
-- Elasticsearch Release Readiness
-- Jenkins Release Readiness
-- Final Pre-Release Validation 2026-07-05
-- Release Publish Handoff 2026-07-05
 
 ## Command Gate Matrix
 
@@ -37,25 +19,32 @@ It complements:
 |---|---:|---|---|
 | Aggregate Agent/TUI release evidence | Yes | `python3 scripts/agent_tui_release_gate.py --profile full` | [Agent and TUI Aggregate Release Gate](agent-tui-release-gate.md) |
 | Agent capability matrix drift | Yes | `scripts/check-agent-capability-matrix.sh` | [Agent Capability and Experience Matrix](agent-capability-matrix.md) |
-| Secret-free promoted plugin smoke | Yes | `scripts/release-plugin-smoke.sh` | Release Plugin Smoke |
-| Local Docker fixture harness preflight | When local Docker-backed live fixtures are used | `scripts/local-fixture-smoke.sh run --fixture probe --report target/tmp/local-fixture-probe-evidence.md` | Live Fixture Smoke Harness |
-| Sync client/server smoke | Yes, while Sync is documented or shipped | `scripts/release-sync-smoke.sh` | Release Sync Smoke |
-| Stable object Sync claim | Only if release notes or UI copy call Sync stable/default | `cargo test -p voidb-core object_sync`, plus the stable object sync gate in Release Sync Smoke | Release Sync Smoke |
+| Secret-free promoted plugin smoke | Yes | `scripts/release-plugin-smoke.sh` | `scripts/release-plugin-smoke.sh` |
+| Local Docker fixture harness preflight | When local Docker-backed live fixtures are used | `scripts/local-fixture-smoke.sh run --fixture probe --report target/tmp/local-fixture-probe-evidence.md` | `scripts/local-fixture-smoke.sh` |
+| Sync client/server smoke | Yes, while Sync is documented or shipped | `scripts/release-sync-smoke.sh` | `scripts/release-sync-smoke.sh` |
+| Stable object Sync claim | Only if release notes or UI copy call Sync stable/default | `cargo test -p voidb-core object_sync`, plus the stable object sync gate in `scripts/release-sync-smoke.sh` | [Sync Boundary Under The Capability Model](sync-boundary.md) |
 | Security release gate | Yes | Commands in [Security Release Checklist](security-release-checklist.md) | [Security Release Checklist](security-release-checklist.md) |
 | Process-plugin runtime & tooling gate | Yes, while process plugins are enabled | `cargo test -p voidb-core process_plugin`; `cargo test -p voidb-core process_plugin_runtime`; `cargo test -p vb plugin`; `cargo test -p vb invoke`; `cargo test -p voidb-process-plugin-sdk` | [CI Check Tiers](ci-checks.md) |
-| External-agent interaction boundary | Yes | `scripts/check-external-agent-interaction.sh`; focused SSH/infrastructure/capability-only plugin groups from the CI guide | External-Agent Interaction Evidence |
-| Core protocol & RDBMS baseline | Yes, for core database contract confidence | `cargo test -p voidb-plugin-sqlite`; `cargo test -p voidb-plugin-redis`; `cargo test -p voidb-plugin-mysql`; `cargo test -p voidb-plugin-postgres`; `cargo test -p voidb-plugin-duckdb`; `cargo test -p vb invoke`; `git diff --check` | [CI Check Tiers](ci-checks.md) |
+| External-agent interaction boundary | Yes | `scripts/check-external-agent-interaction.sh`; focused SSH/infrastructure/capability-only plugin groups from the CI guide | `scripts/check-external-agent-interaction.sh` |
+| Core protocol & RDBMS baseline | Yes, for core database contract confidence | `cargo test -p voidb-core`; `cargo test -p vb invoke`; `git diff --check`; the SQL plugin crates' own test suites run inside their repository checkouts per [CI Check Tiers](ci-checks.md) | [CI Check Tiers](ci-checks.md) |
 | Decoupled long-tail protocol plugins | Verified in independent repos | Independent CI checks in `voidb-plugin-jenkins`, `voidb-plugin-webdav`, `voidb-plugin-email`, `voidb-plugin-s3`, `voidb-plugin-kubernetes`, `voidb-plugin-docker`, `voidb-plugin-elasticsearch`, `voidb-plugin-mongodb` | External Process Plugin Workflow |
-| SSH capability smoke | Yes, for SSH release candidate status | `cargo check -p voidb-plugin-ssh --example fixture_smoke`; `cargo test -p voidb-plugin-ssh`; `cargo test -p vb invoke`; `cargo test -p voidb-core profile_adapter`; `cargo test -p voidb-core profile_store`; `scripts/ssh-fixture-smoke.sh --report target/tmp/ssh-fixture-smoke-evidence.md` | SSH Release Readiness |
+| SSH capability smoke | Yes, for SSH release candidate status | `cargo test -p vb invoke`; `cargo test -p voidb-core profile_adapter`; `cargo test -p voidb-core profile_store`; `scripts/ssh-fixture-smoke.sh --report target/tmp/ssh-fixture-smoke-evidence.md`; `voidb-plugin-ssh` crate tests run in its repository checkout | [CI Check Tiers](ci-checks.md) |
 | Default native Connection Manager | Yes | `cargo test -p voidb-tui`; manual `cargo run` smoke | [Connection Manager TUI](connection-manager-tui.md) |
 | Retained standalone TUI gate | Yes, while retained standalone TUIs are shipped | `scripts/tui-quality-gate.sh`; retain its full output on failure; use `--cli-bin` and `--tui-bin` for staged/package binaries | [TUI CI And Real-Terminal Coverage](tui-terminal-coverage.md) |
 | Future plugin TUI UX gate | Only if a new plugin-owned TUI is accepted | `cargo test -p voidb-core tui_launch`; plugin-owned PTY/lifecycle test target | [Plugin-Owned TUI Development Guide](plugin-owned-tui-development-guide.md) |
-| Data inspector TUI gate | Only if release notes or UI copy advertise a data inspector TUI | Requirement 83 currently accepts no pilot; rerun the accepted plugin's capability, fixture, and PTY gates before adding any `vb <data-plugin> tui` command. | [Data Inspector CLI-First Decisions](data-inspector-cli-first-decisions.md) |
-| Package artifact smoke | Yes before tag | Commands in [Release Packaging](release-packaging.md), plus `scripts/linux-package-smoke.sh --report target/tmp/linux-package-smoke-evidence.md` when Linux Docker smoke is used; record platform evidence with the format in [Package CI Matrix](package-ci-matrix.md#package-evidence-format) | [Release Packaging](release-packaging.md) |
+| Data inspector TUI gate | Only if release notes or UI copy advertise a data inspector TUI | Requirement 83 currently accepts no pilot; rerun the accepted plugin's capability, fixture, and PTY gates before adding any `vb <data-plugin> tui` command. | [Standalone TUI UX Acceptance Criteria](standalone-tui-ux-acceptance.md) |
+| Package artifact smoke | Yes before tag | Commands in [Release Packaging](release-packaging.md), plus `scripts/linux-package-smoke.sh --report target/tmp/linux-package-smoke-evidence.md` when Linux Docker smoke is used; record platform evidence with a dated evidence entry under `target/tmp/` | [Release Packaging](release-packaging.md) |
 | Full workspace | Yes before tag | `cargo test --workspace --no-fail-fast` | [CI Check Tiers](ci-checks.md) |
 | Full clippy | Yes before tag | `cargo clippy --workspace --all-targets --no-deps` | [CI Check Tiers](ci-checks.md) |
 
 ## Manual Smoke Matrix
+
+Fixture wrappers for Email, S3, WebDAV, Kubernetes, MongoDB, Elasticsearch,
+and Jenkins are not present in `scripts/` yet: the Email, S3, and WebDAV
+wrappers are 0.4.1 deliverables (see the
+[0.4.1 Iteration Roadmap](roadmap-0.4.1.md)), and the remaining rows are
+executed inside the matching plugin repositories. A fixture row is only
+runnable when its script exists in `scripts/`.
 
 | Surface | Required manual coverage | Skip policy |
 |---|---|---|
@@ -64,7 +53,7 @@ It complements:
 | Future plugin TUIs | PTY gate transcripts and metrics exist under `target/tmp/standalone-tui-ux/` before any new plugin-owned TUI is shipped. | Record as not applicable while no plugin-owned TUI is shipped. |
 | SSH live fixture | Local OpenSSH lifecycle and capability/service smoke via `scripts/ssh-fixture-smoke.sh --report target/tmp/ssh-fixture-smoke-evidence.md`. | Rerun before RC promotion when SSH capabilities, host-key policy, or service channels change. |
 | SSH external-agent share | Fixture evidence plus a real-terminal check of share/refresh, operation review, one-operation approval, same-agent approval, denial, and `Ctrl+]` then `v` revoke. | Do not claim the live interaction path from deterministic source checks alone. |
-| Redis local fixture | Disposable local Redis container and scratch key prefix via `scripts/redis-fixture-smoke.sh --report target/tmp/redis-fixture-smoke-evidence.md`. | Rerun before RC promotion when Redis capabilities change; do not claim Redis fixture-backed readiness from Req55 skipped evidence alone. |
+| Redis local fixture | Disposable local Redis container and scratch key prefix via `scripts/redis-fixture-smoke.sh --report target/tmp/redis-fixture-smoke-evidence.md`. | Rerun before RC promotion when Redis capabilities change; do not claim Redis fixture-backed readiness from skipped evidence alone. |
 | Email local fixture | Disposable local GreenMail mailbox covering bounded reads, guarded send/move/delete/flag, attachment policy, and IDLE cancellation via `scripts/email-fixture-smoke.sh --report target/tmp/email-fixture-smoke-evidence.md`. | Rerun before RC promotion when Email capability, attachment, mutation, or IDLE behavior changes; real-provider interoperability remains opt-in. |
 | S3 local fixture | Disposable local MinIO bucket and scratch prefix via `scripts/s3-fixture-smoke.sh --report target/tmp/s3-fixture-smoke-evidence.md`. | Rerun before RC promotion when S3 capabilities, destructive safeguards, pagination, sync planning, or redaction behavior change. |
 | WebDAV local fixture | Disposable local rclone WebDAV collection via `scripts/webdav-fixture-smoke.sh --report target/tmp/webdav-fixture-smoke-evidence.md`. | Rerun before RC promotion when WebDAV capabilities, destructive safeguards, pagination, sync planning, or redaction behavior change. |
@@ -104,37 +93,15 @@ Include these notes in release-candidate notes when applicable:
 - Optional integration tests: provider compatibility for MySQL/MariaDB, SSH,
   WebDAV, and external hosted Sync
   smoke need external or local Docker fixtures and must be recorded as run,
-  partially run, or skipped using the evidence format in
-  [Live Fixture Smoke Harness](live-fixture-smoke-harness.md#evidence-format).
-  Docker fixture smoke completed in
-  Fixture-Backed Operations Plugin Promotion Smoke 2026-07-05.
-  Req61 records Redis local fixture-backed capability evidence in
-  DuckDB and Redis Release Readiness.
-  Req62 records Email local fixture-backed capability evidence in
-  Email Release Readiness. Req63 records SSH
-  local OpenSSH fixture-backed capability/service evidence in
-  SSH Release Readiness. Req64 records S3 local
-  MinIO fixture-backed capability evidence in
-  S3 Release Readiness. Req65 records WebDAV local
-  rclone fixture-backed capability evidence in
-  WebDAV Release Readiness. Req66 records MySQL
-  local fixture-backed SQL capability evidence in
-  MySQL Release Readiness. Req67 records
-  Kubernetes local kind fixture-backed capability evidence in
-  Kubernetes Release Readiness. Req68 records
-  MongoDB local fixture-backed capability evidence in
-  MongoDB Release Readiness. Req69 records
-  Elasticsearch local fixture-backed capability evidence in
-  Elasticsearch Release Readiness. Req70
-  records Jenkins local fixture-backed capability evidence in
-  Jenkins Release Readiness.
-- Sync: Sync is beta-certified but opt-in. Req60 records the object-level gate
-  and local hosted process smoke for profile and credential sync readiness. The
+  partially run, or skipped with a dated evidence entry under `target/tmp/`.
+  Historical per-requirement fixture evidence stays in git history and past
+  release notes.
+- Sync: Sync is beta-certified but opt-in. The object-level gate and local
+  hosted process smoke run through `scripts/release-sync-smoke.sh`; the
   full-directory bundle remains an encrypted compatibility path, not the stable
   profile/credential sync contract. A stable/default Sync claim still requires
-  release-owner acceptance of the gate in Release Sync Smoke
-  and the boundary in Sync Beta Readiness, not only
-  the compatibility-bundle smoke.
+  release-owner acceptance of that gate and the boundary in
+  [Sync Boundary Under The Capability Model](sync-boundary.md).
 - Clippy baseline: full clippy may still report inherited warnings recorded in
   the warning budget. New errors, new warning classes, or warnings in touched
   code are regressions.
@@ -175,66 +142,12 @@ Release candidate validation:
 - Residual risks disclosed:
 ```
 
-## Latest Rehearsal Result
+## Rehearsal Records
 
-Latest final validation record:
-Final Open-Source Decoupling and RC Validation 2026-10-07
-records Task Weaver requirement `93f1d929-f0ef-4e45-b475-5504a292b7c0` for commit
-`bc75a46`.
-
-Supporting evidence:
-
-- Final Open-Source Decoupling & Hardening (Waves 1 to 6) successfully moved
-  Jenkins, WebDAV, Email, S3, Kubernetes, Docker, Elasticsearch, and MongoDB into
-  independent open-source repositories under `https://github.com/limmytian/`.
-- Process-Plugin SDK published readiness and `cargo-generate` template completed
-  in `crates/voidb-process-plugin-sdk` and `templates/process-plugin-template`.
-- CLI packaging (`vb plugin package`) and distribution tooling completed
-  supporting `.tar.zst` and `.tar` with sha256 digests and integrity verification.
-- Third-party developer guide published in `docs/process-plugin-development-guide.md`.
-- Full workspace tests (`cargo test --workspace --no-fail-fast`) pass cleanly with 0 failures.
-- Full workspace Clippy (`cargo clippy --workspace --all-targets --no-deps`) passes with strict 0 warnings.
-- Agent capability matrix check (`scripts/check-agent-capability-matrix.sh`) is current and drift-free.
-
-Current go/no-go: **GO to prepare the human-controlled `v0.3.0-rc.1` publish
-handoff after release notes include the documented waivers**.
-
-Accepted residual risks only if disclosed in release notes:
-
-- Final deterministic validation targeted commit `4019a9d`. Subsequent
-  evidence/checklist commits are docs-only; if a later commit is tagged, package
-  staging should be rerun so manifest metadata and selected tag agree.
-- Package evidence covers native macOS arm64 artifacts and Docker Linux x64
-  package smoke. Native Linux x64 runner evidence, macOS x64, Windows x64, and
-  Linux arm64 remain unclaimed unless their platform-specific smoke is rerun and
-  recorded with the package evidence format.
-- Default-passphrase risk remains for legacy configs that have not been
-  re-encrypted.
-- External process plugins execute trusted local code from documented roots
-  only; marketplace and hosted catalog flows remain future work.
-- Sync remains beta-certified and opt-in unless the stable object Sync gate,
-  local hosted evidence, and release-owner acceptance are recorded.
-- Live MySQL, external hosted Sync deployment, native Linux x64 runner package
-  smoke, macOS x64 package smoke, Windows x64 package smoke, and Linux arm64
-  package smoke were skipped because disposable fixtures, credentials, or
-  platforms were not available. Local hosted Sync process smoke passed in
-  Req60. Docker
-  fixture smoke completed on 2026-07-05. Redis local fixture-backed capability
-  smoke passed in Req61. Email local fixture-backed capability smoke passed in
-  Req62 for the read-only scope. SSH local OpenSSH fixture-backed
-  capability/service smoke passed in Req63; remaining SSH TUI checks are the
-  visible `Ctrl+\` shell escape, forwarding panel UI, and SFTP path persistence.
-  S3 local MinIO fixture-backed capability smoke passed in Req64. WebDAV local
-  rclone fixture-backed capability smoke passed in Req65. Kubernetes local kind
-  fixture-backed capability smoke passed in Req67. MongoDB local fixture-backed
-  capability smoke passed in Req68. Elasticsearch local fixture-backed
-  capability smoke passed in Req69. Jenkins local fixture-backed capability
-  smoke passed in Req70.
-- Inherited warnings remain non-blocking under the warning budget policy:
-  existing clippy warning buckets are accepted only when they stay within the
-  recorded inventory. New warnings in touched code are regressions. Req71
-  removed the inherited `imap-proto v0.10.2` future-incompatibility warning by
-  upgrading Email to exact-pinned `imap 3.0.0-alpha.15`.
+This checklist records current gates only. Dated rehearsal, validation, and
+promotion records are historical evidence: they live in git history and past
+release notes, not in this file. Record new rehearsal outcomes in the release
+notes using the template above.
 
 ## Stop Conditions
 

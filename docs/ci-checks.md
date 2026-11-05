@@ -153,8 +153,7 @@ This opt-in tier requires a usable local Docker daemon and the lightweight
 probe image. It validates fixture network creation, random port assignment,
 health waiting, redacted log capture, evidence writing, and teardown without
 promoting any plugin. Plugin-specific local fixtures should extend the same
-helper and use the evidence format in
-[Live Fixture Smoke Harness](live-fixture-smoke-harness.md#evidence-format).
+helper and record a dated evidence entry under `target/tmp/`.
 
 ## Sync Smoke Helper
 
@@ -184,7 +183,7 @@ scripts/release-sync-smoke.sh --hosted
 The hosted run writes evidence under
 `target/tmp/voidb-sync-hosted-smoke/<run-id>/evidence.md`.
 The beta readiness decision and stable/default boundary are recorded in
-Sync Beta Readiness.
+[Sync Boundary Under The Capability Model](sync-boundary.md).
 
 ## Package Smoke Helper
 
@@ -214,7 +213,8 @@ thresholds. Trend rows, failure captures, and a checksummed artifact manifest ar
 written under `target/tmp/tui-quality-gate/`. CI must retain that entire directory
 on failure. Local reproduction and the required real-terminal emulator matrix are
 defined in [TUI CI And Real-Terminal Coverage](tui-terminal-coverage.md); package
-runner and platform-claim rules remain in Package CI Matrix.
+runner and platform-claim rules are recorded in
+[Release Packaging](release-packaging.md).
 
 ## First Protocol Pair Gates
 
@@ -245,8 +245,8 @@ capability metadata discovery, direct plugin invocation handlers, and the
 agent-facing generic invoke CLI. They intentionally avoid requiring an external
 Redis server; Redis target-error coverage uses deterministic unavailable-service
 tests and dry-run paths.
-Release-readiness decisions for Redis are recorded in
-DuckDB and Redis Release Readiness.
+Release-readiness decisions for Redis follow the release-candidate gate matrix
+in [Release Candidate Checklist](release-candidate-checklist.md).
 
 ## MySQL Capability Gates
 
@@ -280,8 +280,8 @@ cargo test -p voidb-plugin-mysql --test capability_fixtures \
 Set `VOIDB_MYSQL_TEST_HOST`, `VOIDB_MYSQL_TEST_PORT`,
 `VOIDB_MYSQL_TEST_USER`, `VOIDB_MYSQL_TEST_PASSWORD`, and
 `VOIDB_MYSQL_TEST_DATABASE` for the live target.
-Release-readiness decisions for MySQL are recorded in
-MySQL Release Readiness.
+Release-readiness decisions for MySQL follow the release-candidate gate matrix
+in [Release Candidate Checklist](release-candidate-checklist.md).
 
 ## PostgreSQL Capability Gate
 
@@ -317,8 +317,8 @@ git diff --check
 
 This gate uses temporary DuckDB databases and does not require a live service.
 Keep broader DuckDB native build cost out of unrelated fast gates.
-Release-readiness decisions for DuckDB are recorded in
-DuckDB and Redis Release Readiness.
+Release-readiness decisions for DuckDB follow the release-candidate gate matrix
+in [Release Candidate Checklist](release-candidate-checklist.md).
 
 ## Operations Plugin Capability Gates
 
@@ -332,16 +332,8 @@ git diff --check
 ```
 
 These checks are secret-free and do not require live targets. Fixture-backed
-promotion results are recorded in
-Fixture-Backed Operations Plugin Promotion Smoke 2026-07-05.
-Docker completed disposable daemon smoke in Req50; Kubernetes, MongoDB,
-and Elasticsearch were still fixture-pending at that point. Req67
-completed Kubernetes local kind fixture-backed capability evidence in
-Kubernetes Release Readiness. Req68
-completed MongoDB local fixture-backed capability evidence in
-MongoDB Release Readiness. Req69 completed
-Elasticsearch local fixture-backed capability evidence in
-Elasticsearch Release Readiness. Use the local
+promotion results are recorded as dated evidence entries under `target/tmp/`
+and in the release notes. Use the local
 fixture probe first when those fixtures are provisioned through the shared local
 Docker harness:
 
@@ -635,7 +627,7 @@ slice summary and keep the diff limited to the selected warning group.
 | Fast CLI | Pull request touching `crates/voidb-cli` | `cargo test -p vb` | Catches profile, invoke, audit, and plugin command regressions. |
 | Promoted plugin smoke | Release-candidate prep or plugin smoke doc changes | `scripts/release-plugin-smoke.sh` | Runs secret-free focused checks for SSH and MySQL; local fixture wrappers cover promoted Docker-backed services such as Kubernetes and MongoDB when provisioned; live service commands stay opt-in. |
 | Sync smoke | Release-candidate prep or sync client/server changes | `scripts/release-sync-smoke.sh` | Runs sync plugin e2e tests and standalone sync server smoke with disposable local state. |
-| Package smoke | Release-candidate prep or package automation changes | `scripts/stage-release-artifacts.sh --build`; `scripts/package-smoke.sh --artifact-root target/package/voidb-<version>-<platform>` | Stages default TUI, CLI, and sync-server artifacts; verifies checksums, manifest consistency, executable bits, CLI and sync-server entry points, and TUI prerequisites. Use Package CI Matrix for macOS, Linux, Windows, and runner-skip rules. |
+| Package smoke | Release-candidate prep or package automation changes | `scripts/stage-release-artifacts.sh --build`; `scripts/package-smoke.sh --artifact-root target/package/voidb-<version>-<platform>` | Stages default TUI, CLI, and sync-server artifacts; verifies checksums, manifest consistency, executable bits, CLI and sync-server entry points, and TUI prerequisites. Use [Release Packaging](release-packaging.md) for artifact naming and platform notes. |
 | First protocol pair | Pull request touching SQLite/Redis capabilities or generic invoke | `cargo test -p voidb-plugin-sqlite`; `cargo test -p voidb-plugin-redis`; `cargo test -p vb invoke` | Proves the SQLite/Redis reference capability pair, including pagination, dry-run, structured target errors, and redaction. |
 | MySQL capability | Pull request touching MySQL SQL capabilities or diagnostics | `cargo check -p voidb-plugin-mysql --example fixture_smoke`; `cargo test -p voidb-plugin-mysql`; `cargo test -p vb invoke`; `cargo test -p voidb-core sql_contract`; `scripts/mysql-fixture-smoke.sh --report target/tmp/mysql-fixture-smoke-evidence.md` | Proves the first networked SQL capability path through a disposable local fixture without external credentials. |
 | External-agent interaction | Pull request touching SSH session sharing, Docker/Kubernetes/Jenkins current-view sharing, capability-only plugin boundaries, or related docs | `scripts/check-external-agent-interaction.sh`; relevant plugin tests from the focused group above | Prevents retired conversation UI, protects capability-only plugins, and verifies session/context-share operation gates. |

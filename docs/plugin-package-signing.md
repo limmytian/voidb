@@ -21,16 +21,16 @@ Signatures are distributed as detached signature files with a `.sig` extension (
 
 ---
 
-## 2. CLI Tooling: `voidb plugin sign` and `voidb plugin verify`
+## 2. CLI Tooling: `vb plugin sign` and `vb plugin verify`
 
-The `voidb plugin` CLI provides native subcommands to manage keys, sign packages, and verify signatures.
+The `vb plugin` CLI provides native subcommands to manage keys, sign packages, and verify signatures.
 
 ### 2.1 Generating a Keypair and Signing a Package
 
 To generate a new one-off or release keypair while signing an archive:
 
 ```bash
-voidb plugin sign dist/voidb-plugin-s3-0.3.0-rc.1.tar.zst --generate-key
+vb plugin sign dist/voidb-plugin-s3-0.3.0-rc.1.tar.zst --generate-key
 ```
 
 Output (JSON or Table):
@@ -50,11 +50,11 @@ You can pass a 64-hex private key directly or reference a private key file:
 
 ```bash
 # Direct hex
-voidb plugin sign dist/voidb-plugin-s3-0.3.0-rc.1.tar.zst \
+vb plugin sign dist/voidb-plugin-s3-0.3.0-rc.1.tar.zst \
   --private-key "d88b4998980b62d8544e30ef00ad581373ea89d5337220556fd43b17c1bf2eb8"
 
 # Via file
-voidb plugin sign dist/voidb-plugin-s3-0.3.0-rc.1.tar.zst \
+vb plugin sign dist/voidb-plugin-s3-0.3.0-rc.1.tar.zst \
   --private-key path/to/release.key
 ```
 
@@ -62,11 +62,11 @@ voidb plugin sign dist/voidb-plugin-s3-0.3.0-rc.1.tar.zst \
 
 ```bash
 # Verify using default detached signature path (<archive>.sig)
-voidb plugin verify dist/voidb-plugin-s3-0.3.0-rc.1.tar.zst \
+vb plugin verify dist/voidb-plugin-s3-0.3.0-rc.1.tar.zst \
   --public-key "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 # Or explicitly specifying signature file/hex
-voidb plugin verify dist/voidb-plugin-s3-0.3.0-rc.1.tar.zst \
+vb plugin verify dist/voidb-plugin-s3-0.3.0-rc.1.tar.zst \
   --public-key "e3b0c442..." \
   --signature path/to/custom.sig
 ```
@@ -75,15 +75,15 @@ voidb plugin verify dist/voidb-plugin-s3-0.3.0-rc.1.tar.zst \
 
 ## 3. Installation Gate: Strict Signature Verification
 
-During `voidb plugin install` and `voidb plugin update`, you can enforce signature verification via `--verify-key`:
+During `vb plugin install` and `vb plugin update`, you can enforce signature verification via `--verify-key`:
 
 ```bash
 # Install with verification (fails if signature is missing or invalid)
-voidb plugin install dist/voidb-plugin-s3-0.3.0-rc.1.tar.zst \
+vb plugin install dist/voidb-plugin-s3-0.3.0-rc.1.tar.zst \
   --verify-key "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 # Enforce that signature file exists even if verify key is supplied
-voidb plugin install dist/voidb-plugin-s3-0.3.0-rc.1.tar.zst \
+vb plugin install dist/voidb-plugin-s3-0.3.0-rc.1.tar.zst \
   --verify-key "<pubkey>" \
   --require-signature
 ```

@@ -136,9 +136,9 @@ for source files, event count, generated timestamp, and normalized filters.
 The canonical command groups are:
 
 ```bash
-voidb plugin <command>
-voidb capability <command>
-voidb invoke <capability-ref>
+vb plugin <command>
+vb invoke list | vb invoke describe <capability-ref>
+vb invoke run <capability-ref>
 ```
 
 `plugin` commands expose installed plugin metadata and discovery state.
@@ -237,9 +237,9 @@ Human messages may change. Agents should branch on `ok`, `error.category`,
 List discovered process plugins.
 
 ```bash
-voidb plugin list --format json
-voidb plugin list --state available --format table
-voidb plugin list --include-shadowed --format json
+vb plugin list --format json
+vb plugin list --state available --format table
+vb plugin list --include-shadowed --format json
 ```
 
 Options:
@@ -289,8 +289,8 @@ values, credentials, command-line secrets, or unredacted plugin stderr.
 Describe one plugin and its manifest-derived metadata.
 
 ```bash
-voidb plugin describe mysql --format json
-voidb plugin describe mysql --include schemas,capabilities --format json
+vb plugin describe mysql --format json
+vb plugin describe mysql --include schemas,capabilities --format json
 ```
 
 Options:
@@ -462,12 +462,12 @@ references or redacted placeholders.
 `invoke` runs one capability.
 
 ```bash
-voidb invoke mysql.query --profile prod-db --input query.json --format json
-voidb invoke redis.get --profile cache --input-json '{"key":"user:1"}' --format json
-voidb invoke s3.list --profile assets --input-json '{"bucket":"logs"}' --format json
-voidb invoke webdav.get --profile dav --input-json '{"path":"/reports/q2.csv"}' --format json
-voidb invoke email.list --profile mail --input-json '{"folder":"INBOX"}' --format json
-voidb invoke ssh.sftp_list --profile shell --input-json '{"path":"."}' --format json
+vb invoke run mysql.query --profile prod-db --input query.json --format json
+vb invoke run redis.get --profile cache --input-json '{"key":"user:1"}' --format json
+vb invoke run s3.list --profile assets --input-json '{"bucket":"logs"}' --format json
+vb invoke run webdav.get --profile dav --input-json '{"path":"/reports/q2.csv"}' --format json
+vb invoke run email.list --profile mail --input-json '{"folder":"INBOX"}' --format json
+vb invoke run ssh.sftp_list --profile shell --input-json '{"path":"."}' --format json
 ```
 
 The canonical profile flag is `--profile`. `--conn` may be kept as a

@@ -1,11 +1,14 @@
 # Data and Search Agent Live-Session Contract
 
 This document defines how Redis, MongoDB, and Elasticsearch map cursor and
-stream workflows onto VoidB's shared Agent live-session protocol. The bundled
-plugins now advertise the capabilities listed below and register native
-live-session factories. Shared deterministic conformance and disposable
+stream workflows onto VoidB's shared Agent live-session protocol. The
+external Redis, MongoDB, and Elasticsearch plugins declare the capabilities
+listed below and implement native live-session factories in their own
+repositories. Shared deterministic conformance and disposable
 Redis, MongoDB replica-set, and Elasticsearch fixture gates are available
-through `scripts/check-data-search-live-session-conformance.sh`.
+through `scripts/check-data-search-live-session-conformance.sh`. As of 0.4.0
+the production broker host registers no plugin session factories, so these
+families fail closed at session open until the 0.4.1 host wiring lands.
 
 The shared Rust types live in `voidb_core::live_session`. Infrastructure
 plugins use the same protocol; their currently supported families and defaults
@@ -180,6 +183,9 @@ separate acknowledged capabilities and are never smuggled through a read-event
 operation.
 
 ## Implemented plugin mapping
+
+The mapping below is implemented in the plugin repositories; production
+reachability depends on the broker host wiring status described above.
 
 | Capability and workflow | Shared kind/cursor | Delivery and continuity | Required safety |
 |---|---|---|---|

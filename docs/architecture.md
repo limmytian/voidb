@@ -18,9 +18,9 @@
 |   [Human Interaction]                                 [Machine Communication] |
 |                                                                               |
 |   +-----------------------+   +-------------------+   +-------------------+   |
-|   |   voidb (Main TUI)    |   | vb <cmd>   |   | AI Agents / Core  |   |
-|   |  Connection & Profile |   | Unified Command   |   | Capability Broker |   |
-|   |       Manager         |   |    Dispatcher     |   |                   |   |
+|   |  vb-tui (Connection   |   |     vb <cmd>      |   | AI Agents / Core  |   |
+|   |     Manager TUI)      |   | Unified Command   |   | Capability Broker |   |
+|   |                       |   |    Dispatcher     |   |                   |   |
 |   +-----------------------+   +-------------------+   +-------------------+   |
 |               |                         |                       |             |
 |               | saves metadata          | transparent dispatch  | JSON-RPC    |

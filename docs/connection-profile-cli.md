@@ -18,11 +18,11 @@ discovery and invocation are defined in
 The canonical command group is:
 
 ```bash
-voidb profile <command>
+vb profile <command>
 ```
 
-`voidb connection <command>` may be kept as a compatibility alias while the old
-`voidb connections` built-in command is migrated, but new documentation and
+`vb connection <command>` may be kept as a compatibility alias while the old
+`vb connections` built-in command is migrated, but new documentation and
 agent workflows should use `profile`.
 
 The noun is intentionally `profile`, not `connection`, because a profile is
@@ -47,9 +47,9 @@ IDs, not decrypted config.
 Examples:
 
 ```bash
-voidb profile show prod-db --format json
-voidb profile show id:profile:4c26ea66-9c35-4b82-8876-239c72f68d89 --format json
-voidb profile test name:prod-db --timeout 30s --format json
+vb profile show prod-db --format json
+vb profile show id:profile:4c26ea66-9c35-4b82-8876-239c72f68d89 --format json
+vb profile test name:prod-db --timeout 30s --format json
 ```
 
 ## Common Flags
@@ -94,12 +94,12 @@ Human local workflows may import or replace credential material through
 dedicated secret source flags:
 
 ```bash
-voidb profile create --plugin mysql --name prod-db \
+vb profile create --plugin mysql --name prod-db \
   --input mysql-profile.json \
   --credential password:env=VOIDB_MYSQL_PASSWORD \
   --format json
 
-voidb profile update prod-db \
+vb profile update prod-db \
   --credential password:file=./password.txt \
   --expected-version 7 \
   --format json
@@ -196,8 +196,8 @@ allowed by policy.
 List saved profiles.
 
 ```bash
-voidb profile list --format json
-voidb profile list --plugin mysql --format table
+vb profile list --format json
+vb profile list --plugin mysql --format table
 ```
 
 Options:
@@ -256,8 +256,8 @@ selection, filtering, policy inspection, and follow-up `show`.
 Inspect one profile.
 
 ```bash
-voidb profile show prod-db --format json
-voidb profile show prod-db --include metadata,policy,credential_refs --format json
+vb profile show prod-db --format json
+vb profile show prod-db --include metadata,policy,credential_refs --format json
 ```
 
 Options:
@@ -276,8 +276,8 @@ validates against the installed plugin schema.
 Validate a profile document before create or update.
 
 ```bash
-voidb profile validate --plugin mysql --input mysql-profile.json --format json
-voidb profile validate --plugin mysql --input - --format json
+vb profile validate --plugin mysql --input mysql-profile.json --format json
+vb profile validate --plugin mysql --input - --format json
 ```
 
 Options:
@@ -303,8 +303,8 @@ Validation checks:
 Create one saved profile.
 
 ```bash
-voidb profile create --plugin mysql --name prod-db --input mysql-profile.json --format json
-voidb profile create --plugin s3 --name assets --input - --credential cloud_secret_key:env=VOIDB_AWS_SECRET_ACCESS_KEY --format json
+vb profile create --plugin mysql --name prod-db --input mysql-profile.json --format json
+vb profile create --plugin s3 --name assets --input - --credential cloud_secret_key:env=VOIDB_AWS_SECRET_ACCESS_KEY --format json
 ```
 
 Options:
@@ -333,9 +333,9 @@ JSON output returns the created profile with credential references only.
 Patch one saved profile.
 
 ```bash
-voidb profile update prod-db --input profile.patch.json --expected-version 7 --format json
-voidb profile update prod-db --set metadata.database=app2 --expected-version 7 --format json
-voidb profile update prod-db --credential password:env=VOIDB_MYSQL_PASSWORD --expected-version 7 --format json
+vb profile update prod-db --input profile.patch.json --expected-version 7 --format json
+vb profile update prod-db --set metadata.database=app2 --expected-version 7 --format json
+vb profile update prod-db --credential password:env=VOIDB_MYSQL_PASSWORD --expected-version 7 --format json
 ```
 
 Options:
@@ -367,8 +367,8 @@ plugin-owned.
 Test whether a profile can create the runtime access needed by a plugin.
 
 ```bash
-voidb profile test prod-db --format json
-voidb profile test prod-db --capability query --timeout 15s --format json
+vb profile test prod-db --format json
+vb profile test prod-db --capability query --timeout 15s --format json
 ```
 
 Options:
@@ -419,14 +419,14 @@ on where the failure happened.
 The existing CLI has a `connections` built-in command group with `list`, `show`,
 and `test`. During migration:
 
-1. `voidb profile list` reads current `ConnectionConfig` values through a
+1. `vb profile list` reads current `ConnectionConfig` values through a
    storage adapter and emits `ConnectionProfile`-shaped JSON.
-2. `voidb profile show` treats `plugin_config` as storage-internal data and
+2. `vb profile show` treats `plugin_config` as storage-internal data and
    emits only redacted profile metadata and credential references.
-3. `voidb profile test` moves away from direct driver dispatch in the generic
+3. `vb profile test` moves away from direct driver dispatch in the generic
    CLI command and routes through plugin-owned test capabilities.
-4. `voidb connections ...` remains a compatibility wrapper until existing
-   scripts can move to `voidb profile ...`.
+4. `vb connections ...` remains a compatibility wrapper until existing
+   scripts can move to `vb profile ...`.
 
 ## Invariants
 

@@ -18,6 +18,18 @@ One-shot `profile test` and `invoke run` requests still execute in scoped child
 processes. Semantic continuation instead uses `agent session open/call/start`
 with a `session_only` or `both` grant.
 
+### Production host wiring status
+
+Since the official plugins moved to external repositories, the production
+broker registers no plugin session factories: the broker runtime's
+`register_session_factories` is a stub, so `agent session open` fails closed
+with `session.unsupported` for every plugin regardless of the matrix below.
+The plugin-side factories and fixtures marked "implemented" live in the
+external plugin repositories and are exercised there through their own test
+harnesses. The 0.4.1 iteration wires an external-plugin session factory over
+`ProcessPluginSessionRuntime` into the production broker host; from that
+slice on, the matrix rows describe true end-to-end behavior.
+
 ## Adoption Matrix
 
 The classification values are:

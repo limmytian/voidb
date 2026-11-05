@@ -296,7 +296,7 @@ the public contract:
 1. Treat saved `ConnectionConfig` values as storage-backed profiles.
 2. Expose profile references through CLI commands without printing secrets.
 3. Add capability metadata and schema discovery per plugin.
-4. Route `voidb invoke` requests into `CapabilityInvocation`.
+4. Route `vb invoke` requests into `CapabilityInvocation`.
 5. Let plugins decide instance creation and reuse behind the protocol boundary.
 
 Compatibility for existing configs is handled by the explicit migration

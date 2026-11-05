@@ -1,10 +1,10 @@
 # Service Layer Design
 
-This document captures the architectural decisions, design principles, and known pitfalls from the service-layer decoupling milestone (completed 2026-04-11). It is the reference for anyone adding a new plugin or extending an existing service.
+This document captures the architectural decisions, design principles, and known pitfalls of the service-layer decoupling work. It is the reference for anyone adding a new plugin or extending an existing service; official plugins live in external repositories and follow the same rules.
 
 ## Core Decisions
 
-These decisions were locked before any plugin extraction began and apply to all 14 plugins.
+These decisions apply to every plugin, including the external official plugin repositories.
 
 | Decision | Choice | Rationale |
 |---|---|---|
