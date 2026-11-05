@@ -162,7 +162,10 @@ vb ix · vb ctx       # invoke · context commands
 
 Builtin and agent subcommands also accept short forms directly:
 `agent authorize-batch` = `agent batch`, `agent request inbox` =
-`agent request in`.
+`agent request in`, and high-frequency flags carry shorts
+(`-p` profile, `-c` capability, `-w` wait, `-t` ttl, `-y` yes,
+`-f` format) so one-liners stay one-liners:
+`vb exec ssh.exec -p prod -w 120000 --purpose triage`.
 
 If no current grant permits an operation, an identified interactive agent
 creates one exact JIT request and waits briefly for review in the Connection

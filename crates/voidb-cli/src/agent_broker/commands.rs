@@ -225,6 +225,7 @@ pub(crate) fn agent_subcommand() -> Command {
                 .arg(
                     Arg::new("wait-timeout-ms")
                         .long("wait-timeout-ms")
+                        .short('w')
                         .default_value("30000")
                         .value_name("MILLISECONDS")
                         .value_parser(clap::value_parser!(u64))
@@ -263,6 +264,7 @@ pub(crate) fn agent_subcommand() -> Command {
                 .arg(
                     Arg::new("yes")
                         .long("yes")
+                        .short('y')
                         .action(ArgAction::SetTrue),
                 )
                 .arg(
@@ -298,12 +300,14 @@ pub(crate) fn agent_subcommand() -> Command {
                 .arg(
                     Arg::new("capability")
                         .long("capability")
+                        .short('c')
                         .action(ArgAction::Append)
                         .help("Exact qualified capability; without --preset explicit values infer Custom"),
                 )
                 .arg(
                     Arg::new("ttl-minutes")
                         .long("ttl-minutes")
+                        .short('t')
                         .default_value("15")
                         .value_parser(clap::value_parser!(u64)),
                 )
@@ -322,6 +326,7 @@ pub(crate) fn agent_subcommand() -> Command {
                 .arg(
                     Arg::new("yes")
                         .long("yes")
+                        .short('y')
                         .action(ArgAction::SetTrue)
                         .help("Confirm an authorization that permits --yes operations"),
                 )
@@ -352,6 +357,7 @@ pub(crate) fn agent_subcommand() -> Command {
                 .arg(
                     Arg::new("ttl-minutes")
                         .long("ttl-minutes")
+                        .short('t')
                         .default_value("15")
                         .value_parser(clap::value_parser!(u64)),
                 )
@@ -370,6 +376,7 @@ pub(crate) fn agent_subcommand() -> Command {
                 .arg(
                     Arg::new("yes")
                         .long("yes")
+                        .short('y')
                         .action(ArgAction::SetTrue)
                         .help("Accept the rendered batch review non-interactively"),
                 )
@@ -433,6 +440,7 @@ pub(crate) fn agent_subcommand() -> Command {
                 .arg(
                     Arg::new("ttl-minutes")
                         .long("ttl-minutes")
+                        .short('t')
                         .default_value("15")
                         .value_parser(clap::value_parser!(u64)),
                 )

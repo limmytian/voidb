@@ -36,9 +36,9 @@ pub(super) fn jit_request_command() -> Command {
         .subcommand(with_principal_args(
             Command::new("create")
                 .about("Create a short-lived authorization request (JSON output)")
-                .arg(Arg::new("profile").long("profile").required(true))
+                .arg(Arg::new("profile").long("profile").short('p').required(true))
                 .arg(Arg::new("plugin").long("plugin").required(true))
-                .arg(Arg::new("capability").long("capability").required(true))
+                .arg(Arg::new("capability").long("capability").short('c').required(true))
                 .arg(
                     Arg::new("scope")
                         .long("scope")
@@ -67,6 +67,7 @@ pub(super) fn jit_request_command() -> Command {
                 .arg(
                     Arg::new("ttl-seconds")
                         .long("ttl-seconds")
+                        .short('t')
                         .default_value("300")
                         .value_parser(clap::value_parser!(u64)),
                 ),
@@ -102,6 +103,7 @@ pub(super) fn jit_request_command() -> Command {
                 .arg(
                     Arg::new("format")
                         .long("format")
+                        .short('f')
                         .default_value("json")
                         .value_parser(["json", "table"])
                         .help("Output format; json is stable for agents, table is human-readable"),
@@ -123,6 +125,7 @@ pub(super) fn jit_request_command() -> Command {
                 .arg(
                     Arg::new("ttl-seconds")
                         .long("ttl-seconds")
+                        .short('t')
                         .default_value("900")
                         .value_parser(clap::value_parser!(u64)),
                 )
