@@ -15,10 +15,10 @@ use std::time::Duration;
 use tokio::io::AsyncReadExt;
 use uuid::Uuid;
 use voidb_core::{
-    AgentAuthorizationPresetKind, AgentAuthorizationScope, AgentGrantAmendment, AgentGrantRevision,
-    AgentPrincipal, AppConfig, AuditOperation, CapabilityDefinition, CapabilityExecutionMode,
-    ConnectionProfile, FrontendAgentGrant, LocalProfileStore, authorize_normalized_operation,
-    normalize_agent_operation,
+    AgentAuthorizationPresetKind, AgentAuthorizationRequest, AgentAuthorizationScope,
+    AgentGrantAmendment, AgentGrantRevision, AgentPrincipal, AppConfig, AuditOperation,
+    CapabilityDefinition, CapabilityExecutionMode, ConnectionProfile, FrontendAgentGrant,
+    LocalProfileStore, authorize_normalized_operation, normalize_agent_operation,
 };
 
 use super::GRANT_VERSION;
@@ -948,6 +948,50 @@ pub(super) fn print_jit_error(
     Ok(exit_code)
 }
 
+/// Interactive add-to-grant target selection: list the principal's grants on
+/// the same profile and plugin numbered 1..n (Enter picks the first /
+/// soonest-expiring), accept a number or a full grant id, and fall back to
+/// manual entry when nothing is compatible.
+fn prompt_existing_grant(request: &AgentAuthorizationRequest) -> anyhow::Result<String> {
+    let fingerprint = request.principal.fingerprint()?;
+    let compatible: Vec<AgentGrantFile> = load_grants(false)?
+        .into_iter()
+        .filter(|grant| {
+            grant.profile_id == request.profile_id
+                && grant.plugin_id == request.plugin_id
+                && grant
+                    .principal_fingerprint
+                    .as_deref()
+                    .is_none_or(|principal| principal == fingerprint)
+        })
+        .collect();
+    if compatible.is_empty() {
+        println!("No existing grants on this profile/principal; enter a grant id manually.");
+        return prompt_tty_line("Existing logical grant ID: ");
+    }
+    println!("Existing grants on this profile:");
+    for (index, grant) in compatible.iter().enumerate() {
+        println!(
+            "  {}. {} · expires {}",
+            index + 1,
+            grant.id,
+            grant.expires_at.to_rfc3339()
+        );
+    }
+    let entered = prompt_tty_line("Grant number (Enter for 1, or a full grant id): ")?;
+    let entered = entered.trim();
+    if entered.is_empty() {
+        return Ok(compatible[0].id.clone());
+    }
+    if let Ok(index) = entered.parse::<usize>() {
+        return compatible
+            .get(index.wrapping_sub(1))
+            .map(|grant| grant.id.clone())
+            .ok_or_else(|| anyhow!("grant number {index} is not in the list"));
+    }
+    Ok(entered.to_string())
+}
+
 pub(super) async fn review_jit_request(request_id: &str) -> anyhow::Result<i32> {
     if !std::io::stdin().is_terminal() || !std::io::stdout().is_terminal() {
         return print_jit_error(
@@ -1062,7 +1106,7 @@ pub(super) async fn review_jit_request(request_id: &str) -> anyhow::Result<i32> 
             uses: prompt_tty_optional_number("Optional use limit (1-100, Enter for unlimited): ")?,
         },
         "a" => AgentGrantAmendment::AddToGrant {
-            grant_id: prompt_tty_line("Existing logical grant ID: ")?,
+            grant_id: prompt_existing_grant(&request)?,
             ttl_delta_seconds: prompt_tty_number_with_default(
                 "TTL extension seconds (0 allowed, Enter for default 300): ",
                 300,
