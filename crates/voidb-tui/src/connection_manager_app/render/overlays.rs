@@ -90,6 +90,7 @@ impl ConnectionManagerApp {
             Line::raw("a               Agent access · simple/advanced, presets, TTL, uses,"),
             Line::raw("                capability scope, renew/revoke"),
             Line::raw("p               Open canonical JIT approval inbox"),
+            Line::raw("L               Unified grant lifecycle screen"),
             Line::raw("x               Review explicit revoke-all action"),
             Line::raw("m               Unlock or set master password · r reload store"),
             Line::raw("Enter           Copy CLI guidance to the clipboard"),

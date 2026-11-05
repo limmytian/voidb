@@ -403,6 +403,16 @@ impl ConnectionManagerApp {
         self.mode = ScreenMode::ConfirmPluginInstall;
     }
 
+    /// Open the unified grant lifecycle screen with a fresh snapshot.
+    pub(super) fn open_grant_lifecycle(&mut self) {
+        self.mode = ScreenMode::Grants;
+        if self.grant_lifecycle_selected >= self.grant_lifecycle.len() {
+            self.grant_lifecycle_selected = 0;
+        }
+        self.next_authorization_refresh = Instant::now();
+        self.start_authorization_status_refresh();
+    }
+
     pub(super) fn show_guidance(&mut self) {
         let Some(profile) = self.selected_profile() else {
             self.set_status("No profile selected".to_string());

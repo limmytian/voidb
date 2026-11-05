@@ -22,6 +22,7 @@ impl ConnectionManagerApp {
         }
         match self.mode {
             ScreenMode::Browse => self.handle_browse_key(key),
+            ScreenMode::Grants => self.handle_grants_key(key),
             ScreenMode::Search => self.handle_search_key(key),
             ScreenMode::Edit => self.handle_editor_key(key),
             ScreenMode::ConfirmDiscard => self.handle_discard_edit_key(key),
@@ -48,6 +49,8 @@ impl ConnectionManagerApp {
             KeyCode::PageUp => self.move_selection_by(-PROFILE_PAGE_STEP),
             KeyCode::Home | KeyCode::Char('g') => self.select_first(),
             KeyCode::End | KeyCode::Char('G') => self.select_last(),
+            // Unified grant lifecycle screen (L = lifecycle).
+            KeyCode::Char('L') => self.open_grant_lifecycle(),
             KeyCode::Char('/') => {
                 self.search.clear();
                 self.mode = ScreenMode::Search;
@@ -322,6 +325,41 @@ impl ConnectionManagerApp {
                         capability.id, profile.id
                     );
                     self.mode = ScreenMode::Browse;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Unified grant lifecycle screen: every grant with its revisions and
+    /// related pending requests in one surface.
+    fn handle_grants_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('q') => self.mode = ScreenMode::Browse,
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.grant_lifecycle_selected =
+                    stepped_selection(self.grant_lifecycle_selected, self.grant_lifecycle.len(), 1);
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.grant_lifecycle_selected = stepped_selection(
+                    self.grant_lifecycle_selected,
+                    self.grant_lifecycle.len(),
+                    -1,
+                );
+            }
+            KeyCode::Home | KeyCode::Char('g') => self.grant_lifecycle_selected = 0,
+            KeyCode::End | KeyCode::Char('G') => {
+                self.grant_lifecycle_selected = self.grant_lifecycle.len().saturating_sub(1)
+            }
+            KeyCode::Char('r') => {
+                self.next_authorization_refresh = Instant::now();
+                self.start_authorization_status_refresh();
+                self.set_status("Refreshing grant lifecycle...");
+            }
+            // Grant-scoped revoke stays CLI-first: print the exact command.
+            KeyCode::Char('v') => {
+                if let Some(grant) = self.grant_lifecycle.get(self.grant_lifecycle_selected) {
+                    self.set_status(format!("Revoke with: vb agent revoke {}", grant.id));
                 }
             }
             _ => {}

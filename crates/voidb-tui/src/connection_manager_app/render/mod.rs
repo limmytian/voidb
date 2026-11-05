@@ -48,6 +48,7 @@ impl ConnectionManagerApp {
             ScreenMode::Capabilities => self.render_capabilities(frame, area),
             ScreenMode::Authorization => self.render_authorization(frame, area),
             ScreenMode::AuthorizationInbox => self.render_authorization_inbox(frame, area),
+            ScreenMode::Grants => self.render_grants(frame, area),
             _ => {}
         }
     }
@@ -273,7 +274,7 @@ impl ConnectionManagerApp {
         let help = match self.mode {
             ScreenMode::Search => "Type to filter · Esc clears · Enter applies · ↑↓ navigate",
             _ => {
-                "n/e/d profile · p approvals · a agent access · t test · c capabilities · x revoke-all · m credentials · ? help"
+                "n/e/d profile · p approvals · L grant lifecycle · a agent access · t test · c capabilities · x revoke-all · m credentials · ? help"
             }
         };
         let status_style = match self.status_kind {

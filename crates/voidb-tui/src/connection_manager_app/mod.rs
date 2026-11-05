@@ -75,6 +75,7 @@ type BackgroundResult = Receiver<std::result::Result<String, String>>;
 enum ScreenMode {
     Browse,
     Search,
+    Grants,
     Edit,
     ConfirmDiscard,
     ConfirmDelete,
@@ -90,7 +91,7 @@ impl ScreenMode {
     fn shows_authorization_data(self) -> bool {
         matches!(
             self,
-            ScreenMode::Authorization | ScreenMode::AuthorizationInbox
+            ScreenMode::Authorization | ScreenMode::AuthorizationInbox | ScreenMode::Grants
         )
     }
 }
@@ -1057,9 +1058,12 @@ pub struct ConnectionManagerApp {
     capability_rx: Option<BackgroundResult>,
     capabilities: Vec<CapabilityItem>,
     capability_selected: usize,
+    grant_lifecycle: Vec<background::GrantLifecycleRow>,
+    grant_lifecycle_selected: usize,
     authorization_dialog: Option<AuthorizationDialog>,
     authorization_catalog_rx: Option<BackgroundResult>,
     authorization_operation_rx: Option<BackgroundResult>,
+
     authorization_status_rx: Option<
         std::sync::mpsc::Receiver<std::result::Result<background::AuthorizationSnapshot, String>>,
     >,
@@ -1128,6 +1132,8 @@ impl ConnectionManagerApp {
             capability_rx: None,
             capabilities: Vec::new(),
             capability_selected: 0,
+            grant_lifecycle: Vec::new(),
+            grant_lifecycle_selected: 0,
             authorization_dialog: None,
             authorization_catalog_rx: None,
             authorization_operation_rx: None,

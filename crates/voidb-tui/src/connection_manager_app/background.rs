@@ -210,6 +210,8 @@ impl ConnectionManagerApp {
 
                 self.grant_revisions = snapshot.grant_revisions;
 
+                self.grant_lifecycle = snapshot.grants;
+
                 self.authorization_observed_at = snapshot.observed_at;
 
                 self.authorization_snapshot_error = None;
@@ -685,6 +687,20 @@ pub(super) struct AuthorizationSnapshot {
     pub(super) pending_requests: Vec<PendingAuthorizationView>,
     pub(super) grant_revisions: Vec<GrantRevisionView>,
     pub(super) observed_at: Option<String>,
+    pub(super) grants: Vec<GrantLifecycleRow>,
+}
+
+/// One grant row for the unified lifecycle screen.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct GrantLifecycleRow {
+    pub(super) id: String,
+    pub(super) profile_name: String,
+    pub(super) profile_id: String,
+    pub(super) plugin_id: String,
+    pub(super) status: String,
+    pub(super) expires_at: String,
+    pub(super) remaining_uses: Option<u32>,
+    pub(super) destructive: bool,
 }
 
 /// Parse the snapshot payload exactly once.
@@ -696,7 +712,59 @@ pub(super) fn build_authorization_snapshot(payload: &str) -> AuthorizationSnapsh
         pending_requests: parse_pending_authorizations(payload),
         grant_revisions: parse_grant_revisions(payload),
         observed_at: parse_authorization_observed_at(payload),
+        grants: parse_grant_lifecycle(payload),
     }
+}
+
+/// Parse `/agent/data/grants` into lifecycle rows for the `g` screen.
+pub(super) fn parse_grant_lifecycle(payload: &str) -> Vec<GrantLifecycleRow> {
+    let Ok(value) = serde_json::from_str::<Value>(payload) else {
+        return Vec::new();
+    };
+    value
+        .pointer("/agent/data/grants")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|grant| {
+            Some(GrantLifecycleRow {
+                id: grant.get("id")?.as_str()?.to_string(),
+                profile_name: grant
+                    .get("profile_name")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string(),
+                profile_id: grant
+                    .get("profile_id")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string(),
+                plugin_id: grant
+                    .get("plugin_id")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string(),
+                status: grant
+                    .get("status")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown")
+                    .to_string(),
+                expires_at: grant
+                    .get("expires_at")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string(),
+                remaining_uses: grant
+                    .get("remaining_uses")
+                    .and_then(Value::as_u64)
+                    .map(|uses| uses as u32),
+                destructive: grant
+                    .get("destructive")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false),
+            })
+        })
+        .collect()
 }
 
 /// Generic drain over an optional worker channel: collapses the repeated

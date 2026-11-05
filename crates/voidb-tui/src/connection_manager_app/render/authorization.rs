@@ -604,3 +604,212 @@ fn describe_scope(scope: &Value) -> String {
         _ => format!("Capability '{capability}' (all invocations allowed)"),
     }
 }
+
+impl ConnectionManagerApp {
+    /// Unified grant lifecycle screen: grants on the left, the selected
+    /// grant's revisions and related pending requests on the right.
+    pub(super) fn render_grants(&self, frame: &mut Frame, area: Rect) {
+        let popup = centered_rect(94, 90, area);
+        frame.render_widget(Clear, popup);
+        frame.render_widget(
+            Block::default()
+                .title(" Grant lifecycle · L opens · r refresh · v revoke via CLI · Esc back ")
+                .borders(Borders::ALL),
+            popup,
+        );
+        let columns = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
+            .split(popup.inner(ratatui::layout::Margin {
+                horizontal: 1,
+                vertical: 1,
+            }));
+
+        // Left: every grant with lifecycle status and relative expiry.
+
+        let items: Vec<ListItem> = if self.grant_lifecycle.is_empty() {
+            vec![ListItem::new(
+                "No agent grants. Press a on a profile to authorize access.",
+            )]
+        } else {
+            self.grant_lifecycle
+                .iter()
+                .map(|grant| {
+                    ListItem::new(Line::from(vec![
+                        Span::styled(
+                            format!("{} ", grant_status_color_label(&grant.status)),
+                            grant_status_style(&grant.status),
+                        ),
+                        Span::styled(
+                            format!("{} ", grant.profile_name),
+                            Style::default().add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(
+                            format!("{} ", grant.plugin_id),
+                            Style::default().fg(Color::DarkGray),
+                        ),
+                        Span::styled(
+                            format!("expires {}", relative_expiry_display(&grant.expires_at)),
+                            Style::default().fg(Color::DarkGray),
+                        ),
+                        Span::raw(if grant.destructive {
+                            "  [DESTRUCTIVE]"
+                        } else {
+                            ""
+                        }),
+                    ]))
+                })
+                .collect()
+        };
+        let mut state = ListState::default();
+        if !self.grant_lifecycle.is_empty() {
+            state.select(Some(self.grant_lifecycle_selected));
+        }
+        frame.render_stateful_widget(
+            List::new(items)
+                .highlight_symbol("▶ ")
+                .highlight_style(Style::default().bg(Color::Rgb(30, 50, 65)))
+                .block(Block::default().title(" Grants ").borders(Borders::ALL)),
+            columns[0],
+            &mut state,
+        );
+
+        // Right: the selected grant's details, revisions, related requests.
+        let selected = self.grant_lifecycle.get(self.grant_lifecycle_selected);
+        let mut lines: Vec<Line> = match selected {
+            None => vec![Line::raw("No grant selected")],
+            Some(grant) => {
+                let mut lines = vec![
+                    Line::from(Span::styled(
+                        grant.id.as_str(),
+                        Style::default().add_modifier(Modifier::BOLD),
+                    )),
+                    Line::raw(format!(
+                        "Profile: {} · Plugin: {}",
+                        grant.profile_name, grant.plugin_id
+                    )),
+                    Line::raw(format!(
+                        "Status: {} · Expires: {} · Uses: {}",
+                        grant.status,
+                        grant.expires_at,
+                        grant
+                            .remaining_uses
+                            .map(|uses| uses.to_string())
+                            .unwrap_or_else(|| "unlimited".into()),
+                    )),
+                    Line::raw(""),
+                    Line::from(Span::styled(
+                        "Revisions",
+                        Style::default().add_modifier(Modifier::BOLD),
+                    )),
+                ];
+                let revisions: Vec<_> = self
+                    .grant_revisions
+                    .iter()
+                    .filter(|revision| {
+                        self.grant_lifecycle
+                            .get(self.grant_lifecycle_selected)
+                            .is_some_and(|grant| {
+                                revision.profile_id == grant.profile_id
+                                    && revision.plugin_id == grant.plugin_id
+                            })
+                    })
+                    .collect();
+                if revisions.is_empty() {
+                    lines.push(Line::raw("  none recorded"));
+                } else {
+                    for revision in revisions.iter().take(8) {
+                        lines.push(Line::raw(format!(
+                            "  r{} · expires {} · uses {}",
+                            revision.revision,
+                            revision.expires_at,
+                            format_use_limit(revision.remaining_uses),
+                        )));
+                    }
+                }
+                lines.push(Line::raw(""));
+                lines.push(Line::from(Span::styled(
+                    "Pending requests on this profile",
+                    Style::default().add_modifier(Modifier::BOLD),
+                )));
+                let requests: Vec<_> = self
+                    .pending_authorization_requests
+                    .iter()
+                    .filter(|request| {
+                        request.is_pending() && request.profile_id == grant.profile_id
+                    })
+                    .collect();
+                if requests.is_empty() {
+                    lines.push(Line::raw("  none"));
+                } else {
+                    for request in requests {
+                        lines.push(Line::raw(format!(
+                            "  {} · {} · {}",
+                            short_request_label(&request.id),
+                            request.capability_id(),
+                            sanitize_display_text(&request.purpose),
+                        )));
+                    }
+                }
+                lines.push(Line::raw(""));
+                lines.push(Line::styled(
+                    "v prints the exact revoke command",
+                    Style::default().fg(Color::DarkGray),
+                ));
+                lines
+            }
+        };
+        lines.truncate(columns[1].height.saturating_sub(2) as usize);
+        frame.render_widget(
+            Paragraph::new(Text::from(lines))
+                .wrap(Wrap { trim: false })
+                .block(
+                    Block::default()
+                        .title(" Selected grant ")
+                        .borders(Borders::ALL),
+                ),
+            columns[1],
+        );
+    }
+}
+
+fn grant_status_color_label(status: &str) -> String {
+    format!("[{}]", status.to_uppercase())
+}
+
+fn grant_status_style(status: &str) -> Style {
+    match status {
+        "active" => Style::default().fg(Color::Green),
+        "expiring" => Style::default().fg(Color::Yellow),
+        "exhausted" | "expired" => Style::default().fg(Color::Red),
+        _ => Style::default().fg(Color::DarkGray),
+    }
+}
+
+/// Relative expiry for humans inside the lifecycle screen.
+fn relative_expiry_display(expires_at: &str) -> String {
+    use chrono::{DateTime, Utc};
+    match DateTime::parse_from_rfc3339(expires_at) {
+        Ok(expires_at) => {
+            let delta = expires_at.with_timezone(&Utc) - Utc::now();
+            if delta.num_seconds() <= 0 {
+                "expired".into()
+            } else if delta.num_hours() > 0 {
+                format!("in {}h{:02}m", delta.num_hours(), delta.num_minutes() % 60)
+            } else {
+                format!("in {}m", delta.num_minutes().max(1))
+            }
+        }
+        Err(_) => expires_at.to_string(),
+    }
+}
+
+fn short_request_label(id: &str) -> String {
+    let tail = id.rsplit(':').next().unwrap_or(id);
+    let mut tail = tail.to_string();
+    if tail.len() > 13 {
+        tail.truncate(13);
+        tail.push('\u{2026}');
+    }
+    tail
+}
