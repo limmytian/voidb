@@ -61,7 +61,7 @@ use super::{
 pub(crate) const AGENT_TOP_LEVEL_ALIASES: &[(&str, &[&str])] = &[
     ("approve", &["request", "review"]),
     ("inbox", &["request", "inbox"]),
-    ("grants", &["list"]),
+    ("grants", &["grants"]),
     ("auth", &["authorize"]),
     ("catalog", &["catalog"]),
     ("exec", &["exec"]),
@@ -118,6 +118,9 @@ async fn dispatch_agent(args: Vec<String>) -> anyhow::Result<Option<i32>> {
         }
         Some(("catalog", sub_matches)) => {
             management_command_result(list_authorization_catalog(sub_matches))
+        }
+        Some(("grants", sub_matches)) => {
+            management_command_result(grants_summary(sub_matches).await)
         }
         Some(("list", sub_matches)) => management_command_result(list_grants(sub_matches).await),
         Some(("renew", sub_matches)) => management_command_result(renew_grant(sub_matches).await),
@@ -178,7 +181,7 @@ pub(crate) fn agent_subcommand() -> Command {
     Command::new("agent")
         .about(
             "Manage short-lived, scoped agent access (short forms: vb approve <id> · vb inbox · \
-             vb grants · vb auth <profile> · vb catalog · vb exec)",
+             vb grants [summary] · vb auth <profile> · vb catalog · vb exec)",
         )
         .subcommand_required(true)
         .subcommand(with_hidden_optional_principal_args(
@@ -391,6 +394,19 @@ pub(crate) fn agent_subcommand() -> Command {
                 ),
         )
         .subcommand(jit_request_command())
+        .subcommand(
+            Command::new("grants")
+                .about(
+                    "One-screen agent access summary: grant lifecycle counts, pending approvals, \
+                     and the grants table (--watch refreshes every 2s)",
+                )
+                .arg(
+                    Arg::new("watch")
+                        .long("watch")
+                        .action(clap::ArgAction::SetTrue)
+                        .help("Refresh the summary every 2 seconds until interrupted"),
+                ),
+        )
         .subcommand(
             Command::new("list")
                 .about("List frontend-safe agent grant and broker summaries")
@@ -1824,6 +1840,55 @@ pub(super) fn frontend_grant_value(
         );
     }
     Ok(value)
+}
+
+/// One-screen answer to "what can agents do right now": lifecycle counts,
+/// pending approvals, broker health, and the grants table.
+async fn grants_summary(matches: &ArgMatches) -> anyhow::Result<i32> {
+    ensure_unix()?;
+    let watch = matches.get_flag("watch");
+    loop {
+        let grants = load_grants(false)?;
+        let mut statuses: Vec<AgentGrantStatus> = Vec::with_capacity(grants.len());
+        let mut public_grants = Vec::with_capacity(grants.len());
+        for grant in &grants {
+            let inspection = inspect_grant(grant).await;
+            let public = grant.public(inspection.broker_health, inspection.active_session_count);
+            statuses.push(public.status_at(Utc::now()));
+            public_grants.push(public);
+        }
+        let count =
+            |wanted: AgentGrantStatus| statuses.iter().filter(|status| **status == wanted).count();
+        let pending = JitAuthorizationStore::default_store()
+            .and_then(|store| store.list_for_review(Utc::now()))
+            .map(|requests| {
+                requests
+                    .iter()
+                    .filter(|request| {
+                        request.status == voidb_core::AgentAuthorizationRequestStatus::Pending
+                    })
+                    .count()
+            })
+            .unwrap_or(0);
+        if watch {
+            // Clear + home so repeated renders replace the screen in place.
+            print!("\x1b[2J\x1b[H");
+        }
+        println!(
+            "Agent access summary · {} grant(s): {} active, {} expiring, {} exhausted/expired, {} offline\npending JIT approvals: {pending} · details below (refreshed {})",
+            public_grants.len(),
+            count(AgentGrantStatus::Active),
+            count(AgentGrantStatus::Expiring),
+            count(AgentGrantStatus::Exhausted) + count(AgentGrantStatus::Expired),
+            count(AgentGrantStatus::BrokerOffline),
+            Utc::now().to_rfc3339(),
+        );
+        println!("{}", agent_grants_table(&public_grants, Utc::now()));
+        if !watch {
+            return Ok(0);
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    }
 }
 
 async fn list_grants(matches: &ArgMatches) -> anyhow::Result<i32> {

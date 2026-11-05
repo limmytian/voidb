@@ -150,7 +150,7 @@ Short top-level aliases keep the frequent authorization operations easy to
 type from a human shell:
 
 ```bash
-vb grants            # agent list: grant lifecycle table (--format table)
+vb grants            # agent grants: one-screen access summary + grants table (--watch)
 vb inbox             # agent request inbox: pending approval queue
 vb approve <id>      # agent request review: interactive human review
 vb auth <profile>    # agent authorize: grant scoped access directly
