@@ -321,7 +321,7 @@ fn jit_inbox_table(
 }
 
 /// Short request id for humans: the segment after the prefix, truncated.
-fn short_request_id(id: &str) -> String {
+pub(super) fn short_request_id(id: &str) -> String {
     let tail = id.rsplit(':').next().unwrap_or(id);
     let mut tail = tail.to_string();
     if tail.len() > 13 {

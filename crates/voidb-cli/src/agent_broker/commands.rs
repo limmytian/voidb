@@ -133,6 +133,7 @@ async fn dispatch_agent(args: Vec<String>) -> anyhow::Result<Option<i32>> {
         Some(("run", sub_matches)) => run_granted(sub_matches).await?,
         Some(("session", sub_matches)) => run_session_command(sub_matches).await?,
         Some(("request", sub_matches)) => run_jit_request_command(sub_matches).await?,
+        Some(("watch", sub_matches)) => watch_pending_requests(sub_matches)?,
         _ => unreachable!("clap enforces agent subcommands"),
     };
     Ok(Some(exit_code))
@@ -479,6 +480,25 @@ pub(crate) fn agent_subcommand() -> Command {
                         .short('y')
                         .action(ArgAction::SetTrue)
                         .help("Confirm a multi-grant revoke without the interactive review"),
+                ),
+        )
+        .subcommand(
+            Command::new("watch")
+                .about(
+                    "Watch for new pending JIT approval requests; bell + one-line alert per request",
+                )
+                .arg(
+                    Arg::new("notify")
+                        .long("notify")
+                        .action(ArgAction::SetTrue)
+                        .help("Also fire a best-effort desktop notification per request"),
+                )
+                .arg(
+                    Arg::new("interval-seconds")
+                        .long("interval-seconds")
+                        .default_value("2")
+                        .value_parser(clap::value_parser!(u64))
+                        .help("Poll interval for the store"),
                 ),
         )
         .subcommand(with_optional_principal_args(
@@ -2030,6 +2050,93 @@ pub(super) async fn renew_grant(matches: &ArgMatches) -> anyhow::Result<i32> {
         }))?
     );
     Ok(0)
+}
+
+/// Ambient approval surface: poll the JIT store and announce new pending
+/// requests with a terminal bell so humans do not need the agent to tell
+/// them or the TUI open. Ctrl+C exits.
+fn watch_pending_requests(matches: &ArgMatches) -> anyhow::Result<i32> {
+    let store = match JitAuthorizationStore::default_store() {
+        Ok(store) => store,
+        Err(error) => return print_jit_store_error(error),
+    };
+    let notify = matches.get_flag("notify");
+    let interval = std::time::Duration::from_secs(
+        *matches
+            .get_one::<u64>("interval-seconds")
+            .expect("defaulted by clap"),
+    );
+    eprintln!(
+        "Watching for pending JIT approval requests (Ctrl+C to exit)\nReview with: vb approve <id> · or the Connection Manager (p)"
+    );
+    let mut seen: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    loop {
+        let requests = match store.list_for_review(Utc::now()) {
+            Ok(requests) => requests,
+            Err(error) => {
+                print_jit_store_error(error)?;
+                std::thread::sleep(interval);
+                continue;
+            }
+        };
+        for request in &requests {
+            if request.status != voidb_core::AgentAuthorizationRequestStatus::Pending
+                || !seen.insert(request.id.clone())
+            {
+                continue;
+            }
+            print!(
+                "\x07\r\x1b[33m[PENDING]\x1b[0m {} · {} · {}/{} · {}\n  review: vb approve {}\n",
+                super::jit::short_request_id(&request.id),
+                capability_risk_name(request.risk),
+                request.plugin_id,
+                request.profile_id,
+                sanitize_terminal_text(&request.purpose),
+                request.id,
+            );
+            std::io::Write::flush(&mut std::io::stdout())?;
+            if notify {
+                desktop_notify(
+                    "VoidB: agent approval needed",
+                    &format!(
+                        "{} / {} ({})",
+                        request.scope.capability_id(),
+                        request.plugin_id,
+                        request.profile_id
+                    ),
+                );
+            }
+        }
+        std::thread::sleep(interval);
+    }
+}
+
+/// Best-effort desktop notification; silently skipped when the platform tool
+/// is unavailable (watch keeps running with the terminal bell alone).
+fn desktop_notify(title: &str, body: &str) {
+    let title = sanitize_terminal_text(title);
+    let body = sanitize_terminal_text(body);
+    let result = if cfg!(target_os = "macos") {
+        std::process::Command::new("osascript")
+            .args([
+                "-e",
+                &format!("display notification \"{body}\" with title \"{title}\""),
+            ])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+    } else if std::path::Path::new("/usr/bin/notify-send").exists() {
+        std::process::Command::new("notify-send")
+            .args([title.as_str(), body.as_str()])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+    } else {
+        return;
+    };
+    if let Err(error) = result {
+        eprintln!("note: desktop notification failed: {error}");
+    }
 }
 
 pub(super) async fn revoke(matches: &ArgMatches) -> anyhow::Result<i32> {
