@@ -209,9 +209,9 @@ Focused changes to this flow should run:
 cargo test -p voidb-core credential_protection --quiet
 cargo test -p voidb-core reencrypt_config_file_sets_user_passphrase_metadata --quiet
 cargo test -p voidb-core configured_user_passphrase_save_requires_active_password --quiet
-cargo test -p vb master_reencrypt_command_exposes_safe_password_sources --quiet
-cargo test -p vb default_passphrase_warning_is_redacted_and_machine_readable --quiet
-cargo test -p vb user_passphrase_protection_suppresses_default_passphrase_warning --quiet
+cargo test -p voidb-cli master_reencrypt_command_exposes_safe_password_sources --quiet
+cargo test -p voidb-cli default_passphrase_warning_is_redacted_and_machine_readable --quiet
+cargo test -p voidb-cli user_passphrase_protection_suppresses_default_passphrase_warning --quiet
 cargo test -p voidb-tui credential --quiet
 git diff --check
 ```

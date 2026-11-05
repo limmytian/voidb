@@ -123,10 +123,10 @@ contains one or more plugin directories:
 
 ```bash
 VOIDB_PLUGIN_PATH=examples/process-plugins \
-  cargo run -p vb -- plugin list --format json
+  cargo run -p voidb-cli -- plugin list --format json
 
 VOIDB_PLUGIN_PATH=examples/process-plugins \
-  cargo run -p vb -- plugin describe hello-sql \
+  cargo run -p voidb-cli -- plugin describe hello-sql \
     --include runtime,connections,capabilities,schemas,diagnostics \
     --format json
 ```
@@ -141,7 +141,7 @@ Generic invocation uses `vb invoke run <plugin>.<capability>`.
 
 ```bash
 VOIDB_PLUGIN_PATH=examples/process-plugins \
-  cargo run -p vb -- invoke run hello-sql.query \
+  cargo run -p voidb-cli -- invoke run hello-sql.query \
     --profile name:hello-dev \
     --input-json '{"sql":"select 42","limit":1}' \
     --format json

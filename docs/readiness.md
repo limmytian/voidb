@@ -23,8 +23,8 @@ plugin-experience inventory. Generate it as JSON for tooling or Markdown for
 documentation:
 
 ```bash
-cargo run -p vb -- invoke matrix --format json
-cargo run -p vb -- invoke matrix --format markdown
+cargo run -p voidb-cli -- invoke matrix --format json
+cargo run -p voidb-cli -- invoke matrix --format markdown
 scripts/check-agent-capability-matrix.sh
 ```
 

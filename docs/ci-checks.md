@@ -22,7 +22,7 @@ Use these while editing a focused area:
 
 ```bash
 cargo test -p voidb-core
-cargo test -p vb
+cargo test -p voidb-cli
 cargo test -p voidb-plugin-sync
 cargo test -p voidb-tui
 ```
@@ -40,23 +40,23 @@ depends on. Examples:
 - Capability catalog, execution-mode, standalone-TUI registration, or release
   posture metadata: `scripts/check-agent-capability-matrix.sh`
 - Core config, crypto, widgets, or shared traits: `cargo test -p voidb-core`
-- CLI profile, plugin, audit, or invoke behavior: `cargo test -p vb`
+- CLI profile, plugin, audit, or invoke behavior: `cargo test -p voidb-cli`
 - SQLite/Redis capability protocol pair:
   `cargo test -p voidb-plugin-sqlite`, `cargo test -p voidb-plugin-redis`,
-  and `cargo test -p vb invoke`
+  and `cargo test -p voidb-cli invoke`
 - MySQL SQL capabilities:
-  `cargo test -p voidb-plugin-mysql`, `cargo test -p vb invoke`, and
+  `cargo test -p voidb-plugin-mysql`, `cargo test -p voidb-cli invoke`, and
   `cargo test -p voidb-core sql_contract`
 - PostgreSQL SQL capabilities:
   `cargo test -p voidb-plugin-postgres capabilities`,
-  `cargo test -p vb invoke`, and `cargo test -p voidb-core sql_contract`
+  `cargo test -p voidb-cli invoke`, and `cargo test -p voidb-core sql_contract`
 - DuckDB/Redis release-readiness decisions:
   `cargo test -p voidb-plugin-duckdb`,
   `cargo test -p voidb-plugin-redis`,
-  `cargo test -p vb duckdb_and_redis_release_readiness_catalog`, and
+  `cargo test -p voidb-cli duckdb_and_redis_release_readiness_catalog`, and
   `cargo test -p voidb-core sql_contract`
 - SSH capabilities, profile metadata, or host-key policy:
-  `cargo test -p voidb-plugin-ssh`, `cargo test -p vb invoke`,
+  `cargo test -p voidb-plugin-ssh`, `cargo test -p voidb-cli invoke`,
   `cargo test -p voidb-core profile_adapter`, and
   `cargo test -p voidb-core profile_store`
 - Future plugin-owned standalone TUI launch code:
@@ -66,7 +66,7 @@ depends on. Examples:
 - Process-plugin discovery or stdio runtime:
   `cargo test -p voidb-core process_plugin`,
   `cargo test -p voidb-core process_plugin_runtime`,
-  `cargo test -p vb plugin`, and `cargo test -p vb invoke`
+  `cargo test -p voidb-cli plugin`, and `cargo test -p voidb-cli invoke`
 - TUI shell or Connection Manager default path: `cargo test -p voidb-tui`
 - A plugin service or connection dialog: `cargo test -p voidb-plugin-<name>`
 - Sync client changes: `cargo test -p voidb-plugin-sync`
@@ -226,7 +226,7 @@ redaction should run this focused test gate:
 ```bash
 cargo test -p voidb-plugin-sqlite
 cargo test -p voidb-plugin-redis
-cargo test -p vb invoke
+cargo test -p voidb-cli invoke
 git diff --check
 ```
 
@@ -237,7 +237,7 @@ gate before the full workspace tier:
 ```bash
 cargo clippy -p voidb-plugin-sqlite --all-targets --no-deps
 cargo clippy -p voidb-plugin-redis --all-targets --no-deps
-cargo clippy -p vb --all-targets --no-deps
+cargo clippy -p voidb-cli --all-targets --no-deps
 ```
 
 These gates prove the first-pair contract stays stable in three places:
@@ -258,7 +258,7 @@ should run:
 ```bash
 cargo check -p voidb-plugin-mysql --example fixture_smoke
 cargo test -p voidb-plugin-mysql
-cargo test -p vb invoke
+cargo test -p voidb-cli invoke
 cargo test -p voidb-core sql_contract
 scripts/mysql-fixture-smoke.sh --report target/tmp/mysql-fixture-smoke-evidence.md
 git diff --check
@@ -292,7 +292,7 @@ registration, or SQL contract validation should run:
 
 ```bash
 cargo test -p voidb-plugin-postgres capabilities
-cargo test -p vb invoke
+cargo test -p voidb-cli invoke
 cargo test -p voidb-core sql_contract
 git diff --check
 ```
@@ -310,7 +310,7 @@ validation should run:
 
 ```bash
 cargo test -p voidb-plugin-duckdb
-cargo test -p vb invoke
+cargo test -p voidb-cli invoke
 cargo test -p voidb-core sql_contract
 git diff --check
 ```
@@ -327,7 +327,7 @@ Changes to generic invoke registration, bounded output contracts,
 destructive gates, or fixture promotion status should run:
 
 ```bash
-cargo test -p vb invoke
+cargo test -p voidb-cli invoke
 git diff --check
 ```
 
@@ -392,7 +392,7 @@ Shared S3/WebDAV transfer-contract changes run:
 cargo test -p voidb-core transfer
 cargo test -p voidb-plugin-s3
 cargo test -p voidb-plugin-webdav
-cargo test -p vb storage_plugins_map_to_one_fail_closed_transfer_lifecycle
+cargo test -p voidb-cli storage_plugins_map_to_one_fail_closed_transfer_lifecycle
 scripts/check-local-filesystem-boundaries.sh
 scripts/check-external-agent-interaction.sh
 git diff --check
@@ -409,7 +409,7 @@ Choose the relevant focused group in addition to the script:
 # Shared context-share and operation contract
 cargo test -p voidb-core assist
 cargo test -p voidb-core session
-cargo test -p vb agent_broker
+cargo test -p voidb-cli agent_broker
 
 # SSH live PTY sharing
 cargo test -p voidb-plugin-ssh
@@ -419,7 +419,7 @@ cargo test -p voidb-core sql_contract
 cargo test -p voidb-plugin-mysql -p voidb-plugin-postgres \
   -p voidb-plugin-sqlite -p voidb-plugin-duckdb --no-fail-fast
 cargo test -p voidb-plugin-redis --no-fail-fast
-cargo test -p vb invoke
+cargo test -p voidb-cli invoke
 ```
 
 The capability suites must retain SQL/document/cache mutation classification,
@@ -441,7 +441,7 @@ agent-owned terminal session lifecycle, or forwarding should run:
 cargo test -p voidb-plugin-ssh capabilities
 cargo test -p voidb-plugin-ssh service
 cargo test -p voidb-plugin-ssh
-cargo test -p vb invoke
+cargo test -p voidb-cli invoke
 cargo test -p voidb-core profile_adapter
 cargo test -p voidb-core profile_store
 git diff --check
@@ -463,12 +463,12 @@ run the focused session-share subset and regenerate deterministic TUI evidence:
 ```bash
 cargo test -p voidb-core assist
 cargo test -p voidb-core external_context
-cargo test -p vb builtin::context
+cargo test -p voidb-cli builtin::context
 cargo test -p voidb-core session
-cargo test -p vb agent_broker
+cargo test -p voidb-cli agent_broker
 cargo test -p voidb-plugin-ssh
 scripts/check-external-agent-interaction.sh
-cargo run -p vb -- ssh tui \
+cargo run -p voidb-cli -- ssh tui \
   --fixture crates/plugins/voidb-plugin-ssh/fixtures/ssh_tui_terminal_core.json \
   --evidence target/tmp/ssh-tui-fixture-evidence.json
 ```
@@ -486,7 +486,7 @@ Changes to the shared non-PTY context-share contract used by SSH should run:
 ```bash
 cargo test -p voidb-core assist
 cargo test -p voidb-core external_context
-cargo test -p vb builtin::context
+cargo test -p voidb-cli builtin::context
 cargo test -p voidb-core session
 cargo test -p voidb-plugin-ssh
 scripts/check-external-agent-interaction.sh
@@ -510,7 +510,7 @@ For release candidates or broad SSH security policy changes, add:
 
 ```bash
 cargo clippy -p voidb-plugin-ssh --all-targets --no-deps
-cargo clippy -p vb --all-targets --no-deps
+cargo clippy -p voidb-cli --all-targets --no-deps
 ```
 
 ## Process Plugin Runtime Gates
@@ -524,8 +524,8 @@ process-plugin invocation should run:
 ```bash
 cargo test -p voidb-core process_plugin
 cargo test -p voidb-core process_plugin_runtime
-cargo test -p vb plugin
-cargo test -p vb invoke
+cargo test -p voidb-cli plugin
+cargo test -p voidb-cli invoke
 git diff --check
 ```
 
@@ -545,7 +545,7 @@ For release candidates or broad runtime policy changes, add:
 
 ```bash
 cargo clippy -p voidb-core --all-targets --no-deps
-cargo clippy -p vb --all-targets --no-deps
+cargo clippy -p voidb-cli --all-targets --no-deps
 ```
 
 ## Full Workspace Checks
@@ -624,16 +624,16 @@ slice summary and keep the diff limited to the selected warning group.
 | Aggregate Agent/TUI release | Requirement or release boundary | `python3 scripts/agent_tui_release_gate.py --profile full` | Runs the current focused and deterministic Agent/TUI journeys, full workspace tests, and full Clippy with per-phase evidence. |
 | Agent capability matrix | Pull request touching built-in capability metadata, session handoffs, standalone TUI registration, or readiness posture | `scripts/check-agent-capability-matrix.sh` | Regenerates the repository-owned matrix from runtime definitions and fails on added, removed, changed, or undocumented rows. |
 | Fast core | Pull request, every push | `cargo test -p voidb-core` | Catches shared API, crypto, config, widget regressions. |
-| Fast CLI | Pull request touching `crates/voidb-cli` | `cargo test -p vb` | Catches profile, invoke, audit, and plugin command regressions. |
+| Fast CLI | Pull request touching `crates/voidb-cli` | `cargo test -p voidb-cli` | Catches profile, invoke, audit, and plugin command regressions. |
 | Promoted plugin smoke | Release-candidate prep or plugin smoke doc changes | `scripts/release-plugin-smoke.sh` | Runs secret-free focused checks for SSH and MySQL; local fixture wrappers cover promoted Docker-backed services such as Kubernetes and MongoDB when provisioned; live service commands stay opt-in. |
 | Sync smoke | Release-candidate prep or sync client/server changes | `scripts/release-sync-smoke.sh` | Runs sync plugin e2e tests and standalone sync server smoke with disposable local state. |
 | Package smoke | Release-candidate prep or package automation changes | `scripts/stage-release-artifacts.sh --build`; `scripts/package-smoke.sh --artifact-root target/package/voidb-<version>-<platform>` | Stages default TUI, CLI, and sync-server artifacts; verifies checksums, manifest consistency, executable bits, CLI and sync-server entry points, and TUI prerequisites. Use [Release Packaging](release-packaging.md) for artifact naming and platform notes. |
-| First protocol pair | Pull request touching SQLite/Redis capabilities or generic invoke | `cargo test -p voidb-plugin-sqlite`; `cargo test -p voidb-plugin-redis`; `cargo test -p vb invoke` | Proves the SQLite/Redis reference capability pair, including pagination, dry-run, structured target errors, and redaction. |
-| MySQL capability | Pull request touching MySQL SQL capabilities or diagnostics | `cargo check -p voidb-plugin-mysql --example fixture_smoke`; `cargo test -p voidb-plugin-mysql`; `cargo test -p vb invoke`; `cargo test -p voidb-core sql_contract`; `scripts/mysql-fixture-smoke.sh --report target/tmp/mysql-fixture-smoke-evidence.md` | Proves the first networked SQL capability path through a disposable local fixture without external credentials. |
+| First protocol pair | Pull request touching SQLite/Redis capabilities or generic invoke | `cargo test -p voidb-plugin-sqlite`; `cargo test -p voidb-plugin-redis`; `cargo test -p voidb-cli invoke` | Proves the SQLite/Redis reference capability pair, including pagination, dry-run, structured target errors, and redaction. |
+| MySQL capability | Pull request touching MySQL SQL capabilities or diagnostics | `cargo check -p voidb-plugin-mysql --example fixture_smoke`; `cargo test -p voidb-plugin-mysql`; `cargo test -p voidb-cli invoke`; `cargo test -p voidb-core sql_contract`; `scripts/mysql-fixture-smoke.sh --report target/tmp/mysql-fixture-smoke-evidence.md` | Proves the first networked SQL capability path through a disposable local fixture without external credentials. |
 | External-agent interaction | Pull request touching SSH session sharing, Docker/Kubernetes/Jenkins current-view sharing, capability-only plugin boundaries, or related docs | `scripts/check-external-agent-interaction.sh`; relevant plugin tests from the focused group above | Prevents retired conversation UI, protects capability-only plugins, and verifies session/context-share operation gates. |
 | Local filesystem boundary | Pull request touching agent-triggered local reads, writes, scans, transfer staging, SSH SFTP, or authorization/audit projection | `scripts/check-local-filesystem-boundaries.sh`; `scripts/check-external-agent-interaction.sh` | Proves traversal/alias rejection, Unicode handling, no-follow behavior, root-identity conflicts, no-replace races, bounded scans, capability-wide denial, and audit redaction across the affected plugins. |
-| SSH capability and TUI smoke | Pull request touching SSH capabilities, profiles, host-key policy, terminal/SFTP/forwarding sessions, external-agent sharing, or generic invoke | `cargo test -p voidb-plugin-ssh`; `cargo test -p vb invoke`; `cargo test -p voidb-core profile_adapter`; `cargo test -p voidb-core profile_store`; for sharing changes also `cargo test -p voidb-core assist`, `cargo test -p voidb-core session`, `cargo test -p vb agent_broker`, `scripts/check-external-agent-interaction.sh`, and the SSH TUI `--evidence` command above | Proves SSH capability metadata, strict non-interactive host-key errors, destructive gates, profile redaction, session-share redaction/confirmation/revoke behavior, and the documented manual fixture smoke boundary. |
-| Process plugin runtime/package management | Pull request touching process-plugin discovery, manifests, trust roots, package install/update/lifecycle commands, stdio runtime, or process invocation | `cargo test -p voidb-core process_plugin`; `cargo test -p voidb-core process_plugin_runtime`; `cargo test -p vb plugin`; `cargo test -p vb invoke` | Proves deterministic local process-plugin discovery, package validation, compatibility diagnostics, lifecycle handling, and redacted runtime failures. |
+| SSH capability and TUI smoke | Pull request touching SSH capabilities, profiles, host-key policy, terminal/SFTP/forwarding sessions, external-agent sharing, or generic invoke | `cargo test -p voidb-plugin-ssh`; `cargo test -p voidb-cli invoke`; `cargo test -p voidb-core profile_adapter`; `cargo test -p voidb-core profile_store`; for sharing changes also `cargo test -p voidb-core assist`, `cargo test -p voidb-core session`, `cargo test -p voidb-cli agent_broker`, `scripts/check-external-agent-interaction.sh`, and the SSH TUI `--evidence` command above | Proves SSH capability metadata, strict non-interactive host-key errors, destructive gates, profile redaction, session-share redaction/confirmation/revoke behavior, and the documented manual fixture smoke boundary. |
+| Process plugin runtime/package management | Pull request touching process-plugin discovery, manifests, trust roots, package install/update/lifecycle commands, stdio runtime, or process invocation | `cargo test -p voidb-core process_plugin`; `cargo test -p voidb-core process_plugin_runtime`; `cargo test -p voidb-cli plugin`; `cargo test -p voidb-cli invoke` | Proves deterministic local process-plugin discovery, package validation, compatibility diagnostics, lifecycle handling, and redacted runtime failures. |
 | Fast TUI | Pull request touching `crates/voidb-tui` | `cargo test -p voidb-tui` | Builds the default lightweight TUI surface: shell, tab manager, and Connection Manager only. |
 | Fast plugin | Pull request touching one plugin | `cargo test -p voidb-plugin-<name>` | Keeps plugin feedback scoped. |
 | Full workspace | Merge queue, nightly, release candidate | `cargo test --workspace --no-fail-fast` | Slow but authoritative; no database drivers compile in this workspace. |

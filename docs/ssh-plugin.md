@@ -543,7 +543,7 @@ cargo check -p voidb-plugin-ssh --example fixture_smoke
 cargo test -p voidb-plugin-ssh capabilities
 cargo test -p voidb-plugin-ssh service
 cargo test -p voidb-plugin-ssh
-cargo test -p vb invoke
+cargo test -p voidb-cli invoke
 cargo test -p voidb-core profile_adapter
 cargo test -p voidb-core profile_store
 git diff --check
@@ -555,9 +555,9 @@ changes, also run:
 ```bash
 cargo test -p voidb-core assist
 cargo test -p voidb-core session
-cargo test -p vb agent_broker
+cargo test -p voidb-cli agent_broker
 cargo test -p voidb-plugin-ssh assist
-cargo run -p vb -- ssh tui \
+cargo run -p voidb-cli -- ssh tui \
   --fixture crates/plugins/voidb-plugin-ssh/fixtures/ssh_tui_terminal_core.json \
   --evidence target/tmp/ssh-tui-fixture-evidence.json
 ```
