@@ -1,8 +1,7 @@
 # Plugin-Owned TUI Launch Contract
 
 This document defines how future accepted VoidB plugin TUIs advertise and
-launch as standalone terminal apps. It follows
-[ADR: Plugin-Owned CLI-Launched TUI Apps](adr-plugin-owned-cli-launched-tui.md).
+launch as standalone terminal apps.
 
 ## Scope
 
@@ -211,9 +210,8 @@ A standalone TUI is shipped only when it has:
 - profile and credential handoff without plaintext secrets in args, env, logs,
   panic output, or audit records;
 - service-layer execution for target operations;
-- for data inspectors, a completed Requirement 83 decision record in
-  [Data Inspector CLI-First Decisions](data-inspector-cli-first-decisions.md)
-  before any pilot implementation starts;
+- for data inspectors, a documented CLI-first decision before any pilot
+  implementation starts;
 - terminal lifecycle tests for startup, quit, cleanup, resize, and crash
   recovery;
 - raw input tests if it embeds a terminal or attach session;

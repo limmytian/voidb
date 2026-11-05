@@ -14,7 +14,6 @@ It builds on:
 - [Capability Discovery and Invocation CLI Contract](capability-cli.md)
 - [Secret Brokering and Redaction Policy](secret-brokering-redaction-policy.md)
 - [Sync Boundary Under The Capability Model](sync-boundary.md)
-- [Migration Compatibility Notes](migration-compatibility-notes.md)
 
 ## Decision
 
@@ -244,9 +243,9 @@ Compatibility has separate axes:
 The plugin package version does not by itself prove profile compatibility.
 Profile migration requires an explicit migration model in a later slice. Until
 that exists, updates that change profile schemas should be treated as
-compatibility-sensitive. Existing config, TUI, built-in factory, and service
-direct-mode compatibility risks are tracked in
-[Migration Compatibility Notes](migration-compatibility-notes.md).
+compatibility-sensitive. Existing config compatibility is handled by the
+explicit migration workflow in
+[Profile Migration](profile-migration.md).
 
 ## CLI Shape
 

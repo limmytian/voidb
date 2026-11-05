@@ -16,7 +16,7 @@ readiness, release, Agent, or TUI claim.
 | TUI | [Plugin-Owned TUI Development Guide](plugin-owned-tui-development-guide.md) and [TUI CI and Real-Terminal Coverage](tui-terminal-coverage.md) | Retained TUI lifecycle, PTY journeys, performance thresholds, and evidence. |
 | Security | [Security Notes](security.md), [Security Release Checklist](security-release-checklist.md), and [Secret Brokering and Redaction Policy](secret-brokering-redaction-policy.md) | Credential, authorization, acknowledgement, local-path, and redaction boundaries. |
 | Validation | [CI Check Tiers](ci-checks.md), [Agent and TUI Aggregate Release Gate](agent-tui-release-gate.md), and [Release Candidate Checklist](release-candidate-checklist.md) | Focused checks, aggregate gates, full workspace tests, Clippy, fixtures, and packaging. |
-| Sync | [Sync Boundary](sync-boundary.md), [Sync Plugin](sync-plugin.md), and Sync Beta Readiness | E2E encryption, opt-in posture, recovery, and stable/default non-goals. |
+| Sync | [Sync Boundary](sync-boundary.md), [Sync Plugin](sync-plugin.md), and [Object-Level Sync Model](object-level-sync-model.md) | E2E encryption, opt-in posture, recovery, and stable/default non-goals. |
 
 The generated matrix is authoritative for the current built-in capability and
 plugin-experience inventory. Generate it as JSON for tooling or Markdown for
@@ -34,19 +34,16 @@ manifests and trust roots are node-local.
 
 ## Historical Evidence Rules
 
-The following documents are evidence, not current product contracts:
+Files whose names carry a dated evidence, report, rehearsal, baseline, smoke,
+handoff, or readiness snapshot are point-in-time evidence, not current product
+contracts. Superseded design and planning documents have been removed from the
+documentation tree; git history preserves their content.
 
-- filenames containing a dated evidence, report, rehearsal, baseline, smoke,
-  handoff, or readiness snapshot;
-- All-Plugin RC Readiness Matrix, which is
-  the Req52 planning snapshot from 2026-07-05;
-- Cloud Operations Promotion Report
-  and other requirement-specific promotion reports.
-
-Historical files keep the facts, skips, commits, and commands that were true
-for their recorded date and requirement. They must not be edited to look like a
-current aggregate inventory. When current code supersedes one of their claims,
-the file should retain a visible historical banner and link here.
+Historical material keeps the facts, skips, commits, and commands that were
+true for its recorded date and requirement. It must not be edited to look like
+a current aggregate inventory, and it must not be restored into the tree as
+one. When current code supersedes a historical claim, the current document
+wins.
 
 ## Change Rules
 

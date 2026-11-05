@@ -8,10 +8,8 @@ It complements:
 
 - [Service Layer Design](service-layer-design.md) for service-layer
   conventions;
-- [ADR: Plugin-Owned CLI-Launched TUI Apps](adr-plugin-owned-cli-launched-tui.md);
 - [Plugin-Owned TUI Launch Contract](plugin-owned-tui-launch-contract.md);
-- [Standalone TUI UX Acceptance Criteria](standalone-tui-ux-acceptance.md);
-- [Plugin-Owned TUI UX Briefs](plugin-owned-tui-ux-briefs.md).
+- [Standalone TUI UX Acceptance Criteria](standalone-tui-ux-acceptance.md).
 
 The current in-repo CLI binary is `vb`. Some architecture docs use the
 packaged shorthand `voidb <plugin> tui`; for workspace commands, implement and
@@ -177,7 +175,8 @@ Before marking a standalone TUI retained, write or update its brief with:
 - non-goals;
 - evidence required before promotion.
 
-Use [Plugin-Owned TUI UX Briefs](plugin-owned-tui-ux-briefs.md) as the template.
+Define target users, workflows, keyboard model, safety states, non-goals, and
+required promotion evidence before implementation.
 Do not copy another plugin's layout unless the workflow actually matches.
 
 ## Required Tests

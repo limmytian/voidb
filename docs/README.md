@@ -9,7 +9,8 @@ VoidB is a terminal-based database management tool with vim-style keybindings an
 - [Conventions](conventions.md) - Development conventions, code style, error handling, and guidelines
 - [Service Layer Design](service-layer-design.md) - Service-layer decisions, invariants, and known pitfalls from the plugin decoupling milestone
 - [Technology Stack](tech-stack.md) - Languages, runtime, dependencies, and build tooling inventory
-- [5 分钟开发一个 VoidB 插件](quickstart-process-plugin.md) - 快速上手：编写基于 stdio-jsonrpc 的多语言独立进程插件
+- [0.4.1 Iteration Roadmap](roadmap-0.4.1.md) - Scope, workstreams, sequencing, and definition of done for the 0.4.1 iteration
+- [Process Plugin Quickstart](quickstart-process-plugin.md) - Five-minute quickstart for writing stdio-jsonrpc process plugins in multiple languages
 - [Process Plugin Development and Certification Guide](process-plugin-development-guide.md) - Specification, cargo-generate template, packaging tooling, and certification checklist
 - [Process Plugin Package Management](process-plugin-package-management.md) - Local package inputs, installation layout, and lifecycle boundaries for process plugins
 - [Plugin Conformance And Certification](plugin-conformance.md) - Deterministic conformance checks and certification maturity levels for process plugins
@@ -22,7 +23,6 @@ VoidB is a terminal-based database management tool with vim-style keybindings an
 - [Release Candidate Checklist](release-candidate-checklist.md) - Unified release-candidate gate matrix, manual smoke matrix, and residual-risk notes
 - [Agent and TUI Aggregate Release Gate](agent-tui-release-gate.md) - Layered focused, deterministic, full, and live-fixture evidence command
 - [Release Packaging](release-packaging.md) - Build matrix, artifact names, feature variants, platform prerequisites, and package-readiness results
-- [Capability-First CLI Architecture ADR](adr-capability-first-cli-architecture.md) - Decision record for shifting VoidB from TUI-first to agent-friendly capability execution
 - [Capability Core Model](capability-core-model.md) - Profile, runtime instance, and invocation type boundaries for the capability-first migration
 - [Plugin Session Capability](plugin-session-capability.md) - Shared session lifecycle contract for reusable plugin-owned runtime state
 - [Infrastructure Agent Live-Session Contract](infrastructure-agent-live-session-contract.md) - Bounded discovery, event, resume, control, risk, and audit protocol for infrastructure streams
@@ -48,29 +48,21 @@ VoidB is a terminal-based database management tool with vim-style keybindings an
 - [Plugin Invocation Transport](plugin-invocation-transport.md) - First stdio JSON-RPC message contract for invocation, streaming, cancellation, timeout, health checks, and structured errors
 - [Runtime Plugin Discovery](runtime-plugin-discovery.md) - Installed plugin search paths, manifest validation, on-demand process startup, crash handling, and version compatibility
 - [Process Plugin SDK](process-plugin-sdk.md) - Rust SDK primitives, local example packages, and non-Rust SDK feasibility for external process plugins
-- [Persistent Agent Session Release Handoff](persistent-agent-session-release.md) - supported/deferred matrix, operator workflow, budgets, upgrade notes, and evidence
 - [External Process Plugin Workflow](external-plugin-workflow.md) - End-to-end author flow for building, installing, testing, certifying, and invoking external process plugins
-- [Future Plugin Installation Model](plugin-installation-model.md) - Local package installation, manifest ownership, version compatibility, update, disable, and uninstall boundaries
-- [Migration Compatibility Notes](migration-compatibility-notes.md) - Compatibility risks for existing configs, TUI users, built-in plugin factories, and service direct mode
+- [Plugin Installation Model](plugin-installation-model.md) - Local package installation, manifest ownership, version compatibility, update, disable, and uninstall boundaries
 - [Profile Migration](profile-migration.md) - Explicit, non-destructive migration from legacy `ConnectionConfig` entries to capability-first profile records
 - [Shared SQL Capability Contract](sql-capability-contract.md) - Canonical SQL query, exec, result, pagination, target-error, and metadata shapes for SQL plugins
-- [SQL Plugin Migration Guide](sql-plugin-migration-guide.md) - Steps and checks for moving SQLite, MySQL, PostgreSQL, and DuckDB onto the shared SQL contract
 - [SQL Agent Parity Matrix](sql-agent-parity.md) - Canonical Agent parity comparison for the PostgreSQL, MySQL, SQLite, and DuckDB surfaces
 - [SSH Plugin](ssh-plugin.md) - SSH terminal, SFTP, forwarding, agent capability surface, fixture smoke, and release gate
 - [Agent Capability Examples](agent-capability-examples.md) - Concrete schema discovery, invocation, structured error, and repeated runtime instance examples for agents
-- [TUI Workflow Classification](tui-workflow-classification.md) - Classification of which plugin workflows should retain TUI support versus move to CLI-first capabilities
 - [TUI Adapter Boundary](tui-adapter-boundary.md) - Ownership rules for TUI surfaces that consume profiles, capabilities, and plugin services without becoming the core contract
-- [Plugin-Owned CLI-Launched TUI ADR](adr-plugin-owned-cli-launched-tui.md) - Decision record for moving retained plugin TUIs out of the router-hosted shell and into plugin CLI entrypoints
 - [Plugin-Owned TUI Development Guide](plugin-owned-tui-development-guide.md) - Cookbook for building standalone plugin TUIs with CLI commands, service-layer usage, terminal lifecycle, tests, and release gates
 - [Plugin-Owned TUI Launch Contract](plugin-owned-tui-launch-contract.md) - Command shape, profile/credential handoff, terminal lifecycle, exit-code, and dependency rules for standalone plugin TUIs
 - [Standalone TUI UX Acceptance Criteria](standalone-tui-ux-acceptance.md) - Measurable startup, input, accessibility, safety, error recovery, and evidence gates for retained plugin TUIs
 - [TUI Interaction Performance Contract](tui-interaction-performance.md) - Real-PTY interaction performance targets for the Connection Manager and retained plugin TUIs
 - [TUI CI And Real-Terminal Coverage](tui-terminal-coverage.md) - Automated real-PTY CI gate plus manual real-terminal coverage matrix
-- [Plugin-Owned TUI UX Briefs](plugin-owned-tui-ux-briefs.md) - Per-plugin target users, workflows, keyboard models, safety states, non-goals, and promotion evidence for retained standalone TUIs
 - [Live Operations TUI Safety](live-operations-tui-safety.md) - Docker, Kubernetes, and Jenkins stream bounds, cancellation, exec/attach escapes, watch throttling, confirmations, and audit summaries
 - [Storage TUI Launch And Rollback](storage-tui-launch-and-rollback.md) - S3 and WebDAV standalone TUI commands, fixture evidence, unsupported terminals, rollback behavior, and CLI/capability equivalents
-- [Storage TUI UX Decisions](storage-tui-ux-decisions.md) - Requirement 80 design and safety decisions for plugin-owned S3 and WebDAV standalone browsers
-- [Data Inspector CLI-First Decisions](data-inspector-cli-first-decisions.md) - MySQL, PostgreSQL, SQLite, DuckDB, Redis, MongoDB, and Elasticsearch CLI-first evidence, Requirement 83 no-pilot decisions, and standalone TUI rebuild gates
 - [Readiness Documentation Map](readiness.md) - Canonical current documentation and historical evidence boundaries
 - [Agent Capability and Experience Matrix](agent-capability-matrix.md) - Generated built-in Agent and plugin experience inventory
 - [Changelog](../CHANGELOG.md) - Version history

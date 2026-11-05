@@ -13,7 +13,6 @@ It builds on:
 - [Audit and Structured Error Schema](audit-and-error-schema.md)
 - [Plugin Manifest Schema](plugin-manifest-schema.md)
 - [Future Plugin Installation Model](plugin-installation-model.md)
-- [Migration Compatibility Notes](migration-compatibility-notes.md)
 - [VoidB Sync Architecture](sync-plugin.md)
 - [Object-Level Sync Model](object-level-sync-model.md)
 

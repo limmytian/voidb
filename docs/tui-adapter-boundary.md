@@ -2,8 +2,7 @@
 
 This document defines how VoidB TUI surfaces consume core profiles,
 capabilities, and plugin services after the capability-first migration. It is
-part of Requirement 05 and follows
-[TUI Workflow Classification](tui-workflow-classification.md).
+part of Requirement 05.
 
 The purpose is narrow: keep the TUI valuable for human interaction without
 letting it become the authoritative plugin contract again.
