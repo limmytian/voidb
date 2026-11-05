@@ -72,7 +72,7 @@ jobs:
         run: |
           cli="target/${{ matrix.target }}/release/vb"
           if [ "${{ runner.os }}" = "Windows" ]; then cli="${cli}.exe"; fi
-          test "$("$cli" --version)" = "voidb ${RELEASE_VERSION#v}"
+          test "$("$cli" --version)" = "vb ${RELEASE_VERSION#v}"
           "$cli" --help
           expected="${RELEASE_VERSION#v}"
           test "$("$cli" --version | awk '{print $NF}')" = "$expected"
@@ -82,20 +82,20 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           mkdir -p dist
-          cp target/${{ matrix.target }}/release/voidb dist/voidb
+          cp target/${{ matrix.target }}/release/vb-tui dist/vb-tui
           cp target/${{ matrix.target }}/release/vb dist/vb
           cd dist
-          tar -czf voidb-${RELEASE_VERSION#v}-${{ matrix.platform }}.tar.gz voidb vb
+          tar -czf voidb-${RELEASE_VERSION#v}-${{ matrix.platform }}.tar.gz vb-tui vb
         shell: bash
 
       - name: Package Binaries (Windows)
         if: runner.os == 'Windows'
         run: |
           mkdir -p dist
-          cp target/${{ matrix.target }}/release/voidb.exe dist/voidb.exe
+          cp target/${{ matrix.target }}/release/vb-tui.exe dist/vb-tui.exe
           cp target/${{ matrix.target }}/release/vb.exe dist/vb.exe
           cd dist
-          7z a voidb-${RELEASE_VERSION#v}-${{ matrix.platform }}.zip voidb.exe vb.exe
+          7z a voidb-${RELEASE_VERSION#v}-${{ matrix.platform }}.zip vb-tui.exe vb.exe
         shell: bash
 
       - name: Upload Artifact
@@ -111,7 +111,7 @@ jobs:
     #
     # scripts/sign-release-artifacts.py consumes plugin archives
     # ({plugin-id}-{version}-{target}.tar.gz containing a plugin.toml
-    # manifest, for the four release targets). The core `voidb`/`vb`
+    # manifest, for the four release targets). The core `vb-tui`/`vb`
     # archives built by build-release above are NOT plugin payloads (no
     # plugin.toml, plus an unsupported Windows target), so the signer cannot
     # run over them and this job never runs automatically on tag pushes:

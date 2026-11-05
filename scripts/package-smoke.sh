@@ -245,10 +245,10 @@ fi
 
 if [[ "${TUI}" -eq 1 ]]; then
   default_tui="$(find_binary \
-    "${ARTIFACT_ROOT}/voidb-default/voidb" \
-    "${ARTIFACT_ROOT}/voidb-default/voidb.exe" \
-    "${ARTIFACT_ROOT}/voidb" \
-    "${ARTIFACT_ROOT}/voidb.exe")" || die "missing default TUI artifact"
+    "${ARTIFACT_ROOT}/voidb-default/vb-tui" \
+    "${ARTIFACT_ROOT}/voidb-default/vb-tui.exe" \
+    "${ARTIFACT_ROOT}/vb-tui" \
+    "${ARTIFACT_ROOT}/vb-tui.exe")" || die "missing default TUI artifact"
 
   check_executable "default TUI" "${default_tui}"
 
