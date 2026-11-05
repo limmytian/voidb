@@ -17,6 +17,7 @@ use uuid::Uuid;
 use voidb_core::{
     AgentAuthorizationPresetKind, AgentAuthorizationRequest, AgentAuthorizationScope,
     AgentGrantAmendment, AgentGrantRevision, AgentPrincipal, AppConfig, AuditOperation,
+    CapabilityApprovalField, CapabilityApprovalValueType, CapabilityConstraintKind,
     CapabilityDefinition, CapabilityExecutionMode, ConnectionProfile, FrontendAgentGrant,
     LocalProfileStore, authorize_normalized_operation, normalize_agent_operation,
 };
@@ -1122,7 +1123,19 @@ pub(super) async fn review_jit_request(request_id: &str) -> anyhow::Result<i32> 
         },
         _ => unreachable!(),
     };
-    let approved_scope = prompt_narrowed_scope(&request.scope)?;
+    let definitions = resolved_authorization_capabilities(Some(&request.plugin_id))
+        .map_err(|error| anyhow!(error))?;
+    let definition = definitions
+        .iter()
+        .find(|definition| definition.qualified_id() == request.scope.capability_id())
+        .ok_or_else(|| anyhow!("capability authorization declaration is no longer available"))?;
+    let declared_fields: &[CapabilityApprovalField] = definition
+        .authorization
+        .approval_schema
+        .as_ref()
+        .map(|schema| schema.fields.as_slice())
+        .unwrap_or(&[]);
+    let approved_scope = prompt_narrowed_scope(&request.scope, declared_fields)?;
     if !request.scope.can_narrow_to(&approved_scope) {
         return print_jit_error(
             JIT_EXIT_INVALID,
@@ -1131,12 +1144,6 @@ pub(super) async fn review_jit_request(request_id: &str) -> anyhow::Result<i32> 
             None,
         );
     }
-    let definitions = resolved_authorization_capabilities(Some(&request.plugin_id))
-        .map_err(|error| anyhow!(error))?;
-    let definition = definitions
-        .iter()
-        .find(|definition| definition.qualified_id() == request.scope.capability_id())
-        .ok_or_else(|| anyhow!("capability authorization declaration is no longer available"))?;
     if let Err(error) = validate_declared_jit_scope(definition, &approved_scope) {
         return print_jit_error(JIT_EXIT_INVALID, "invalid_scope", &error.to_string(), None);
     }
@@ -1186,6 +1193,7 @@ pub(super) async fn review_jit_request(request_id: &str) -> anyhow::Result<i32> 
 
 fn prompt_narrowed_scope(
     requested: &AgentAuthorizationScope,
+    declared_fields: &[CapabilityApprovalField],
 ) -> anyhow::Result<AgentAuthorizationScope> {
     if matches!(requested, AgentAuthorizationScope::ExactInvocation { .. }) {
         return Ok(requested.clone());
@@ -1197,9 +1205,30 @@ fn prompt_narrowed_scope(
     if !choice.eq_ignore_ascii_case("n") {
         bail!("scope choice was not recognized");
     }
-    let raw = prompt_tty_line("Additional constraints JSON object: ")?;
-    let additional: BTreeMap<String, Value> =
-        serde_json::from_str(&raw).context("constraints must be a JSON object")?;
+    // Declared approval fields drive a per-field form (label, type, and
+    // constraint kind shown, values validated on entry); raw JSON stays as
+    // the explicit fallback for undeclared fields.
+    let additional: BTreeMap<String, Value> = if declared_fields.is_empty() {
+        prompt_raw_constraints()?
+    } else {
+        println!("Declared constraint fields:");
+        for field in declared_fields {
+            println!(
+                "  {} [{}] ({}, constraint: {}{})",
+                field.label,
+                field.path,
+                approval_value_type_name(field.value_type),
+                approval_constraint_name(field.constraint),
+                if field.required { ", required" } else { "" },
+            );
+        }
+        let mode = prompt_tty_line("Fill [f=declared fields (Enter), j=raw JSON]: ")?;
+        if mode.eq_ignore_ascii_case("j") {
+            prompt_raw_constraints()?
+        } else {
+            prompt_declared_fields(declared_fields)?
+        }
+    };
     let mut constraints = match requested {
         AgentAuthorizationScope::Capability { .. } => BTreeMap::new(),
         AgentAuthorizationScope::Constrained { constraints, .. } => constraints.clone(),
@@ -1215,6 +1244,100 @@ fn prompt_narrowed_scope(
         capability_id: requested.capability_id().to_string(),
         constraints,
     })
+}
+
+fn prompt_raw_constraints() -> anyhow::Result<BTreeMap<String, Value>> {
+    let raw = prompt_tty_line("Additional constraints JSON object: ")?;
+    serde_json::from_str(&raw).context("constraints must be a JSON object")
+}
+
+/// Sequential per-field form: each declared field prompts once, values parse
+/// by the declared type, and required fields must be non-empty.
+fn prompt_declared_fields(
+    fields: &[CapabilityApprovalField],
+) -> anyhow::Result<BTreeMap<String, Value>> {
+    let mut constraints = BTreeMap::new();
+    for field in fields {
+        let prompt = format!(
+            "{} [{}]{}: ",
+            field.label,
+            field.path,
+            if field.required {
+                " (required)"
+            } else {
+                " (empty skips)"
+            },
+        );
+        let raw = prompt_tty_line(&prompt)?;
+        if raw.is_empty() {
+            if field.required {
+                bail!("field '{}' is required", field.path);
+            }
+            continue;
+        }
+        constraints.insert(field.path.clone(), parse_approval_value(field, &raw)?);
+    }
+    Ok(constraints)
+}
+
+fn parse_approval_value(field: &CapabilityApprovalField, raw: &str) -> anyhow::Result<Value> {
+    match field.value_type {
+        CapabilityApprovalValueType::String
+        | CapabilityApprovalValueType::ResourceId
+        | CapabilityApprovalValueType::Path => Ok(Value::String(raw.to_string())),
+        // Secret-typed fields never enter constraints (fail closed).
+        CapabilityApprovalValueType::Secret => {
+            anyhow::bail!(
+                "'{}' is secret-typed and cannot constrain an approval",
+                field.path
+            )
+        }
+        CapabilityApprovalValueType::StringList => Ok(Value::Array(
+            raw.split(',')
+                .map(|item| Value::String(item.trim().to_string()))
+                .filter(|value| !value.as_str().unwrap_or_default().is_empty())
+                .collect(),
+        )),
+        CapabilityApprovalValueType::CommandArgv => Ok(Value::Array(
+            raw.split_whitespace()
+                .map(|item| Value::String(item.to_string()))
+                .collect(),
+        )),
+        CapabilityApprovalValueType::Integer => raw
+            .parse::<i64>()
+            .map(Value::from)
+            .map_err(|error| anyhow!("'{}' must be an integer: {error}", field.path)),
+        CapabilityApprovalValueType::Boolean => match raw.to_ascii_lowercase().as_str() {
+            "y" | "yes" | "true" => Ok(Value::Bool(true)),
+            "n" | "no" | "false" => Ok(Value::Bool(false)),
+            _ => anyhow::bail!("'{}' must be a boolean", field.path),
+        },
+        CapabilityApprovalValueType::Json => serde_json::from_str(raw)
+            .map_err(|error| anyhow!("'{}' must be valid JSON: {error}", field.path)),
+    }
+}
+
+fn approval_value_type_name(value_type: CapabilityApprovalValueType) -> &'static str {
+    match value_type {
+        CapabilityApprovalValueType::String => "text",
+        CapabilityApprovalValueType::StringList => "comma-separated list",
+        CapabilityApprovalValueType::Integer => "integer",
+        CapabilityApprovalValueType::Boolean => "boolean",
+        CapabilityApprovalValueType::ResourceId => "resource id",
+        CapabilityApprovalValueType::Path => "path",
+        CapabilityApprovalValueType::CommandArgv => "command argv",
+        CapabilityApprovalValueType::Json => "JSON",
+        CapabilityApprovalValueType::Secret => "secret (not constrainable)",
+    }
+}
+
+fn approval_constraint_name(kind: CapabilityConstraintKind) -> &'static str {
+    match kind {
+        CapabilityConstraintKind::Exact => "exact",
+        CapabilityConstraintKind::Prefix => "prefix",
+        CapabilityConstraintKind::Subset => "subset",
+        CapabilityConstraintKind::Maximum => "maximum",
+    }
 }
 
 pub(super) fn prompt_tty_line(prompt: &str) -> anyhow::Result<String> {
