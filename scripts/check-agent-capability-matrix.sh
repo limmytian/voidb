@@ -9,13 +9,13 @@ trap 'rm -f "$generated_path"' EXIT
 
 cd "$repo_root"
 
-cargo run --quiet -p vb --features full -- invoke matrix --format markdown >"$generated_path"
+cargo run --quiet -p voidb-cli --features full -- invoke matrix --format markdown >"$generated_path"
 
 if ! diff -u "$matrix_path" "$generated_path"; then
     echo >&2
     echo "Agent capability matrix is stale." >&2
     echo "Regenerate it with:" >&2
-    echo "  cargo run --quiet -p vb --features full -- invoke matrix --format markdown > docs/agent-capability-matrix.md" >&2
+    echo "  cargo run --quiet -p voidb-cli --features full -- invoke matrix --format markdown > docs/agent-capability-matrix.md" >&2
     exit 1
 fi
 

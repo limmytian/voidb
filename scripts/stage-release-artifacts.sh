@@ -267,7 +267,7 @@ if [[ "${BUILD}" -eq 1 ]]; then
     "cargo build${PROFILE_LABEL}" \
     "voidb-default/${TUI_NAME}"
 
-  run cargo build "${profile_args[@]}" -p vb
+  run cargo build "${profile_args[@]}" -p voidb-cli
   stage_file \
     "cli" \
     "vb" \
@@ -276,7 +276,7 @@ if [[ "${BUILD}" -eq 1 ]]; then
     "${VERSION}" \
     "default" \
     "${TARGET_DIR}/${PROFILE_DIR}/${CLI_NAME}" \
-    "cargo build${PROFILE_LABEL} -p vb" \
+    "cargo build${PROFILE_LABEL} -p voidb-cli" \
     "cli/${CLI_NAME}"
 
   run cargo build "${profile_args[@]}" --manifest-path voidb-sync-server/Cargo.toml

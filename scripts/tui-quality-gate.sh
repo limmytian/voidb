@@ -87,8 +87,8 @@ cd "${REPO_ROOT}"
 export VOIDB_PLUGIN_PATH="${VOIDB_PLUGIN_PATH:-${REPO_ROOT}/..}"
 
 if [[ "${BUILD}" -eq 1 ]]; then
-  printf '\n==> cargo build -q -p vb -p voidb-tui\n'
-  cargo build -q -p vb -p voidb-tui
+  printf '\n==> cargo build -q -p voidb-cli -p voidb-tui\n'
+  cargo build -q -p voidb-cli -p voidb-tui
 fi
 
 CLI_BIN="${CLI_BIN:-target/debug/vb}"

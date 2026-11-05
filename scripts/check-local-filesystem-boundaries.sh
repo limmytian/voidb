@@ -6,7 +6,7 @@ cd "$ROOT"
 
 cargo test -p voidb-core local_filesystem_boundary_
 cargo test --manifest-path "${ROOT}/../voidb-plugin-ssh/Cargo.toml" local_filesystem_boundary_
-cargo test -p vb local_filesystem_boundary_
-cargo test -p vb default_grant_fails_closed_on_non_read_only_capabilities
+cargo test -p voidb-cli local_filesystem_boundary_
+cargo test -p voidb-cli default_grant_fails_closed_on_non_read_only_capabilities
 
 printf 'local filesystem boundary checks passed\n'

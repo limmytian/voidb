@@ -38,7 +38,7 @@ mkdir -p "${INSTALL_ROOT}" "${DIST_DIR}"
 
 # Step 1: Ensure vb is built
 echo "==> Step 1: Building vb"
-cargo build -p vb
+cargo build -p voidb-cli
 
 VOIDB_CLI="${REPO_ROOT}/target/debug/vb"
 if [ ! -f "${VOIDB_CLI}" ]; then
