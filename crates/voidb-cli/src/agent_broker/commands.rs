@@ -472,6 +472,13 @@ pub(crate) fn agent_subcommand() -> Command {
                         .long("all")
                         .action(ArgAction::SetTrue)
                         .conflicts_with_all(["grant", "profile", "plugin"]),
+                )
+                .arg(
+                    Arg::new("yes")
+                        .long("yes")
+                        .short('y')
+                        .action(ArgAction::SetTrue)
+                        .help("Confirm a multi-grant revoke without the interactive review"),
                 ),
         )
         .subcommand(with_optional_principal_args(
@@ -2038,6 +2045,33 @@ pub(super) async fn revoke(matches: &ArgMatches) -> anyhow::Result<i32> {
     let selected = select_grants_for_revoke(&grants, all, requested, profile, plugin);
     if selected.is_empty() && !all {
         bail!("agent grant was not found");
+    }
+    if selected.len() > 1 && !matches.get_flag("yes") && std::io::stdin().is_terminal() {
+        // Bulk revoke mirrors the TUI review: show exactly what would be
+        // closed and require an explicit confirmation.
+        println!("Revoking {} grant(s):", selected.len());
+        for grant in &selected {
+            println!(
+                "  {} · {} ({}) · capabilities: {}",
+                grant.id,
+                grant.profile_name,
+                grant.plugin_id,
+                grant.capabilities.join(", ")
+            );
+        }
+        let answer = prompt_tty_line("Type 'revoke' to confirm, anything else cancels: ")?;
+        if answer.trim() != "revoke" {
+            println!(
+                "{}",
+                serde_json::json!({"ok": false, "error": {"code": "cancelled", "message": "revoke cancelled"}})
+            );
+            return Ok(0);
+        }
+    } else if selected.len() > 1 && !matches.get_flag("yes") {
+        bail!(
+            "revoking {} grants is destructive; rerun with --yes to confirm",
+            selected.len()
+        );
     }
     let mut revoked = Vec::new();
     for grant in selected {
