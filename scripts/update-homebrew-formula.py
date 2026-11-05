@@ -23,7 +23,7 @@ def main():
         archive = args.artifacts / f'voidb-{args.version}-{platform}.tar.gz'
         with tarfile.open(archive) as package:
             members = package.getmembers()
-            if len(members) != 2 or {member.name for member in members} != {'voidb', 'vb'} or not all(member.isfile() for member in members):
+            if len(members) != 2 or {member.name for member in members} != {'vb-tui', 'vb'} or not all(member.isfile() for member in members):
                 raise ValueError(f'{archive.name} must contain only the two regular core binaries')
         checksums[platform] = hashlib.sha256(archive.read_bytes()).hexdigest()
     formula = args.formula.read_text()
