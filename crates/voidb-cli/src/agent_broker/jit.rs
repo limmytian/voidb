@@ -109,7 +109,7 @@ pub(super) fn jit_request_command() -> Command {
         .subcommand(
             Command::new("decide")
                 .about(
-                    "Apply one local frontend approval decision; use request review for an interactive password prompt",
+                    "Apply one local frontend approval decision; prompts for the hidden master password on a TTY, or reads --password-stdin for automation",
                 )
                 .arg(Arg::new("request-id").required(true))
                 .arg(
@@ -403,18 +403,24 @@ async fn decide_jit_request(
         .get_one::<String>("decision")
         .expect("required by clap")
         .as_str();
-    if !matches.get_flag("password-stdin") {
+    // One-command approvals: an interactive terminal prompts for the hidden
+    // master password in place; automation keeps the --password-stdin path.
+    let mut password = if matches.get_flag("password-stdin") {
+        let mut password = String::new();
+        tokio::io::stdin().read_to_string(&mut password).await?;
+        password
+    } else if std::io::stdin().is_terminal() && std::io::stdout().is_terminal() {
+        rpassword::prompt_password("VoidB master password: ")?
+    } else {
         return print_jit_error(
             JIT_EXIT_INVALID,
             "authentication_required",
             &format!(
-                "frontend decisions require the master password on standard input; run 'vb agent request review {request_id}' in a local terminal for an interactive hidden password prompt"
+                "frontend decisions need the master password on standard input (--password-stdin) or an interactive terminal; run 'vb agent request decide {request_id} ...' in a local terminal, or 'vb agent request review {request_id}' for the guided flow"
             ),
             None,
         );
-    }
-    let mut password = String::new();
-    tokio::io::stdin().read_to_string(&mut password).await?;
+    };
     if password.is_empty() {
         return print_jit_error(
             JIT_EXIT_INVALID,
