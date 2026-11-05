@@ -372,6 +372,17 @@ mod tests {
     use std::collections::BTreeMap;
     use std::path::PathBuf;
 
+    /// Keeps encryption-related tests off the OS keyring: the keyring backend
+    /// can block indefinitely on a keychain authorization prompt in headless
+    /// or sandboxed environments (observed on macOS), so tests exercise the
+    /// file-fallback install secret instead.
+    fn disable_keyring_for_tests() {
+        static ONCE: std::sync::Once = std::sync::Once::new();
+        ONCE.call_once(|| unsafe {
+            std::env::set_var("VOIDB_DISABLE_KEYRING", "1");
+        });
+    }
+
     fn parse_cli(args: &[&str]) -> ArgMatches {
         let cli_manager = build_cli_manager();
         let mut discovery = voidb_core::process_plugin::discover_process_plugins();
@@ -534,6 +545,7 @@ mod tests {
 
     #[test]
     fn protected_config_static_discovery_never_requires_or_exposes_password() {
+        disable_keyring_for_tests();
         let root = std::env::temp_dir().join(format!(
             "voidb-cli-static-discovery-{}",
             uuid::Uuid::new_v4()
@@ -596,6 +608,7 @@ mod tests {
 
     #[test]
     fn legacy_unprotected_config_static_discovery_ignores_password_context() {
+        disable_keyring_for_tests();
         let root = std::env::temp_dir().join(format!(
             "voidb-cli-legacy-static-discovery-{}",
             uuid::Uuid::new_v4()
