@@ -65,6 +65,10 @@ pub(crate) const AGENT_TOP_LEVEL_ALIASES: &[(&str, &[&str])] = &[
     ("auth", &["authorize"]),
     ("catalog", &["catalog"]),
     ("exec", &["exec"]),
+    ("decide", &["request", "decide"]),
+    ("renew", &["renew"]),
+    ("revoke", &["revoke"]),
+    ("run", &["run"]),
 ];
 
 pub async fn handle_early(args: Vec<String>) -> anyhow::Result<Option<i32>> {
@@ -181,7 +185,8 @@ pub(crate) fn agent_subcommand() -> Command {
     Command::new("agent")
         .about(
             "Manage short-lived, scoped agent access (short forms: vb approve <id> · vb inbox · \
-             vb grants [summary] · vb auth <profile> · vb catalog · vb exec)",
+             vb grants [summary] · vb auth <profile> · vb catalog · vb exec · vb decide <id> · \
+             vb renew <id> · vb revoke <id> · vb batch · vb run)",
         )
         .subcommand_required(true)
         .subcommand(with_hidden_optional_principal_args(
@@ -335,6 +340,7 @@ pub(crate) fn agent_subcommand() -> Command {
         )
         .subcommand(
             Command::new("authorize-batch")
+                .alias("batch")
                 .about("Review and authorize multiple profile-scoped grants at once")
                 .arg(
                     Arg::new("spec")

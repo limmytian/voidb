@@ -97,6 +97,7 @@ pub(super) fn jit_request_command() -> Command {
         ))
         .subcommand(
             Command::new("inbox")
+                .alias("in")
                 .about("List the canonical secret-free local approval inbox and grant revisions")
                 .arg(
                     Arg::new("format")

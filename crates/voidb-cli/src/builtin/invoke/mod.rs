@@ -55,6 +55,10 @@ impl CliPlugin for InvokeCliPlugin {
         "Generic Capability Invocation"
     }
 
+    fn visible_aliases(&self) -> Vec<&'static str> {
+        vec!["ix"]
+    }
+
     fn commands(&self) -> Vec<Command> {
         vec![
             Command::new("list")

@@ -33,6 +33,10 @@ impl CliPlugin for ContextCliPlugin {
         "External Context Handoff"
     }
 
+    fn visible_aliases(&self) -> Vec<&'static str> {
+        vec!["ctx"]
+    }
+
     fn commands(&self) -> Vec<Command> {
         vec![
             Command::new("list")

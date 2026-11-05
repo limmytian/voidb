@@ -154,7 +154,15 @@ vb grants            # agent grants: one-screen access summary + grants table (-
 vb inbox             # agent request inbox: pending approval queue
 vb approve <id>      # agent request review: interactive human review
 vb auth <profile>    # agent authorize: grant scoped access directly
+vb decide <id> --decision bounded   # agent request decide
+vb renew <id> · vb revoke <id> · vb run · vb batch (authorize-batch)
+vb in                # agent request inbox (short form)
+vb ix · vb ctx       # invoke · context commands
 ```
+
+Builtin and agent subcommands also accept short forms directly:
+`agent authorize-batch` = `agent batch`, `agent request inbox` =
+`agent request in`.
 
 If no current grant permits an operation, an identified interactive agent
 creates one exact JIT request and waits briefly for review in the Connection
