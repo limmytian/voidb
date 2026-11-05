@@ -758,7 +758,16 @@ struct CapabilityItem {
     risk: String,
     interactive_execute: bool,
     capability_wide_allowed: bool,
-    approval_fields: Vec<String>,
+    approval_fields: Vec<ApprovalFieldInfo>,
+}
+
+/// One declared approval field, structured so the JIT dialog can template
+/// the constraints editor and show the declarations with their kinds.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ApprovalFieldInfo {
+    label: String,
+    path: String,
+    constraint: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

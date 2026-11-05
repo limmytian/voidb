@@ -484,7 +484,11 @@ impl ConnectionManagerApp {
                 } else {
                     format!(
                         "Declared review fields: {}",
-                        item.approval_fields.join(" · ")
+                        item.approval_fields
+                            .iter()
+                            .map(|field| format!("{} ({})", field.label, field.path))
+                            .collect::<Vec<_>>()
+                            .join(" · ")
                     )
                 }
             })

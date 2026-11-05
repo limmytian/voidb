@@ -542,6 +542,23 @@ impl ConnectionManagerApp {
                         ) =>
                 {
                     dialog.editing_constraints = true;
+                    // Template the editor from the declared approval fields so
+                    // the human edits values in place instead of authoring
+                    // JSON from scratch; the declarations stay visible above.
+                    if dialog.constraints_json.trim().is_empty()
+                        && let Some(capability) = self
+                            .authorization_capability_catalog
+                            .get(dialog.request.capability_id())
+                        && !capability.approval_fields.is_empty()
+                    {
+                        let template: serde_json::Map<String, Value> = capability
+                            .approval_fields
+                            .iter()
+                            .map(|field| (field.path.clone(), Value::String(String::new())))
+                            .collect();
+                        dialog.constraints_json =
+                            serde_json::to_string_pretty(&template).unwrap_or_else(|_| "{}".into());
+                    }
                 }
                 KeyCode::Enter => {
                     // Inline check: this arm holds a mutable borrow of the

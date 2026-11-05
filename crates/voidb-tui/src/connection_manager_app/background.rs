@@ -1031,7 +1031,11 @@ pub(super) fn parse_capabilities(payload: &str) -> Vec<CapabilityItem> {
                             .get("constraint")
                             .and_then(Value::as_str)
                             .unwrap_or("exact");
-                        Some(format!("{label} ({path}, {constraint})"))
+                        Some(super::ApprovalFieldInfo {
+                            label: label.to_string(),
+                            path: path.to_string(),
+                            constraint: constraint.to_string(),
+                        })
                     })
                     .collect(),
             })
