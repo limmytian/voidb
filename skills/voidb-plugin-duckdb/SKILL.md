@@ -9,14 +9,14 @@ description: Guide for the VoidB DuckDB plugin. Use when working on the external
 
 The DuckDB plugin is a decoupled process plugin that lives in its own
 independent repository (`voidb-plugin-duckdb`), not in this repository. Install
-it with `voidb-cli plugin install-default` and run it through
-`voidb-cli duckdb ...` or the `duckdb.*` capabilities.
+it with `vb plugin install-default` and run it through
+`vb duckdb ...` or the `duckdb.*` capabilities.
 
 ## What It Does
 
 DuckDB analytics capability plugin for VoidB: SQL `query`, `explain`, `exec`,
 `tables`, and `describe_table` capabilities backed by `DuckDbService`, plus
-`voidb-cli duckdb` domain commands for query, import/export, extensions, and
+`vb duckdb` domain commands for query, import/export, extensions, and
 tests, and persistent agent sessions.
 
 ## Development Guidance

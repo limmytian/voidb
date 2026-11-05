@@ -9,14 +9,14 @@ description: Guide for the VoidB PostgreSQL plugin. Use when working on the exte
 
 The PostgreSQL plugin is a decoupled process plugin that lives in its own
 independent repository (`voidb-plugin-postgres`), not in this repository.
-Install it with `voidb-cli plugin install-default` and run it through
-`voidb-cli postgres ...` or the `postgres.*` capabilities.
+Install it with `vb plugin install-default` and run it through
+`vb postgres ...` or the `postgres.*` capabilities.
 
 ## What It Does
 
 PostgreSQL capability plugin for VoidB: SQL `query`, `explain`, `exec`,
 `tables`, and `describe_table` capabilities backed by `PostgresService` with
-schema-aware introspection, plus `voidb-cli postgres` domain commands
+schema-aware introspection, plus `vb postgres` domain commands
 (`query`, `databases`, `tables`, `describe`) and persistent agent sessions.
 Native descriptor protocols: `postgres`, `postgresql`.
 

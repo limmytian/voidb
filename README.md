@@ -81,21 +81,21 @@ brew install limmytian/tap/voidb
 #### 3. From Source / Cargo
 
 ```bash
-# Install via cargo
-cargo install --locked voidb vb
+# Install via cargo (from the Git repository)
+cargo install --locked --git https://github.com/limmytian/voidb.git vb vb-tui
 
 # Or clone and build
 git clone https://github.com/limmytian/voidb.git
 cd voidb
 cargo build --release
-sudo cp target/release/voidb target/release/vb /usr/local/bin/
+sudo cp target/release/vb target/release/vb-tui /usr/local/bin/
 ```
 
 ### First Run
 
 ```bash
 # Launch VoidB
-voidb
+vb-tui
 
 # Equivalent explicit Connection Manager entrypoints
 vb-tui --connection-manager
@@ -108,7 +108,7 @@ vb-tui --shell
 # In VoidB:
 # 1. Use the Connection Manager to create or edit profiles
 # 2. Press Enter on a profile for CLI/capability guidance
-# 3. Use vb or voidb invoke for plugin operations
+# 3. Use vb invoke for plugin operations
 ```
 
 `vb` itself ships only the built-in command groups (`audit`,

@@ -61,7 +61,9 @@ For broader changes across plugins or shared contracts, consult [docs/ci-checks.
 
 ### 3. Architecture Guidelines
 
-- **Plugin Isolation**: Database/protocol plugins live in `crates/plugins/`, never inside `voidb-core`.
+- **Plugin Isolation**: Official database/protocol plugins live in independent
+  external repositories (`voidb-plugin-<name>`), never inside `voidb-core`;
+  the only in-tree plugin is `voidb-plugin-sync` under `crates/plugins/`.
 - **Pure Router Shell**: The TUI shell (`voidb-tui`) acts as an autonomous router; plugins manage their own internal views.
 - **Service Layer**: TUI and CLI code consume service modules (`service/`); never import database driver crates directly into TUI components.
 - **Security & Secrets**: Never log or print plaintext passwords, connection strings, or authorization tokens. Profile data must adhere to AES-256-GCM encryption.

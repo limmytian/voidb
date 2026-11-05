@@ -9,15 +9,15 @@ description: Guide for the VoidB SSH plugin. Use when working on the external Vo
 
 The SSH plugin is a decoupled process plugin that lives in its own
 independent repository (`voidb-plugin-ssh`), not in this repository. Install it
-with `voidb-cli plugin install-default` and run it through `voidb-cli ssh ...`
+with `vb plugin install-default` and run it through `vb ssh ...`
 or the `ssh.*` capabilities.
 
 ## What It Does
 
 SSH capability plugin for VoidB: remote terminal, SFTP transfer, and port
-forwarding with strict host-key policy, plus `voidb-cli ssh` domain commands
+forwarding with strict host-key policy, plus `vb ssh` domain commands
 (`test`, `exec`, `sftp-*`, `forward-*`), a standalone full-screen SSH TUI
-(`voidb-cli ssh tui`), session-share commands (`session list/show/wait/
+(`vb ssh tui`), session-share commands (`session list/show/wait/
 operation/input/cancel/close/state`), and bounded, redacted external-agent
 session sharing with one-shot current-PTY control.
 

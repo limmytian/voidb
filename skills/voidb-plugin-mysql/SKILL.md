@@ -9,14 +9,14 @@ description: Guide for the VoidB MySQL plugin. Use when working on the external 
 
 The MySQL plugin is a decoupled process plugin that lives in its own
 independent repository (`voidb-plugin-mysql`), not in this repository. Install
-it with `voidb-cli plugin install-default` and run it through
-`voidb-cli mysql ...` or the `mysql.*` capabilities.
+it with `vb plugin install-default` and run it through
+`vb mysql ...` or the `mysql.*` capabilities.
 
 ## What It Does
 
 MySQL and MariaDB capability plugin for VoidB: SQL `query`, `explain`, `exec`,
 `tables`, and `describe_table` capabilities backed by `MySqlService`, plus
-`voidb-cli mysql` domain commands (`query`, `databases`, `tables`, `describe`)
+`vb mysql` domain commands (`query`, `databases`, `tables`, `describe`)
 and persistent agent sessions. Native descriptor protocols: `mysql`,
 `mariadb`.
 

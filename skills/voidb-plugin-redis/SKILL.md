@@ -9,14 +9,14 @@ description: Guide for the VoidB Redis plugin. Use when working on the external 
 
 The Redis plugin is a decoupled process plugin that lives in its own
 independent repository (`voidb-plugin-redis`), not in this repository. Install
-it with `voidb-cli plugin install-default` and run it through
-`voidb-cli redis ...` or the `redis.*` capabilities.
+it with `vb plugin install-default` and run it through
+`vb redis ...` or the `redis.*` capabilities.
 
 ## What It Does
 
 Redis key-value capability plugin for VoidB: `redis.keys`, `redis.get`,
 `redis.set`, `redis.del`, `redis.ttl`, `redis.info`, and `redis.exec`
-capabilities backed by `RedisService`, plus `voidb-cli redis` domain commands
+capabilities backed by `RedisService`, plus `vb redis` domain commands
 (`keys`, `get`, `set`, `del`, `ttl`, `type`, `info`, `exec`) and persistent
 agent sessions. Destructive operations sit behind mutation and dry-run gates.
 
