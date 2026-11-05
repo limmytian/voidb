@@ -1264,7 +1264,10 @@ fn json_rpc_error_to_capability_error(plugin_id: &str, value: &Value) -> Capabil
     }
 }
 
-fn credential_grant_descriptors(grant: &CredentialGrant) -> Vec<Value> {
+/// Builds the credential-grant descriptors a plugin receives with an
+/// invocation or session open. Descriptors carry reference IDs and classes
+/// only; secret values never cross the plugin boundary.
+pub fn credential_grant_descriptors(grant: &CredentialGrant) -> Vec<Value> {
     let expires_at = grant
         .expires_at
         .unwrap_or_else(|| grant.issued_at + ChronoDuration::minutes(5));

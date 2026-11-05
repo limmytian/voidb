@@ -144,7 +144,6 @@ impl AgentSessionHost {
         }
     }
 
-    #[allow(dead_code)]
     pub fn register_factory(&mut self, factory: Arc<dyn PluginAgentSessionFactory>) {
         self.factories
             .insert(factory.plugin_id().to_owned(), factory);

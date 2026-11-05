@@ -39,3 +39,4 @@ full = ["sync"]
 
 [dev-dependencies]
 toml = "0.8"
+voidb-core = { path = "../voidb-core", features = ["test-support"] }

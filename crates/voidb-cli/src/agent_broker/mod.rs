@@ -12,6 +12,7 @@ use std::time::Duration;
 
 mod audit;
 mod commands;
+mod external_session;
 mod jit;
 mod ledger;
 mod runtime;
