@@ -6,7 +6,7 @@ use tokio::sync::{mpsc, watch};
 use uuid::Uuid;
 use voidb_core::capability::{
     CapabilityDefinition, CapabilityError, CapabilityErrorCategory, CapabilityExecutionMode,
-    InvocationStreamEvent,
+    CapabilityRiskLevel, InvocationStreamEvent,
 };
 use voidb_core::plugin::cli::CliContext;
 use voidb_core::{
@@ -79,11 +79,13 @@ pub(super) fn handle_list(matches: &ArgMatches) -> Result<(), VoidbError> {
     let format = catalog_output_format(matches)?;
     let plugin_filter = matches.get_one::<String>("plugin").map(String::as_str);
     let execution_modes = execution_mode_filters(matches);
+    let risks = risk_filters(matches);
     let discovery = discover_process_plugins();
     let capabilities = supported_capabilities(&discovery)
         .into_iter()
         .filter(|capability| plugin_filter.is_none_or(|plugin| capability.plugin_id == plugin))
         .filter(|capability| capability_matches_execution_modes(capability, &execution_modes))
+        .filter(|capability| capability_matches_risks(capability, &risks))
         .map(CapabilitySummary::from)
         .collect::<Vec<_>>();
 
@@ -162,6 +164,28 @@ pub(super) fn execution_mode_filters(matches: &ArgMatches) -> Vec<CapabilityExec
             _ => unreachable!("clap validates execution modes"),
         })
         .collect()
+}
+
+pub(super) fn risk_filters(matches: &ArgMatches) -> Vec<CapabilityRiskLevel> {
+    matches
+        .get_many::<String>("risk")
+        .into_iter()
+        .flatten()
+        .map(|risk| match risk.as_str() {
+            "read_only" => CapabilityRiskLevel::ReadOnly,
+            "mutating" => CapabilityRiskLevel::Mutating,
+            "destructive" => CapabilityRiskLevel::Destructive,
+            "external_side_effect" => CapabilityRiskLevel::ExternalSideEffect,
+            _ => unreachable!("clap validates risk levels"),
+        })
+        .collect()
+}
+
+pub(super) fn capability_matches_risks(
+    capability: &CapabilityDefinition,
+    filters: &[CapabilityRiskLevel],
+) -> bool {
+    filters.is_empty() || filters.contains(&capability.effective_risk())
 }
 
 pub(super) fn capability_matches_execution_modes(

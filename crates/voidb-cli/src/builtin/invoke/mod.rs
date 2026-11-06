@@ -8,7 +8,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use voidb_core::VoidbError;
 use voidb_core::plugin::cli::{CliContext, CliPlugin};
 
-use command_tree::{capability_arg, execution_mode_arg, format_arg, run_format_arg};
+use command_tree::{capability_arg, execution_mode_arg, format_arg, risk_arg, run_format_arg};
 use handlers::{handle_describe, handle_list, handle_matrix, handle_run};
 
 mod audit;
@@ -65,6 +65,7 @@ impl CliPlugin for InvokeCliPlugin {
                 .about("List generic capability metadata")
                 .arg(format_arg())
                 .arg(execution_mode_arg())
+                .arg(risk_arg())
                 .arg(
                     Arg::new("plugin")
                         .value_name("PLUGIN_ID")
