@@ -176,9 +176,17 @@ impl PluginAgentSessionFactory for ExternalPluginSessionFactory {
             .map_err(|error| map_capability_error(&error))?;
 
         let plugin_session_id = format!("plugin-session:{}", Uuid::new_v4());
+        // PluginSessionPurpose serializes adjacently tagged
+        // ({"kind": "...", "value": ...}); the wire purpose is the kind.
         let purpose = serde_json::to_value(&context.binding.purpose)
             .ok()
-            .and_then(|value| value.as_str().map(str::to_owned))
+            .and_then(|value| {
+                value
+                    .get("kind")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned)
+                    .or_else(|| value.as_str().map(str::to_owned))
+            })
             .unwrap_or_else(|| "capability_invocation".to_owned());
 
         let credential_grants =
