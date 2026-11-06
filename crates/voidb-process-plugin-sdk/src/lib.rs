@@ -9,6 +9,7 @@
 
 use std::collections::BTreeMap;
 use std::io::{self, BufRead, Write};
+use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -18,17 +19,21 @@ use thiserror::Error;
 // alone. `voidb-core` remains available with `default-features = false` for
 // advanced use beyond these re-exports.
 pub use voidb_core::{
-    CapabilityAuthorizationMetadata, CapabilityError, CapabilityErrorCategory,
-    CapabilityExecutionMode, CapabilityInvocation, CapabilityInvocationResult, CapabilityRiskLevel,
-    CapabilitySessionHandoff, CredentialClass, InvocationStatus, PROCESS_PLUGIN_JSONRPC_VERSION,
-    PROCESS_PLUGIN_METHOD_CANCEL, PROCESS_PLUGIN_METHOD_HEALTH, PROCESS_PLUGIN_METHOD_INITIALIZE,
-    PROCESS_PLUGIN_METHOD_INVOKE, PROCESS_PLUGIN_METHOD_SESSION_CALL,
-    PROCESS_PLUGIN_METHOD_SESSION_CANCEL, PROCESS_PLUGIN_METHOD_SESSION_CLOSE,
-    PROCESS_PLUGIN_METHOD_SESSION_HEALTH, PROCESS_PLUGIN_METHOD_SESSION_OPEN,
-    PROCESS_PLUGIN_METHOD_SESSION_RENEW, PROCESS_PLUGIN_PROTOCOL_VERSION,
-    PROCESS_PLUGIN_TRANSPORT_STDIO_JSONRPC, ProcessPluginCapability, ProcessPluginConnections,
-    ProcessPluginManifest, ProcessPluginRequirements, ProcessPluginRuntime, ProcessPluginUi,
-    RedactionStatus, TargetSystemFailure, is_supported_process_plugin_protocol_version,
+    AgentSessionBinding, AgentSessionCallRequest, AgentSessionCallResult, AgentSessionConcurrency,
+    AgentSessionOpenContext, AgentSessionOpenRequest, AgentSessionRef, CapabilityAuthorizationMetadata,
+    CapabilityError, CapabilityErrorCategory, CapabilityExecutionMode, CapabilityInvocation,
+    CapabilityInvocationResult, CapabilityRiskLevel, CapabilitySessionHandoff, CredentialClass,
+    InvocationStatus, PluginAgentSession, PluginAgentSessionFactory, PluginSessionError,
+    PluginSessionErrorCode, PluginSessionHealth, PluginSessionPurpose, PluginSessionReason,
+    PROCESS_PLUGIN_JSONRPC_VERSION, PROCESS_PLUGIN_METHOD_CANCEL, PROCESS_PLUGIN_METHOD_HEALTH,
+    PROCESS_PLUGIN_METHOD_INITIALIZE, PROCESS_PLUGIN_METHOD_INVOKE,
+    PROCESS_PLUGIN_METHOD_SESSION_CALL, PROCESS_PLUGIN_METHOD_SESSION_CANCEL,
+    PROCESS_PLUGIN_METHOD_SESSION_CLOSE, PROCESS_PLUGIN_METHOD_SESSION_HEALTH,
+    PROCESS_PLUGIN_METHOD_SESSION_OPEN, PROCESS_PLUGIN_METHOD_SESSION_RENEW,
+    PROCESS_PLUGIN_PROTOCOL_VERSION, PROCESS_PLUGIN_TRANSPORT_STDIO_JSONRPC,
+    ProcessPluginCapability, ProcessPluginConnections, ProcessPluginManifest,
+    ProcessPluginRequirements, ProcessPluginRuntime, ProcessPluginUi, RedactionStatus,
+    TargetSystemFailure, is_supported_process_plugin_protocol_version,
     parse_process_plugin_protocol_version, redact_text_with_json,
 };
 
@@ -436,6 +441,7 @@ pub struct CapabilityRouter {
     plugin_id: String,
     handlers: BTreeMap<String, CapabilityHandler>,
     health_extra: BTreeMap<String, Value>,
+    session_bridge: Option<Arc<dyn SessionBridge>>,
 }
 
 impl CapabilityRouter {
@@ -444,7 +450,16 @@ impl CapabilityRouter {
             plugin_id: plugin_id.into(),
             handlers: BTreeMap::new(),
             health_extra: BTreeMap::new(),
+            session_bridge: None,
         }
+    }
+
+    /// Registers the persistent-session bridge. Plugins that register one
+    /// advertise the `voidb.session.*` sub-protocol to the host; without a
+    /// bridge the plugin fails sessions closed.
+    pub fn session_bridge(mut self, bridge: Arc<dyn SessionBridge>) -> Self {
+        self.session_bridge = Some(bridge);
+        self
     }
 
     pub fn with_health_detail(mut self, key: impl Into<String>, value: Value) -> Self {
@@ -497,6 +512,380 @@ impl ProcessPluginHandler for CapabilityRouter {
         };
 
         handler(invocation, &credential_grants)
+    }
+
+    fn initialize(
+        &mut self,
+        params: InitializeParams,
+    ) -> Result<InitializeResult, CapabilityError> {
+        if params.plugin_id != self.plugin_id {
+            return Err(plugin_error(
+                "plugin.initialize_id_mismatch",
+                "Initialize request targeted a different plugin id.",
+                json!({
+                    "expected_plugin_id": self.plugin_id,
+                    "actual_plugin_id": params.plugin_id,
+                }),
+            ));
+        }
+
+        if !is_supported_process_plugin_protocol_version(&params.protocol_version) {
+            return Err(plugin_error(
+                "plugin.protocol_unsupported",
+                "Requested VoidB process-plugin protocol version is not supported.",
+                json!({ "protocol_version": params.protocol_version }),
+            ));
+        }
+
+        // Advertise the persistent-session sub-protocol only when a session
+        // bridge is registered; otherwise the host fails closed with
+        // `unavailable.process_plugin_sessions_unsupported` instead of
+        // opening a runtime the plugin cannot answer.
+        let session_protocol = if self.session_bridge.is_some() {
+            parse_process_plugin_protocol_version(&params.protocol_version)
+                .filter(|(_, minor)| *minor >= 1)
+                .map(|_| "1".into())
+        } else {
+            None
+        };
+
+        Ok(InitializeResult {
+            plugin_id: self.plugin_id.clone(),
+            protocol_version: params.protocol_version.clone(),
+            status: Some("ready".into()),
+            session_protocol,
+        })
+    }
+
+    fn session_open(
+        &mut self,
+        params: SessionOpenParams,
+    ) -> Result<SessionOpenResult, CapabilityError> {
+        match &self.session_bridge {
+            Some(bridge) => bridge.open(params),
+            None => Err(session_unsupported()),
+        }
+    }
+
+    fn session_call(
+        &mut self,
+        params: SessionCallParams,
+    ) -> Result<SessionCallResult, CapabilityError> {
+        match &self.session_bridge {
+            Some(bridge) => bridge.call(params),
+            None => Err(session_unsupported()),
+        }
+    }
+
+    fn session_health(
+        &mut self,
+        params: SessionHandleParams,
+    ) -> Result<SessionHealthResult, CapabilityError> {
+        match &self.session_bridge {
+            Some(bridge) => bridge.health(params),
+            None => Err(session_unsupported()),
+        }
+    }
+
+    fn session_renew(
+        &mut self,
+        params: SessionRenewParams,
+    ) -> Result<SessionHealthResult, CapabilityError> {
+        match &self.session_bridge {
+            Some(bridge) => bridge.renew(params),
+            None => Err(session_unsupported()),
+        }
+    }
+
+    fn session_cancel(
+        &mut self,
+        params: SessionCancelParams,
+    ) -> Result<SessionCancelResult, CapabilityError> {
+        match &self.session_bridge {
+            Some(bridge) => bridge.cancel(params),
+            None => Err(session_unsupported()),
+        }
+    }
+
+    fn session_close(
+        &mut self,
+        params: SessionCloseParams,
+    ) -> Result<SessionCloseResult, CapabilityError> {
+        match &self.session_bridge {
+            Some(bridge) => bridge.close(params),
+            None => Err(session_unsupported()),
+        }
+    }
+}
+
+fn session_unsupported() -> CapabilityError {
+    plugin_error(
+        "plugin.session_unsupported",
+        "Plugin does not expose persistent sessions.",
+        json!({}),
+    )
+}
+
+/// Sync bridge between the stdio serve loop and a plugin's persistent
+/// sessions. Implement this to answer the `voidb.session.*` RPCs; the
+/// [`CoreSessionAdapter`] provides the ready-made implementation over a
+/// [`PluginAgentSessionFactory`] from `voidb-core`.
+pub trait SessionBridge: Send + Sync {
+    fn open(&self, params: SessionOpenParams) -> Result<SessionOpenResult, CapabilityError>;
+    fn call(&self, params: SessionCallParams) -> Result<SessionCallResult, CapabilityError>;
+    fn health(&self, params: SessionHandleParams) -> Result<SessionHealthResult, CapabilityError>;
+    fn renew(&self, params: SessionRenewParams) -> Result<SessionHealthResult, CapabilityError>;
+    fn cancel(&self, params: SessionCancelParams) -> Result<SessionCancelResult, CapabilityError>;
+    fn close(&self, params: SessionCloseParams) -> Result<SessionCloseResult, CapabilityError>;
+}
+
+/// Ready-made [`SessionBridge`] over a `voidb-core`
+/// [`PluginAgentSessionFactory`]. The factory constructor receives each open
+/// request so plugin-side factories that need the profile's decrypted
+/// configuration can build it from `params.options`; the adapter drives the
+/// async factory/session through the provided tokio runtime handle and keeps
+/// the handle registry.
+pub struct CoreSessionAdapter {
+    runtime: tokio::runtime::Handle,
+    factory: Box<
+        dyn Fn(&SessionOpenParams) -> Result<Arc<dyn PluginAgentSessionFactory>, CapabilityError>
+            + Send
+            + Sync,
+    >,
+    handles: std::sync::Mutex<std::collections::BTreeMap<String, (u64, Arc<dyn PluginAgentSession>)>>,
+}
+
+impl CoreSessionAdapter {
+    pub fn new(
+        runtime: tokio::runtime::Handle,
+        factory: impl Fn(&SessionOpenParams) -> Result<Arc<dyn PluginAgentSessionFactory>, CapabilityError>
+            + Send
+            + Sync
+            + 'static,
+    ) -> Self {
+        Self {
+            runtime,
+            factory: Box::new(factory),
+            handles: std::sync::Mutex::new(std::collections::BTreeMap::new()),
+        }
+    }
+
+    fn lookup(
+        &self,
+        handle_id: &str,
+        generation: u64,
+    ) -> Result<Arc<dyn PluginAgentSession>, CapabilityError> {
+        let handles = self.handles.lock().expect("session handle registry");
+        let Some((registered_generation, session)) = handles.get(handle_id) else {
+            return Err(bridge_capability_error(
+                "session.not_found",
+                "Plugin session handle does not exist or is already closed.",
+            ));
+        };
+        if *registered_generation != generation {
+            return Err(bridge_capability_error(
+                "session.stale",
+                "Plugin session handle generation no longer matches.",
+            ));
+        }
+        Ok(Arc::clone(session))
+    }
+}
+
+
+fn bridge_capability_error(
+    code: impl Into<String>,
+    message: impl Into<String>,
+) -> CapabilityError {
+    CapabilityError {
+        category: CapabilityErrorCategory::Plugin,
+        code: code.into(),
+        message: message.into(),
+        details: json!({}),
+        target: None,
+        retryable: false,
+        redaction: RedactionStatus::NotRequired,
+    }
+}
+
+/// Maps a core [`PluginSessionError`] onto the wire [`CapabilityError`]. The
+/// stable session error code (`session.unsupported`, `session.not_found`, …)
+/// is preserved so the host can restore the typed error.
+pub fn session_error_to_capability(error: PluginSessionError) -> CapabilityError {
+    let category = match error.code {
+        PluginSessionErrorCode::PolicyDenied
+        | PluginSessionErrorCode::BindingMismatch
+        | PluginSessionErrorCode::Expired
+        | PluginSessionErrorCode::CallIdInvalid
+        | PluginSessionErrorCode::CallIdMismatch
+        | PluginSessionErrorCode::CallIdConflict => CapabilityErrorCategory::Permission,
+        PluginSessionErrorCode::TimedOut => CapabilityErrorCategory::Timeout,
+        PluginSessionErrorCode::Cancelled => CapabilityErrorCategory::Cancellation,
+        PluginSessionErrorCode::OutputLimit | PluginSessionErrorCode::RedactionFailed => {
+            CapabilityErrorCategory::Validation
+        }
+        _ => CapabilityErrorCategory::Plugin,
+    };
+    CapabilityError {
+        category,
+        code: error.code.as_str().to_string(),
+        message: error.message,
+        details: error
+            .session_id
+            .as_ref()
+            .map(|session_id| json!({ "session_id": session_id }))
+            .unwrap_or_else(|| json!({})),
+        target: None,
+        retryable: false,
+        redaction: RedactionStatus::NotRequired,
+    }
+}
+
+fn health_string(health: &PluginSessionHealth) -> String {
+    serde_json::to_value(health)
+        .ok()
+        .and_then(|value| value.as_str().map(str::to_owned))
+        .unwrap_or_else(|| "degraded".into())
+}
+
+impl SessionBridge for CoreSessionAdapter {
+    fn open(&self, params: SessionOpenParams) -> Result<SessionOpenResult, CapabilityError> {
+        let factory = (self.factory)(&params)?;
+        let purpose: PluginSessionPurpose = serde_json::from_value(json!(params.purpose))
+            .or_else(|_| serde_json::from_value(json!({ "kind": params.purpose })))
+            .map_err(|error| {
+                bridge_capability_error(
+                    "validation.session_purpose_invalid",
+                    format!("Invalid session purpose: {error}"),
+                )
+            })?;
+        let lease_seconds = (params.lease_expires_at - chrono::Utc::now())
+            .num_seconds()
+            .clamp(1, 86_400) as u64;
+        let context = AgentSessionOpenContext {
+            binding: AgentSessionBinding {
+                grant_id: params.grant_id.clone(),
+                profile_id: params.profile_id.clone(),
+                plugin_id: factory.plugin_id().to_string(),
+                purpose: purpose.clone(),
+                allowed_capabilities: params.capabilities.clone(),
+                host_generation: params.generation.max(1),
+            },
+            request: AgentSessionOpenRequest {
+                purpose,
+                capabilities: params.capabilities.clone(),
+                lease_seconds,
+                concurrency: AgentSessionConcurrency::default(),
+                destructive_acknowledged: false,
+                input: params.input.clone(),
+            },
+            lease_expires_at: params.lease_expires_at,
+        };
+        let session = self
+            .runtime
+            .block_on(factory.open(context))
+            .map_err(session_error_to_capability)?;
+        let health = self
+            .runtime
+            .block_on(session.health())
+            .map_err(session_error_to_capability)?;
+        let handle_id = params.session_id.clone();
+        let generation = params.generation.max(1);
+        self.handles
+            .lock()
+            .expect("session handle registry")
+            .insert(handle_id.clone(), (generation, Arc::clone(&session)));
+        Ok(SessionOpenResult {
+            handle_id,
+            generation,
+            health: health_string(&health),
+            descriptor: Value::Null,
+        })
+    }
+
+    fn call(&self, params: SessionCallParams) -> Result<SessionCallResult, CapabilityError> {
+        let session = self.lookup(&params.handle_id, params.generation)?;
+        let request = AgentSessionCallRequest {
+            session: AgentSessionRef::new(
+                format!("plugin-session:{}", params.handle_id),
+                params.generation,
+            ),
+            call_id: params.call_id.clone(),
+            capability: params.capability.clone(),
+            input: params.input.clone(),
+            destructive_acknowledged: false,
+            timeout_ms: params.timeout_ms,
+            output_limit_bytes: params.output_limit_bytes,
+        };
+        let result = self
+            .runtime
+            .block_on(session.call(request))
+            .map_err(session_error_to_capability)?;
+        Ok(SessionCallResult {
+            call_id: result.call_id,
+            output: result.output,
+            output_bytes: result.output_bytes,
+            redaction: result.redaction,
+            truncated: result.truncated,
+        })
+    }
+
+    fn health(&self, params: SessionHandleParams) -> Result<SessionHealthResult, CapabilityError> {
+        let session = self.lookup(&params.handle_id, params.generation)?;
+        let health = self
+            .runtime
+            .block_on(session.health())
+            .map_err(session_error_to_capability)?;
+        Ok(SessionHealthResult {
+            handle_id: params.handle_id,
+            generation: params.generation,
+            health: health_string(&health),
+            descriptor: Value::Null,
+        })
+    }
+
+    fn renew(&self, params: SessionRenewParams) -> Result<SessionHealthResult, CapabilityError> {
+        let session = self.lookup(&params.handle_id, params.generation)?;
+        self.runtime
+            .block_on(session.renew(params.lease_expires_at))
+            .map_err(session_error_to_capability)?;
+        let health = self
+            .runtime
+            .block_on(session.health())
+            .map_err(session_error_to_capability)?;
+        Ok(SessionHealthResult {
+            handle_id: params.handle_id,
+            generation: params.generation,
+            health: health_string(&health),
+            descriptor: Value::Null,
+        })
+    }
+
+    fn cancel(&self, params: SessionCancelParams) -> Result<SessionCancelResult, CapabilityError> {
+        let session = self.lookup(&params.handle_id, params.generation)?;
+        self.runtime
+            .block_on(session.cancel(&params.call_id))
+            .map_err(session_error_to_capability)?;
+        Ok(SessionCancelResult {
+            handle_id: params.handle_id,
+            call_id: params.call_id,
+            accepted: true,
+        })
+    }
+
+    fn close(&self, params: SessionCloseParams) -> Result<SessionCloseResult, CapabilityError> {
+        let session = self.lookup(&params.handle_id, params.generation)?;
+        self.runtime
+            .block_on(session.close(params.reason.clone()))
+            .map_err(session_error_to_capability)?;
+        self.handles
+            .lock()
+            .expect("session handle registry")
+            .remove(&params.handle_id);
+        Ok(SessionCloseResult {
+            handle_id: params.handle_id,
+            closed: true,
+        })
     }
 }
 
@@ -701,6 +1090,11 @@ pub struct SessionOpenParams {
     pub input: Value,
     #[serde(default)]
     pub credential_grants: Vec<CredentialGrantDescriptor>,
+    /// Decrypted profile plugin configuration for this scoped session,
+    /// filled by Core from the granted profile. Plugins treat it as
+    /// write-only operational input per the secret-brokering policy.
+    #[serde(default, skip_serializing_if = "Value::is_null")]
+    pub options: Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -1220,5 +1614,184 @@ mod tests {
             }),
             requested_at: Utc::now(),
         }
+    }
+}
+
+#[cfg(test)]
+mod session_bridge_tests {
+    use super::*;
+
+    struct MockFactory;
+
+    #[async_trait::async_trait]
+    impl PluginAgentSessionFactory for MockFactory {
+        fn plugin_id(&self) -> &str {
+            "fixture"
+        }
+
+        async fn open(
+            &self,
+            context: AgentSessionOpenContext,
+        ) -> Result<Arc<dyn PluginAgentSession>, PluginSessionError> {
+            assert_eq!(context.binding.plugin_id, "fixture");
+            assert_eq!(context.binding.allowed_capabilities, ["fixture.echo"]);
+            Ok(Arc::new(MockSession))
+        }
+    }
+
+    struct MockSession;
+
+    #[async_trait::async_trait]
+    impl PluginAgentSession for MockSession {
+        fn concurrency(&self) -> AgentSessionConcurrency {
+            AgentSessionConcurrency::Serialized
+        }
+
+        async fn call(
+            &self,
+            request: AgentSessionCallRequest,
+        ) -> Result<AgentSessionCallResult, PluginSessionError> {
+            Ok(AgentSessionCallResult {
+                call_id: request.call_id,
+                output: json!({ "echo": true }),
+                output_bytes: 15,
+                redaction: RedactionStatus::NotRequired,
+                truncated: false,
+            })
+        }
+
+        async fn health(&self) -> Result<PluginSessionHealth, PluginSessionError> {
+            Ok(PluginSessionHealth::Ready)
+        }
+
+        async fn close(&self, _reason: PluginSessionReason) -> Result<(), PluginSessionError> {
+            Ok(())
+        }
+    }
+
+    fn open_params() -> SessionOpenParams {
+        SessionOpenParams {
+            session_id: "plugin-session:1".into(),
+            generation: 1,
+            grant_id: "grant-test".into(),
+            profile_id: "profile-fixture".into(),
+            purpose: "capability_invocation".into(),
+            capabilities: vec!["fixture.echo".into()],
+            lease_expires_at: chrono::Utc::now() + chrono::Duration::minutes(5),
+            input: Value::Null,
+            credential_grants: vec![],
+            options: json!({ "host": "fixture.internal" }),
+        }
+    }
+
+    fn adapter(runtime: tokio::runtime::Handle) -> CoreSessionAdapter {
+        CoreSessionAdapter::new(runtime, |params| {
+            assert_eq!(params.options["host"], "fixture.internal");
+            Ok(Arc::new(MockFactory))
+        })
+    }
+
+    #[test]
+    fn open_call_health_close_round_trip_through_the_adapter() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime");
+        let adapter = adapter(runtime.handle().clone());
+
+        let opened = adapter.open(open_params()).expect("open");
+        assert_eq!(opened.handle_id, "plugin-session:1");
+        assert_eq!(opened.health, "ready");
+
+        let called = adapter
+            .call(SessionCallParams {
+                handle_id: opened.handle_id.clone(),
+                generation: 1,
+                call_id: "call-1".into(),
+                capability: "fixture.echo".into(),
+                input: Value::Null,
+                output_limit_bytes: 64 * 1024,
+                timeout_ms: None,
+            })
+            .expect("call");
+        assert_eq!(called.output, json!({ "echo": true }));
+
+        let health = adapter
+            .health(SessionHandleParams {
+                handle_id: opened.handle_id.clone(),
+                generation: 1,
+            })
+            .expect("health");
+        assert_eq!(health.health, "ready");
+
+        let closed = adapter
+            .close(SessionCloseParams {
+                handle_id: opened.handle_id,
+                generation: 1,
+                reason: "test_close".into(),
+            })
+            .expect("close");
+        assert!(closed.closed);
+
+        // The handle registry dropped the session with the close.
+        assert!(adapter
+            .health(SessionHandleParams {
+                handle_id: "plugin-session:1".into(),
+                generation: 1,
+            })
+            .is_err());
+    }
+
+    #[test]
+    fn unknown_or_stale_handles_fail_closed() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime");
+        let adapter = adapter(runtime.handle().clone());
+
+        let stale = adapter.call(SessionCallParams {
+            handle_id: "plugin-session:missing".into(),
+            generation: 1,
+            call_id: "call-1".into(),
+            capability: "fixture.echo".into(),
+            input: Value::Null,
+            output_limit_bytes: 64 * 1024,
+            timeout_ms: None,
+        });
+        let error = stale.expect_err("missing handle");
+        assert_eq!(error.code, "session.not_found");
+    }
+
+    #[test]
+    fn router_advertises_sessions_only_with_a_bridge() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime");
+        let mut bridged = CapabilityRouter::new("fixture")
+            .session_bridge(Arc::new(adapter(runtime.handle().clone())));
+        let result = bridged
+            .initialize(InitializeParams {
+                plugin_id: "fixture".into(),
+                protocol_version: "1.1".into(),
+                core_version: None,
+                manifest_path: None,
+                started_at: None,
+            })
+            .expect("initialize");
+        assert_eq!(result.session_protocol.as_deref(), Some("1"));
+
+        let mut plain = CapabilityRouter::new("fixture");
+        let result = plain
+            .initialize(InitializeParams {
+                plugin_id: "fixture".into(),
+                protocol_version: "1.1".into(),
+                core_version: None,
+                manifest_path: None,
+                started_at: None,
+            })
+            .expect("initialize");
+        assert_eq!(result.session_protocol, None);
     }
 }

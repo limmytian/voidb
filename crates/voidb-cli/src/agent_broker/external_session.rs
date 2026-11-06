@@ -195,6 +195,7 @@ impl PluginAgentSessionFactory for ExternalPluginSessionFactory {
                 "lease_expires_at": context.lease_expires_at,
                 "input": context.request.input,
                 "credential_grants": credential_grants,
+                "options": self.connection.plugin_config.clone().unwrap_or(Value::Null),
             }))
             .await
             .map_err(|error| map_capability_error(&error))?;
@@ -441,6 +442,11 @@ fn map_capability_error(error: &CapabilityError) -> PluginSessionError {
             PluginSessionErrorCode::RedactionFailed,
             "Plugin session output failed closed and cannot be returned.",
         );
+    }
+    if let Ok(code) =
+        serde_json::from_value::<PluginSessionErrorCode>(json!(error.code))
+    {
+        return PluginSessionError::new(code, error.message.clone());
     }
     let code = match error.code.as_str() {
         "plugin.session_unsupported" | "unavailable.process_plugin_sessions_unsupported" => {
