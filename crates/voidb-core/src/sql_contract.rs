@@ -674,7 +674,33 @@ fn classify_statement(statement: &str, dialect: SqlDialect) -> (SqlStatementInte
 
     match first_keyword(statement).as_deref() {
         Some("select") | Some("with") => (SqlStatementIntent::Read, "statement.read_query"),
-        Some("explain") => (SqlStatementIntent::Explain, "statement.explain"),
+        Some("explain") => {
+            // EXPLAIN ANALYZE executes the inner statement on MySQL, Postgres,
+            // and DuckDB: an EXPLAIN whose analyzed statement mutates must
+            // never pass the read-only gates.
+            match keyword_after_explain(statement).as_deref() {
+                Some("delete")
+                | Some("insert")
+                | Some("update")
+                | Some("merge")
+                | Some("replace")
+                | Some("create")
+                | Some("drop")
+                | Some("alter")
+                | Some("truncate")
+                | Some("grant")
+                | Some("revoke")
+                | Some("call")
+                | Some("vacuum")
+                | Some("reindex")
+                | Some("lock")
+                | Some("copy") => (
+                    SqlStatementIntent::Write,
+                    "statement.explain_analyze_mutation",
+                ),
+                _ => (SqlStatementIntent::Explain, "statement.explain"),
+            }
+        }
         Some("values") if matches!(dialect, SqlDialect::DuckDb | SqlDialect::Postgres) => {
             (SqlStatementIntent::Read, "statement.values")
         }
@@ -732,8 +758,7 @@ fn contains_duckdb_external_access(lowered: &str) -> bool {
     .any(|fragment| lowered.contains(fragment))
 }
 
-fn first_keyword(statement: &str) -> Option<String> {
-    let mut rest = statement.trim_start();
+fn skip_leading_comments(mut rest: &str) -> Option<&str> {
     loop {
         if let Some(after_line_comment) = rest.strip_prefix("--") {
             let (_, after_newline) = after_line_comment.split_once('\n')?;
@@ -745,9 +770,11 @@ fn first_keyword(statement: &str) -> Option<String> {
             rest = after_block.trim_start();
             continue;
         }
-        break;
+        return Some(rest);
     }
+}
 
+fn take_keyword(rest: &str) -> Option<(String, &str)> {
     let keyword = rest
         .chars()
         .take_while(|character| character.is_ascii_alphabetic() || *character == '_')
@@ -755,7 +782,41 @@ fn first_keyword(statement: &str) -> Option<String> {
     if keyword.is_empty() {
         None
     } else {
-        Some(keyword.to_ascii_lowercase())
+        let consumed = keyword.len();
+        Some((keyword.to_ascii_lowercase(), &rest[consumed..]))
+    }
+}
+
+fn first_keyword(statement: &str) -> Option<String> {
+    let rest = skip_leading_comments(statement.trim_start())?;
+    take_keyword(rest).map(|(keyword, _)| keyword)
+}
+
+/// Returns the first keyword after an `EXPLAIN` prefix, skipping the
+/// `ANALYZE`/`ANALYSE` word and parenthesized option groups so callers can
+/// detect `EXPLAIN ANALYZE <mutation>` forms.
+fn keyword_after_explain(statement: &str) -> Option<String> {
+    let rest = skip_leading_comments(statement.trim_start())?;
+    let (keyword, after) = take_keyword(rest)?;
+    if keyword != "explain" {
+        return None;
+    }
+    let mut rest = after;
+    loop {
+        rest = skip_leading_comments(rest.trim_start())?;
+        if rest.is_empty() {
+            return None;
+        }
+        if let Some(after_group) = rest.strip_prefix('(') {
+            let (_, after_close) = after_group.split_once(')')?;
+            rest = after_close;
+            continue;
+        }
+        let (keyword, after) = take_keyword(rest)?;
+        match keyword.as_str() {
+            "analyze" | "analyse" => rest = after,
+            other => return Some(other.to_string()),
+        }
     }
 }
 
@@ -1909,5 +1970,72 @@ mod tests {
             supports_dry_run,
             default_timeout_ms: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod explain_analyze_tests {
+    use super::*;
+
+    #[test]
+    fn plain_explain_and_explain_of_select_stay_read_only() {
+        assert!(sql_allows_read_only_query("explain select 1", SqlDialect::MySql));
+        assert!(sql_allows_read_only_query(
+            "explain analyze select 1",
+            SqlDialect::MySql
+        ));
+        assert!(sql_allows_read_only_query(
+            "explain (analyze, verbose) select 1",
+            SqlDialect::Postgres
+        ));
+    }
+
+    #[test]
+    fn explain_analyze_of_mutations_is_classified_as_write() {
+        for statement in [
+            "explain analyze delete from t",
+            "EXPLAIN ANALYZE UPDATE t SET a = 1",
+            "explain analyse insert into t values (1)",
+        ] {
+            let classifications = sql_statement_classifications(statement, SqlDialect::MySql);
+            assert!(
+                classifications.iter().any(|classification| {
+                    classification.classification == SqlStatementIntent::Write
+                }),
+                "{statement} should classify as Write"
+            );
+            assert!(
+                !sql_allows_read_only_query(statement, SqlDialect::MySql),
+                "{statement} must not pass the read-only gate"
+            );
+        }
+    }
+
+    #[test]
+    fn explain_analyze_of_mutations_fails_closed_across_dialects() {
+        for dialect in [
+            SqlDialect::MySql,
+            SqlDialect::Postgres,
+            SqlDialect::Sqlite,
+            SqlDialect::DuckDb,
+        ] {
+            assert!(!sql_allows_read_only_query(
+                "explain analyze delete from t",
+                dialect
+            ));
+        }
+    }
+
+    #[test]
+    fn keyword_after_explain_skips_comments_and_paren_groups() {
+        assert_eq!(
+            keyword_after_explain("-- c\nexplain (analyze, verbose) select 1").as_deref(),
+            Some("select")
+        );
+        assert_eq!(
+            keyword_after_explain("explain analyse delete from t").as_deref(),
+            Some("delete")
+        );
+        assert_eq!(keyword_after_explain("select 1"), None);
     }
 }
