@@ -40,6 +40,13 @@ percentile method, CI variance policy, and artifact schema are defined in
 If a remote target blocks startup, the app must render a connecting state before
 the target operation exceeds the first-frame budget.
 
+After a successful unlock, the app must automatically load its primary
+resource view. An empty primary pane on open (for example, a Docker TUI that
+shows `No resources loaded` until the user presses a manual refresh key) fails
+this criterion: users read the empty pane as "no data available" or "cannot
+connect". Startup auto-load counts as one read-only refresh against the
+same bounds and cancellation rules as a manual refresh.
+
 ## Keyboard Journey Scorecard
 
 Each retained TUI must define the top workflows for its domain and score them.

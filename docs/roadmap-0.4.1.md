@@ -82,6 +82,16 @@ plugin-side session handle lands in its repository, run `vb invoke describe`
 against the capability and open an agent session under a scoped grant,
 record the exact behavior, and flip the adoption-matrix row only then.
 
+### Slice A addendum — external plugin work items found during 0.4.1 (2026-11-06)
+
+- `voidb-plugin-docker`: the standalone TUI does not auto-load its primary
+  resource view after unlock — users see an empty `No resources loaded` pane
+  and read it as "cannot get any data" (reproduced in tmux against the local
+  daemon: data loads correctly on a manual refresh). Add a startup
+  auto-refresh; `docs/standalone-tui-ux-acceptance.md` now requires it.
+- `voidb-plugin-*` (all retained TUIs): audit against the same new startup
+  auto-load criterion.
+
 ## Workstream 1 — Email IDLE Agent Live Session
 
 **Goal:** agents can hold a bounded, revocable mailbox-observation session
