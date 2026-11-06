@@ -239,8 +239,11 @@ session bridging; tool-level write-through without broker grants.
 
 ## Non-goals (whole iteration)
 
-- Sync roadmap items (recovery code at signup, failed-decrypt repair UX,
-  automatic periodic sync, OAuth login, keyring token persistence).
+- New sync features beyond what has already shipped: failed-decrypt TUI
+  repair UX, automatic periodic sync scheduling, OAuth login, and
+  schema-aware plugin compatibility disabling. (Recovery codes, pull-time
+  conflict import, and keyring token persistence are already implemented and
+  were only stale documentation — corrected this iteration.)
 - Team-share server API, invites, revoke, and audit storage.
 - Long-lived process pooling; hosted marketplace beyond the static registry
   index; credential brokering beyond the current MVP.

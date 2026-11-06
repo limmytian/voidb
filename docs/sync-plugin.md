@@ -447,14 +447,26 @@ Implemented in the object MVP:
 
 Still not implemented:
 
-- [ ] Recovery code at signup (bip39-style) that wraps the DEK with a
-      secondary key, so users can reset password without data loss
-- [ ] Interactive failed-decrypt repair UX beyond CLI credential re-enrollment
-      handoff
-- [ ] Pull-time conflict marker import beyond push/re-enrollment detection
-- [ ] Tombstone delete import UX beyond preserving unavailable local mappings
+- [ ] Interactive failed-decrypt repair UX beyond the shipped CLI repair paths
+      (`sync credential migrate-mappings` / `re-enroll`,
+      `sync conflict credential-handoff`)
+- [ ] Interactive (TUI) tombstone delete import review beyond the shipped CLI
+      resolution (`sync conflict resolve --mode delete-tombstone
+      --acknowledge-delete`)
 - [ ] Schema-aware plugin compatibility checks that can disable profiles when a
       local plugin is missing or incompatible
-- [ ] Automatic periodic sync (pull on launch, push on exit)
+- [ ] Automatic periodic sync scheduling (the `sync periodic` CLI can configure
+      and run one tick; no launch/exit hooks or daemon exist)
 - [ ] OAuth (GitHub / Google) as an alternative to email + password
-- [ ] Keyring-backed token persistence (optional, off by default)
+
+Already shipped (previously listed here as pending; verified in code):
+
+- [x] Recovery code at signup wrapping the DEK with a secondary key
+      (`vbrec-` recovery codes, server recovery challenge/reset routes,
+      `sync recover`)
+- [x] Pull-time conflict marker import (remote tombstones, decrypt failures,
+      invalid payloads record `pull_time_object_conflict` markers)
+- [x] Tombstone delete apply on pull (unavailable local mappings preserved
+      for explicit resolution)
+- [x] Keyring-backed token persistence (`TokenStoreBackend::Keyring` preferred
+      with file fallback; `VOIDB_TOKEN_STORE=auto|keyring|file`)
