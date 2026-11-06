@@ -652,10 +652,13 @@ mod tests {
 
         let script = bin.join("fixture-runtime");
         std::fs::write(&script, fixture_script()).expect("write script");
-        let mut permissions = std::fs::metadata(&script).expect("metadata").permissions();
-        use std::os::unix::fs::PermissionsExt;
-        permissions.set_mode(0o755);
-        std::fs::set_permissions(&script, permissions).expect("chmod");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut permissions = std::fs::metadata(&script).expect("metadata").permissions();
+            permissions.set_mode(0o755);
+            std::fs::set_permissions(&script, permissions).expect("chmod");
+        }
 
         let manifest = format!(
             r#"

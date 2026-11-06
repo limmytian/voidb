@@ -20,7 +20,8 @@ class InstallerTests(unittest.TestCase):
         mocks.mkdir()
         archive = root / 'archive.tar.gz'
         scripts = {'voidb': '#!/bin/sh\nexit 0\n',
-                   'vb': '#!/bin/sh\nprintf "%s\\n" "$@" > "$(dirname "$0")/bootstrap.args"\n[ -d "$VOIDB_BUNDLED_PLUGIN_ROOT" ] || exit 5\nprintf \'{"results":[{"status": "installed"}]}\'\n',
+                   'vb': '#!/bin/sh\nexit 0\n',
+                   'vb-tui': '#!/bin/sh\nexit 0\n',
                    'plugins/sqlite/plugin.toml': 'id = "sqlite"\n'}
         with tarfile.open(archive, 'w:gz') as package:
             for name, script in scripts.items():
@@ -55,17 +56,18 @@ esac
         self.assertFalse((root / 'install/bootstrap.args').exists())
         self.assertFalse((root / 'home/Library/Application Support/voidb/plugins').exists())
         self.assertFalse((root / 'home/.local/share/voidb/plugins').exists())
-        self.assertTrue((root / 'install/voidb').exists())
+        self.assertTrue((root / 'install/vb').exists())
+        self.assertTrue((root / 'install/vb-tui').exists())
 
     def test_mismatch_does_not_replace_binaries(self):
         root, result = self.run_installer('0' * 64)
         self.assertNotEqual(result.returncode, 0)
-        self.assertFalse((root / 'install/voidb').exists())
+        self.assertFalse((root / 'install/vb').exists())
 
     def test_missing_checksum_does_not_replace_binaries(self):
         root, result = self.run_installer('')
         self.assertNotEqual(result.returncode, 0)
-        self.assertFalse((root / 'install/voidb').exists())
+        self.assertFalse((root / 'install/vb').exists())
 
 
 if __name__ == '__main__':
