@@ -620,10 +620,16 @@ pub fn verify_plugin_binary_integrity(
     let install_record_path =
         process_plugin_install_record_path(&candidate.source.root, &candidate.id);
     let record = read_process_plugin_install_record(&install_record_path).map_err(|error| {
-        VoidbError::Security(format!(
+        let mut message = format!(
             "Plugin '{}' requires a valid installation record; reinstall or update from an authenticated source: {}",
             candidate.id, error
-        ))
+        );
+        if let Some(shadowed_version) = shadowed_managed_install(&candidate.id) {
+            message.push_str(&format!(
+                " A managed installation of this plugin (version {shadowed_version}) is currently shadowed by this unmanaged copy; update or remove the unmanaged copy (see 'vb plugin list --include-shadowed')."
+            ));
+        }
+        VoidbError::Security(message)
     })?;
     if record.schema_version != PROCESS_PLUGIN_INSTALL_RECORD_SCHEMA_VERSION
         || record.plugin_id != candidate.id
@@ -657,6 +663,65 @@ pub fn verify_plugin_binary_integrity(
         )));
     }
     crate::plugin_provenance::verify_plugin_provenance(candidate)
+}
+
+/// Finds a managed (install-record-bearing) candidate for `plugin_id` that
+/// discovery has shadowed, so integrity failures on unmanaged copies can point
+/// users at the newer managed install instead of a generic integrity error.
+fn shadowed_managed_install(plugin_id: &str) -> Option<String> {
+    let discovery = discover_process_plugins();
+    discovery
+        .candidates
+        .iter()
+        .filter(|candidate| {
+            candidate.id == plugin_id && candidate.state == ProcessPluginCandidateState::Shadowed
+        })
+        .filter(|candidate| {
+            read_process_plugin_install_record(&process_plugin_install_record_path(
+                &candidate.source.root,
+                &candidate.id,
+            ))
+            .is_ok()
+        })
+        .filter_map(|candidate| candidate.version.clone())
+        .max()
+}
+
+/// Classifies an integrity-gate failure into a stable reason code for
+/// structured error details. The human message stays generic and redacted;
+/// the reason lets agents and support tooling distinguish the failure class.
+pub(crate) fn plugin_integrity_failure_reason(candidate: &ProcessPluginCandidate) -> &'static str {
+    let install_record_path =
+        process_plugin_install_record_path(&candidate.source.root, &candidate.id);
+    let Ok(record) = read_process_plugin_install_record(&install_record_path) else {
+        return "install_record_missing";
+    };
+    let identity_matches = record.schema_version == PROCESS_PLUGIN_INSTALL_RECORD_SCHEMA_VERSION
+        && record.plugin_id == candidate.id
+        && Some(&record.installed_version) == candidate.version.as_ref()
+        && record.install_root == candidate.source.root
+        && record.enabled;
+    let Some(expected_binary_digest) = record.binary_digest.as_ref() else {
+        return "digest_mismatch";
+    };
+    let Ok(manifest_digest) = digest_file(&candidate.manifest_path) else {
+        return "digest_mismatch";
+    };
+    let Some(binary_digest) = candidate
+        .resolved_runtime_command
+        .as_ref()
+        .and_then(|path| digest_file(path).ok())
+    else {
+        return "digest_mismatch";
+    };
+    if identity_matches
+        && manifest_digest == record.manifest_digest
+        && binary_digest == *expected_binary_digest
+    {
+        "provenance_invalid"
+    } else {
+        "digest_mismatch"
+    }
 }
 
 pub(crate) fn unsigned_development_allowed(
@@ -2180,6 +2245,19 @@ fn candidate_from_manifest(
             json!({ "plugin_id": manifest.id }),
         ));
     }
+    if state == ProcessPluginCandidateState::Available
+        && matches!(
+            source.kind,
+            ProcessPluginRootKind::User | ProcessPluginRootKind::System
+        )
+        && !process_plugin_install_record_path(&source.root, &manifest.id).exists()
+    {
+        diagnostics.push(ProcessPluginDiagnostic::warning(
+            "plugin.unmanaged_install_record_missing",
+            "Plugin candidate has no installation record; managed installs must go through 'vb plugin install'.",
+            json!({ "plugin_id": manifest.id }),
+        ));
+    }
 
     ProcessPluginCandidate {
         id: manifest.id.clone(),
@@ -3034,6 +3112,44 @@ mod tests {
                     diagnostic.code == "plugin.shadowed_by_higher_precedence_candidate"
                 })
         }));
+    }
+
+    #[test]
+    fn unmanaged_user_root_candidate_carries_missing_record_diagnostic() {
+        let temp = TempDir::new("unmanaged");
+        write_valid_plugin(temp.path(), "mysql", "mysql", "1", &[current_platform()]);
+
+        let discovery = discover_process_plugins_from_roots(vec![ProcessPluginRoot::new(
+            temp.path(),
+            ProcessPluginRootKind::User,
+            0,
+        )]);
+
+        let mysql = discovery.candidates_for_id("mysql");
+        assert_eq!(mysql.len(), 1);
+        assert_eq!(mysql[0].state, ProcessPluginCandidateState::Available);
+        assert!(
+            mysql[0]
+                .diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.code == "plugin.unmanaged_install_record_missing")
+        );
+    }
+
+    #[test]
+    fn integrity_failure_reason_reports_missing_install_record() {
+        let temp = TempDir::new("integrity-reason");
+        write_valid_plugin(temp.path(), "mysql", "mysql", "1", &[current_platform()]);
+        let discovery = discover_process_plugins_from_roots(vec![ProcessPluginRoot::new(
+            temp.path(),
+            ProcessPluginRootKind::User,
+            0,
+        )]);
+        let candidate = discovery.candidates_for_id("mysql")[0].clone();
+        assert_eq!(
+            plugin_integrity_failure_reason(&candidate),
+            "install_record_missing"
+        );
     }
 
     #[test]
