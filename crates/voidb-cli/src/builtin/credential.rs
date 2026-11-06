@@ -167,7 +167,7 @@ fn handle_setup(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbError
             "current_protection_mode": ctx.config.credential_protection_mode(),
             "target_protection_mode": CredentialProtectionMode::UserPassphrase,
             "credential_summary": state.summary,
-        })));
+        })))?;
         return Ok(());
     }
     if !matches.get_flag("yes") {
@@ -189,8 +189,7 @@ fn handle_setup(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbError
         "credential_summary": result.credential_summary,
         "native_credentials_reencrypted": native_credentials_reencrypted,
         "active_password_env": VOIDB_MASTER_PASSWORD_ENV,
-    })));
-    Ok(())
+    })))
 }
 
 /// Verifies the master password and reports the unlock state. One-shot CLI
@@ -224,8 +223,7 @@ fn handle_unlock(matches: &ArgMatches) -> Result<(), VoidbError> {
         "unlocked": true,
         "scope": "process",
         "note": "One-shot CLI commands exit after completion; unlock state is not persisted. Long-lived processes supply the password through VOIDB_MASTER_PASSWORD.",
-    })));
-    Ok(())
+    })))
 }
 
 /// One-shot CLI commands never retain master-password state across processes,
@@ -236,8 +234,7 @@ fn handle_forget(matches: &ArgMatches) -> Result<(), VoidbError> {
         "forgotten": true,
         "scope": "process",
         "note": "One-shot CLI commands do not retain master-password state between processes; the in-memory password for this process is dropped on exit.",
-    })));
-    Ok(())
+    })))
 }
 
 fn prompt_confirmed_new_password() -> Result<String, VoidbError> {
