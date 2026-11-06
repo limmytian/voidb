@@ -9,40 +9,40 @@ use voidb_core::{
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(super) struct AgentGrantFile {
-    pub(super) version: u32,
-    pub(super) id: String,
-    pub(super) token: String,
-    pub(super) profile_id: String,
-    pub(super) profile_name: String,
-    pub(super) plugin_id: String,
-    pub(super) capabilities: Vec<String>,
+pub(crate) struct AgentGrantFile {
+    pub(crate) version: u32,
+    pub(crate) id: String,
+    pub(crate) token: String,
+    pub(crate) profile_id: String,
+    pub(crate) profile_name: String,
+    pub(crate) plugin_id: String,
+    pub(crate) capabilities: Vec<String>,
     /// Broker transport boundary. Legacy grant files default to stateless so
     /// they cannot silently authorize persistent-session operations.
     #[serde(default)]
-    pub(super) execution_mode: CapabilityExecutionMode,
+    pub(crate) execution_mode: CapabilityExecutionMode,
     #[serde(default)]
-    pub(super) preset: Option<AgentAuthorizationPresetKind>,
-    pub(super) allow_destructive: bool,
-    pub(super) issued_at: DateTime<Utc>,
-    pub(super) expires_at: DateTime<Utc>,
+    pub(crate) preset: Option<AgentAuthorizationPresetKind>,
+    pub(crate) allow_destructive: bool,
+    pub(crate) issued_at: DateTime<Utc>,
+    pub(crate) expires_at: DateTime<Utc>,
     /// `None` means the grant is bounded only by `expires_at`.
     #[serde(default)]
-    pub(super) remaining_uses: Option<u32>,
-    pub(super) socket_path: PathBuf,
+    pub(crate) remaining_uses: Option<u32>,
+    pub(crate) socket_path: PathBuf,
 
     /// Empty for compatible proactive grants. JIT-issued grants persist exact
     /// Core-owned scopes and revalidate normalized operations before every
     /// stateless execution. Persistent sessions require an explicit proactive
     /// session grant.
     #[serde(default)]
-    pub(super) authorization_scopes: Vec<AgentAuthorizationScope>,
+    pub(crate) authorization_scopes: Vec<AgentAuthorizationScope>,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(super) principal_fingerprint: Option<String>,
+    pub(crate) principal_fingerprint: Option<String>,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(super) grant_revision: Option<u64>,
+    pub(crate) grant_revision: Option<u64>,
 }
 
 impl AgentGrantFile {

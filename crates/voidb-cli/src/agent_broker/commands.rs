@@ -2522,7 +2522,7 @@ pub(super) fn exact_agent_exec_scope(
     Ok((scope, definition.effective_risk()))
 }
 
-async fn find_agent_exec_grant(
+pub(crate) async fn find_agent_exec_grant(
     argv: &[String],
     principal: Option<&AgentPrincipal>,
 ) -> anyhow::Result<Option<AgentGrantFile>> {

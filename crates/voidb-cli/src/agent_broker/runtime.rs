@@ -1603,7 +1603,7 @@ fn broker_response(
 }
 
 #[cfg(unix)]
-pub(super) async fn send_request(
+pub(crate) async fn send_request(
     grant: &AgentGrantFile,
     request: BrokerRequest,
 ) -> anyhow::Result<BrokerResponse> {

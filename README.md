@@ -146,6 +146,18 @@ Profile IDs:
 vb agent exec jenkins.jobs --profile prod-jenkins --purpose 'deploy release' --input-json '{}'
 ```
 
+MCP hosts (Claude Desktop, ZCode, Cursor, …) can reach the same capability
+catalog through the Model Context Protocol gateway. Every `tools/call` is
+broker-gated exactly like `agent exec` — the server process never holds the
+master password:
+
+```bash
+vb mcp serve   # MCP stdio server; authorize tools with `vb agent authorize`
+```
+
+See [docs/mcp-server.md](docs/mcp-server.md) for client configuration and the
+authorization model.
+
 Short top-level aliases keep the frequent authorization operations easy to
 type from a human shell:
 

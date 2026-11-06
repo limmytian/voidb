@@ -136,6 +136,7 @@ fn build_cli_manager() -> CliPluginManager {
     cli_manager.register(Box::new(builtin::context::ContextCliPlugin::new()));
     cli_manager.register(Box::new(builtin::credential::CredentialCliPlugin::new()));
     cli_manager.register(Box::new(builtin::invoke::InvokeCliPlugin::new()));
+    cli_manager.register(Box::new(builtin::mcp::McpCliPlugin::new()));
     cli_manager.register(Box::new(builtin::plugin::PluginCliPlugin::new()));
     cli_manager.register(Box::new(builtin::profile::ProfileCliPlugin::new()));
 
@@ -319,6 +320,7 @@ fn command_can_use_raw_config(matches: &ArgMatches) -> bool {
         || (plugin_id == "profile" && matches!(command, "list" | "show"))
         || plugin_id == "plugin"
         || (plugin_id == "invoke" && matches!(command, "list" | "describe" | "matrix"))
+        || plugin_id == "mcp"
         || plugin_id == "context"
         || (plugin_id == "ssh" && matches!(command, "session" | "assist"))
         || (command == "tui" && tui_fixture_without_target(command_matches))
@@ -576,6 +578,7 @@ mod tests {
             vec!["invoke", "describe", "ssh.exec"],
             vec!["plugin", "list"],
             vec!["profile", "list"],
+            vec!["mcp", "serve"],
             vec![
                 "context",
                 "status",

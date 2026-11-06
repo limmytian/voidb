@@ -25,14 +25,20 @@ mod tests;
 pub(crate) use commands::{agent_command, agent_subcommand};
 pub use commands::{handle_early, take_broker_child_password};
 
+/// Broker execution surface for other builtin groups (the MCP server acts as
+/// a grant client, mirroring `vb agent exec` without a CLI match tree).
+pub(crate) use commands::find_agent_exec_grant;
+pub(crate) use runtime::send_request;
+pub(crate) use wire::{BrokerRequest, BrokerResponse};
+
 const GRANT_VERSION: u32 = 1;
 const BROKER_READY_TIMEOUT: Duration = Duration::from_secs(3);
 const BROKER_PROBE_TIMEOUT: Duration = Duration::from_millis(500);
 const BROKER_CHILD_ENV: &str = "VOIDB_INTERNAL_BROKER_CHILD";
-const AGENT_CLIENT_ID_ENV: &str = "VOIDB_AGENT_CLIENT_ID";
-const AGENT_TASK_ID_ENV: &str = "VOIDB_AGENT_TASK_ID";
-const AGENT_INSTANCE_ID_ENV: &str = "VOIDB_AGENT_INSTANCE_ID";
-const AGENT_THREAD_ID_ENV: &str = "VOIDB_AGENT_THREAD_ID";
+pub(crate) const AGENT_CLIENT_ID_ENV: &str = "VOIDB_AGENT_CLIENT_ID";
+pub(crate) const AGENT_TASK_ID_ENV: &str = "VOIDB_AGENT_TASK_ID";
+pub(crate) const AGENT_INSTANCE_ID_ENV: &str = "VOIDB_AGENT_INSTANCE_ID";
+pub(crate) const AGENT_THREAD_ID_ENV: &str = "VOIDB_AGENT_THREAD_ID";
 
 #[cfg(all(test, feature = "full"))]
 use crate::builtin::invoke::resolved_authorization_capabilities;

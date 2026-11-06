@@ -13,11 +13,11 @@ use handlers::{handle_describe, handle_list, handle_matrix, handle_run};
 
 mod audit;
 mod command_tree;
-mod discovery;
+pub(crate) mod discovery;
 mod execution;
 mod handlers;
 mod output;
-mod profiles;
+pub(crate) mod profiles;
 
 #[cfg(all(test, feature = "full"))]
 mod tests;

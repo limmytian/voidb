@@ -133,7 +133,7 @@ pub(crate) fn builtin_capabilities() -> Vec<CapabilityDefinition> {
     capabilities
 }
 
-pub(super) fn supported_capabilities(
+pub(crate) fn supported_capabilities(
     discovery: &ProcessPluginDiscovery,
 ) -> Vec<CapabilityDefinition> {
     let mut capabilities = builtin_capabilities();

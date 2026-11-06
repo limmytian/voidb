@@ -19,7 +19,7 @@ use voidb_core::{
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "action", rename_all = "snake_case")]
-pub(super) enum BrokerRequest {
+pub(crate) enum BrokerRequest {
     Inspect {
         token: String,
     },
@@ -91,21 +91,21 @@ fn legacy_broker_protocol_version() -> u32 {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(super) struct BrokerResponse {
+pub(crate) struct BrokerResponse {
     #[serde(default = "legacy_broker_protocol_version")]
-    pub(super) protocol_version: u32,
-    pub(super) ok: bool,
-    pub(super) exit_code: i32,
-    pub(super) stdout: String,
-    pub(super) stderr: String,
-    pub(super) error: Option<String>,
+    pub(crate) protocol_version: u32,
+    pub(crate) ok: bool,
+    pub(crate) exit_code: i32,
+    pub(crate) stdout: String,
+    pub(crate) stderr: String,
+    pub(crate) error: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(super) error_code: Option<String>,
+    pub(crate) error_code: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(super) data: Option<Value>,
+    pub(crate) data: Option<Value>,
     #[serde(default)]
-    pub(super) remaining_uses: Option<u32>,
-    pub(super) expires_at: DateTime<Utc>,
+    pub(crate) remaining_uses: Option<u32>,
+    pub(crate) expires_at: DateTime<Utc>,
 }
 
 pub(super) struct BrokerCallEntry {

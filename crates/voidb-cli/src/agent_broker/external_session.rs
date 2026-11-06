@@ -60,6 +60,7 @@ impl ExternalPluginSessionFactory {
     /// session-capable grant. Returns `Ok(None)` when no installed candidate
     /// or matching profile exists so the session host keeps its fail-closed
     /// `Unsupported` behavior for that grant.
+    #[cfg_attr(test, allow(dead_code))]
     pub(crate) fn resolve(
         grant_plugin_id: &str,
         grant_profile_id: &str,
@@ -479,6 +480,7 @@ fn map_health_string(health: &str) -> PluginSessionHealth {
     }
 }
 
+#[cfg_attr(test, allow(dead_code))]
 fn is_local_system_profile(profile: &ConnectionProfile) -> bool {
     profile
         .metadata
@@ -487,6 +489,7 @@ fn is_local_system_profile(profile: &ConnectionProfile) -> bool {
         .is_some_and(|scope| scope == "local_system")
 }
 
+#[cfg_attr(test, allow(dead_code))]
 fn local_system_connection(profile: &ConnectionProfile) -> ConnectionConfig {
     ConnectionConfig {
         name: profile.name.clone(),
@@ -583,7 +586,6 @@ mod tests {
     use super::*;
     use crate::agent_session_host::AgentSessionHost;
     use chrono::Duration;
-    use voidb_core::capability::CredentialRef;
     use voidb_core::process_plugin::{
         ProcessPluginCandidate,
         ProcessPluginPackageSource, ProcessPluginRoot, ProcessPluginRootKind,

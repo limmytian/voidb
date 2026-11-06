@@ -141,7 +141,7 @@ fn profile_store_error(error: VoidbError) -> Box<CapabilityError> {
     ))
 }
 
-pub(super) fn profile_matches_ref(profile: &ConnectionProfile, profile_ref: &str) -> bool {
+pub(crate) fn profile_matches_ref(profile: &ConnectionProfile, profile_ref: &str) -> bool {
     if let Some(id) = profile_ref.strip_prefix("id:") {
         return profile.id == id;
     }
