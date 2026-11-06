@@ -8,8 +8,9 @@ rules.
 The current sync plugin is beta-certified but still opt-in. It has an
 object-level MVP for profile and encrypted credential records, while the older
 encrypted full-directory bundle remains a recovery and compatibility path. The
-bundle is not the stable object sync API. See
-Sync Beta Readiness for the release-facing decision.
+bundle is not the stable object sync API. The release-facing decision is the
+opt-in boundary in
+[Sync Boundary Under The Capability Model](sync-boundary.md).
 
 ## Goals
 
@@ -565,12 +566,17 @@ As of the current MVP, VoidB implements the first object path:
 
 Known MVP limits:
 
-- pull-time conflict marker import and interactive failed-decrypt repair are
-  still later work;
 - plugin compatibility is recorded as metadata but not yet enforced against a
   live plugin/schema registry during import;
+- interactive failed-decrypt repair beyond the shipped CLI repair paths
+  (`sync credential migrate-mappings` / `re-enroll`,
+  `sync conflict credential-handoff`) is still TUI work;
 - the compatibility bundle remains available only as explicit manual
   backup/recovery and is not used as fallback after object conflicts.
+
+Pull-time conflict marker import is implemented: remote tombstones, decrypt
+failures, and invalid payloads record `pull_time_object_conflict` markers that
+`sync conflict list/resolve` surfaces.
 
 ## Migration Gates For Later Slices
 
@@ -581,8 +587,9 @@ Before object sync can be presented as stable:
 2. Keep `cargo test -p voidb-core object_sync` green. These tests prove profile,
    credential-ref, credential-record envelope, and manifest serialization
    contain no plaintext secrets or target-system metadata.
-3. Implement pull-time conflict marker import, TUI conflict presentation, and
-   interactive failed-decrypt repair using the conflict shape above.
+3. Deliver TUI conflict presentation and interactive failed-decrypt repair
+   using the conflict shape above (pull-time conflict marker import is
+   already implemented).
 4. Keep the current full-directory bundle available only as opt-in
    compatibility backup and manual recovery.
 5. Update release gates so "stable Sync" means object-level sync gates pass,

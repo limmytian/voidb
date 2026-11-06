@@ -1,29 +1,32 @@
-# 5 分钟开发一个 VoidB 插件 (Quickstart: Build a VoidB Plugin in 5 Minutes)
+# Quickstart: Build a VoidB Plugin in 5 Minutes
 
-VoidB 采用了基于 **stdio-jsonrpc** 的外部进程插件架构。这使得你可以用**任何编程语言**（Rust、Go、Python、Node.js、Shell 等）为 VoidB 编写插件，无缝接入 VoidB 的 Connection Manager、CLI 以及 Agent 能力体系。
+VoidB uses an external process plugin architecture based on **stdio-jsonrpc**.
+This lets you write plugins for VoidB in **any programming language** (Rust,
+Go, Python, Node.js, Shell, etc.) and seamlessly plug into VoidB's Connection
+Manager, CLI, and agent capability system.
 
 ---
 
-## 插件基本目录结构
+## Basic Plugin Directory Structure
 
-一个标准的 VoidB 插件目录结构如下：
+A standard VoidB plugin directory looks like this:
 
 ```text
 my-plugin/
-  plugin.toml                    # 插件元数据清单
+  plugin.toml                    # Plugin metadata manifest
   bin/
-    my-plugin                    # 可执行文件 (脚本或二进制文件)
+    my-plugin                    # Executable (script or binary)
   schemas/
-    profile.schema.json          # 连接配置的 JSON Schema (供表单渲染与校验)
-    my-capability-input.json     # Capability 输入参数 Schema
-    my-capability-output.json    # Capability 输出结果 Schema
+    profile.schema.json          # JSON Schema for the connection profile (form rendering and validation)
+    my-capability-input.json     # Capability input parameter schema
+    my-capability-output.json    # Capability output result schema
 ```
 
 ---
 
-## 第 1 步：编写 `plugin.toml`
+## Step 1: Write `plugin.toml`
 
-在插件根目录下创建 `plugin.toml`：
+Create `plugin.toml` in the plugin root directory:
 
 ```toml
 id = "my-plugin"
@@ -56,9 +59,9 @@ connection_required = false
 
 ---
 
-## 第 2 步：定义 Schemas
+## Step 2: Define Schemas
 
-在 `schemas/` 目录下放置 JSON Schema 文件：
+Place the JSON Schema files in the `schemas/` directory:
 
 - `schemas/profile.schema.json`:
   ```json
@@ -94,16 +97,17 @@ connection_required = false
 
 ---
 
-## 第 3 步：编写插件运行体
+## Step 3: Write the Plugin Runtime
 
-插件通过 stdin 逐行接收 JSON-RPC 2.0 请求，并将响应输出到 stdout（每行一个 JSON 对象）。
+The plugin receives JSON-RPC 2.0 requests line by line on stdin and writes
+responses to stdout (one JSON object per line).
 
-必须响应的基础方法包括：
+The base methods it must handle are:
 1. `voidb.initialize`
 2. `voidb.health`
 3. `voidb.invoke`
 
-### 方式 A：使用 Rust (`voidb-process-plugin-sdk`)
+### Method A: Using Rust (`voidb-process-plugin-sdk`)
 
 ```rust
 use serde_json::json;
@@ -127,9 +131,10 @@ fn main() -> anyhow::Result<()> {
 }
 ```
 
-### 方式 B：使用 Python 3
+### Method B: Using Python 3
 
-创建可执行脚本 `bin/my-plugin` 并赋予执行权限 (`chmod +x bin/my-plugin`)：
+Create the executable script `bin/my-plugin` and make it executable
+(`chmod +x bin/my-plugin`):
 
 ```python
 #!/usr/bin/env python3
@@ -161,35 +166,58 @@ for line in sys.stdin:
         }
     else:
         resp = {"jsonrpc": "2.0", "id": msg_id, "error": {"code": -32601, "message": "Method not found"}}
-    
+
     sys.stdout.write(json.dumps(resp) + "\n")
     sys.stdout.flush()
 ```
 
-### 方式 C：使用 Go
+### Method C: Using Go
 
-参见 [`examples/process-plugins/example-go/main.go`](../examples/process-plugins/example-go/main.go)，编译为二进制放至 `bin/my-plugin` 即可。
+See
+[`examples/process-plugins/example-go/main.go`](../examples/process-plugins/example-go/main.go);
+compile it into a binary and place it at `bin/my-plugin`.
 
 ---
 
-## 第 4 步：测试与运行
+## Step 4: Test and Run
 
-### 方式 1：本地开发调试
+### Method 1: Local development debugging
 
-使用 `VOIDB_PLUGIN_PATH` 环境变量指定开发目录进行扫描：
+Use the `VOIDB_PLUGIN_PATH` environment variable to point VoidB at the
+development directory to scan (the directory that CONTAINS your plugin's
+folder, not the plugin folder itself):
 
 ```bash
 VOIDB_PLUGIN_PATH=/path/to/parent_of_my_plugin vb plugin list
 VOIDB_PLUGIN_PATH=/path/to/parent_of_my_plugin vb plugin describe my-plugin
 ```
 
-### 方式 2：正式安装使用
+Invoking an unsigned development plugin additionally requires
+`VOIDB_ALLOW_UNSIGNED_PLUGINS=1` (see Method 2).
 
-将插件目录直接拷贝或软链接至用户配置目录：
+### Method 2: Production installation
+
+Do not copy or symlink a plugin directory into a managed plugin directory
+(`voidb/plugins` under the platform config or data directory): managed installs
+verify package signatures and install provenance, and a hand-copied directory
+fails that integrity gate.
+
+Unsigned development plugins are only discovered from an explicit development
+root, with unsigned execution explicitly enabled:
 
 ```bash
-mkdir -p ~/.config/voidb/plugins
-cp -r my-plugin ~/.config/voidb/plugins/
+# VOIDB_PLUGIN_PATH must point at the directory that CONTAINS my-plugin/
+VOIDB_PLUGIN_PATH=$(pwd) VOIDB_ALLOW_UNSIGNED_PLUGINS=1 vb plugin list
+VOIDB_PLUGIN_PATH=$(pwd) VOIDB_ALLOW_UNSIGNED_PLUGINS=1 vb plugin describe my-plugin
 ```
 
-打开 VoidB 或运行 `vb plugin list`，VoidB 将会自动发现并加载该插件，并在 Connection Manager 中注册可选连接类型！
+`VOIDB_PLUGIN_PATH` and `VOIDB_ALLOW_UNSIGNED_PLUGINS=1` only apply to explicit
+development roots; they never apply to managed install directories. Production
+installs must go through packaging and the signed registry:
+
+```bash
+vb plugin install my-plugin
+```
+
+VoidB then discovers and loads the plugin automatically and registers its
+optional connection type in the Connection Manager!

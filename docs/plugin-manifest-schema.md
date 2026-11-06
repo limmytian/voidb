@@ -24,7 +24,7 @@ Runtime behavior for timeout, cancellation, pagination, streaming, dry-run,
 destructive operations, and exit codes is defined in
 [Agent-Friendly Execution Controls](agent-friendly-execution-controls.md).
 Manifest ownership and package installation lifecycle are defined in
-[Future Plugin Installation Model](plugin-installation-model.md).
+[Plugin Installation Model](plugin-installation-model.md).
 
 The manifest must describe:
 

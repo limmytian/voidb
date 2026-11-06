@@ -9,14 +9,14 @@ description: Guide for the VoidB SQLite plugin. Use when working on the external
 
 The SQLite plugin is a decoupled process plugin that lives in its own
 independent repository (`voidb-plugin-sqlite`), not in this repository. Install
-it with `voidb-cli plugin install-default` and run it through
-`voidb-cli sqlite ...` or the `sqlite.*` capabilities.
+it with `vb plugin install-default` and run it through
+`vb sqlite ...` or the `sqlite.*` capabilities.
 
 ## What It Does
 
 SQLite capability plugin for VoidB: local-database SQL `query`, `explain`,
 `exec`, `tables`, and `describe_table` capabilities backed by `SqliteService`,
-plus `voidb-cli sqlite` domain commands (`query`, `tables`, `describe`) and
+plus `vb sqlite` domain commands (`query`, `tables`, `describe`) and
 persistent agent sessions. SQLite and Redis form the first protocol pair for
 generic invoke behavior.
 

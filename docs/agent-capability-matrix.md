@@ -4,7 +4,7 @@
 
 This is the canonical current inventory for built-in Agent capabilities and plugin experiences. It is generated from runtime `CapabilityDefinition` values and checked experience metadata. Process plugins are intentionally excluded because their installed catalog is node-local.
 
-The committed output is `docs/agent-capability-matrix.md`. Regenerate with `cargo run -p vb -- invoke matrix --format markdown` and verify drift with `scripts/check-agent-capability-matrix.sh`.
+The committed output is `docs/agent-capability-matrix.md`. Regenerate with `cargo run -p voidb-cli -- invoke matrix --format markdown` and verify drift with `scripts/check-agent-capability-matrix.sh`.
 
 ## Plugin Experience Summary
 

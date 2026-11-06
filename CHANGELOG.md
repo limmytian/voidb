@@ -5,6 +5,22 @@ All notable changes to VoidB will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-11-06
+
+### Added
+- **MCP gateway (`vb mcp serve`)**: a Model Context Protocol stdio server (spec revision 2025-06-18) that exposes the installed capability catalog as MCP tools. Every `tools/call` is broker-gated exactly like `agent exec` — the server runs on raw configuration, never holds the master password, and missing grants return the stable `authorization.grant_required` execution error with ready-to-run `vb agent authorize` guidance. Tools carry the declared JSON Schemas and risk-mapped annotations (`readOnlyHint`/`destructiveHint`); resources expose the capability matrix (full builds) and redacted profile references. See `docs/mcp-server.md` and `docs/adr-mcp-agent-gateway.md`; verified end to end by `scripts/mcp-fixture-smoke.sh`.
+- **`vb credential master setup`**: configures master-password protection on a legacy default-passphrase config (double prompt or `--new-password-env`, refuses an already-protected config, `--yes`/`--dry-run` gated).
+- **`vb credential master unlock`**: verifies the master password and reports the process unlock state; one-shot CLI processes never retain it, and non-TTY callers are guided to `VOIDB_MASTER_PASSWORD` or `--password-env`.
+- **`vb credential master forget`**: redacted no-op stating exactly that one-shot CLI commands never retain master-password state.
+- **`vb invoke list --risk <risk>`**: repeatable filter over the effective risk level (`read_only`, `mutating`, `destructive`, `external_side_effect`), composing with the plugin positional and `--execution-mode` filters.
+
+### Fixed
+- Plugin discovery now attaches a `plugin.unmanaged_install_record_missing` warning to available candidates in user/system roots that have no installation record, and integrity failures on unmanaged copies name the shadowed managed version instead of a bare security error; `vb plugin list --include-shadowed` renders shadow diagnostics, and the runtime integrity error carries a stable `details.reason` (`install_record_missing | digest_mismatch | provenance_invalid`).
+- Sixty-seven documented `cargo test/run/clippy/check -p vb` commands (the package is `voidb-cli`; only the binary is `vb`) corrected across the docs, and the capability-matrix generator's embedded command spellings fixed so the drift gate is green.
+
+### Changed
+- Documentation reconciled with shipped behavior: the storage transfer contract, capability examples, and session capability docs now describe the registry-declared-but-fail-closed session state; the standalone TUI acceptance criteria require startup auto-load of the primary resource view (the reported "docker TUI shows no data" root cause — the fix lands in the external plugin repositories); sync roadmap documentation corrected four already-implemented items (recovery codes, pull-time conflict import, tombstone apply, keyring token persistence).
+
 ## [0.4.0] - 2026-11-05
 
 ### Added

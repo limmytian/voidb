@@ -292,6 +292,43 @@ fn generated_builtin_catalog_snapshot_covers_every_plugin_and_mode() {
 }
 
 #[test]
+fn risk_filters_match_effective_risk() {
+    let mut capability = test_capability_definition();
+    capability.risk = CapabilityRiskLevel::Destructive;
+    capability.destructive = true;
+    assert!(capability_matches_risks(&capability, &[]));
+    assert!(capability_matches_risks(
+        &capability,
+        &[CapabilityRiskLevel::Destructive]
+    ));
+    assert!(!capability_matches_risks(
+        &capability,
+        &[CapabilityRiskLevel::ReadOnly]
+    ));
+}
+
+fn test_capability_definition() -> CapabilityDefinition {
+    CapabilityDefinition {
+        plugin_id: "fixture".into(),
+        id: "get".into(),
+        description: "Get.".into(),
+        input_schema: serde_json::json!({"type": "object"}),
+        output_schema: serde_json::json!({"type": "object"}),
+        permissions: vec![],
+        authorization: Default::default(),
+        risk: CapabilityRiskLevel::ReadOnly,
+        destructive: false,
+        streaming: false,
+        execution_mode: CapabilityExecutionMode::Stateless,
+        session_handoff: None,
+        connection_required: false,
+        required_secret_classes: vec![],
+        supports_dry_run: false,
+        default_timeout_ms: Some(1000),
+    }
+}
+
+#[test]
 fn execution_mode_filters_include_capabilities_supported_by_both_transports() {
     let definitions =
         resolved_authorization_capabilities(Some("ssh")).expect("ssh fixture catalog");

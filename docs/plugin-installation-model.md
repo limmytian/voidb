@@ -14,7 +14,6 @@ It builds on:
 - [Capability Discovery and Invocation CLI Contract](capability-cli.md)
 - [Secret Brokering and Redaction Policy](secret-brokering-redaction-policy.md)
 - [Sync Boundary Under The Capability Model](sync-boundary.md)
-- [Migration Compatibility Notes](migration-compatibility-notes.md)
 
 ## Decision
 
@@ -244,21 +243,21 @@ Compatibility has separate axes:
 The plugin package version does not by itself prove profile compatibility.
 Profile migration requires an explicit migration model in a later slice. Until
 that exists, updates that change profile schemas should be treated as
-compatibility-sensitive. Existing config, TUI, built-in factory, and service
-direct-mode compatibility risks are tracked in
-[Migration Compatibility Notes](migration-compatibility-notes.md).
+compatibility-sensitive. Existing config compatibility is handled by the
+explicit migration workflow in
+[Profile Migration](profile-migration.md).
 
 ## CLI Shape
 
 The CLI exposes installation as local package management:
 
 ```bash
-voidb plugin install ./mysql-1.2.3.voidb-plugin.tar.zst --format json
-voidb plugin install ./target/plugin/mysql --format json
-voidb plugin update mysql --from ./mysql-1.2.4.voidb-plugin.tar.zst --format json
-voidb plugin disable mysql --format json
-voidb plugin enable mysql --format json
-voidb plugin uninstall mysql --keep-profiles --format json
+vb plugin install ./mysql-1.2.3.voidb-plugin.tar.zst --format json
+vb plugin install ./target/plugin/mysql --format json
+vb plugin update mysql --from ./mysql-1.2.4.voidb-plugin.tar.zst --format json
+vb plugin disable mysql --format json
+vb plugin enable mysql --format json
+vb plugin uninstall mysql --keep-profiles --format json
 ```
 
 JSON output should include:

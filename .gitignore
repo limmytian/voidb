@@ -17,3 +17,6 @@ profiles.json
 # Python script caches
 __pycache__/
 *.py[cod]
+
+# ZCode session-local state
+.zcode/

@@ -55,7 +55,7 @@ pub fn verify_plugin_provenance_for_target(
 ) -> Result<(), VoidbError> {
     verify_with_keys(candidate, target, |key_id| match key_id {
         OFFICIAL_KEY_ID => Some(OFFICIAL_PUBLIC_KEY),
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         "test-only" => Some(TEST_PUBLIC_KEY),
         _ => None,
     })
@@ -254,11 +254,15 @@ fn collect_files(
     Ok(())
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 const TEST_PUBLIC_KEY: &str = "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c";
 
-#[cfg(test)]
-pub(crate) fn sign_test_candidate(candidate: &ProcessPluginCandidate) {    use crate::plugin_signing::sign_bytes;
+/// Signs a plugin candidate with the workspace test key so integration tests
+/// in dependent crates can pass the provenance launch gate. Only available in
+/// test builds and behind the non-default `test-support` feature; never
+/// enabled in release artifacts.
+#[cfg(any(test, feature = "test-support"))]
+pub fn sign_test_candidate(candidate: &ProcessPluginCandidate) {    use crate::plugin_signing::sign_bytes;
     let root = &candidate.source.plugin_dir;
     let mut files = BTreeMap::new();
     collect_files(root, root, &mut files).expect("fixture payload");

@@ -11,9 +11,9 @@ redaction are defined separately in
 Audit fields and structured errors are defined in
 [Audit and Structured Error Schema](audit-and-error-schema.md). Audit storage
 is follow-up work. Process plugin manifest details are defined in
-[Plugin Manifest Schema](plugin-manifest-schema.md). Migration compatibility
-risks are tracked in
-[Migration Compatibility Notes](migration-compatibility-notes.md).
+[Plugin Manifest Schema](plugin-manifest-schema.md). Existing configs migrate
+through the explicit workflow in
+[Profile Migration](profile-migration.md).
 
 ## Model Summary
 
@@ -296,9 +296,9 @@ the public contract:
 1. Treat saved `ConnectionConfig` values as storage-backed profiles.
 2. Expose profile references through CLI commands without printing secrets.
 3. Add capability metadata and schema discovery per plugin.
-4. Route `voidb invoke` requests into `CapabilityInvocation`.
+4. Route `vb invoke` requests into `CapabilityInvocation`.
 5. Let plugins decide instance creation and reuse behind the protocol boundary.
 
-Compatibility requirements for existing configs, TUI workflows, built-in
-plugin factories, and service direct mode are detailed in
-[Migration Compatibility Notes](migration-compatibility-notes.md).
+Compatibility for existing configs is handled by the explicit migration
+workflow in [Profile Migration](profile-migration.md). Official plugin
+factories and service direct mode live in external plugin repositories.

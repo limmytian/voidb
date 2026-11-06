@@ -1,5 +1,7 @@
 //! Built-in credential management CLI.
 
+use std::io::IsTerminal;
+
 use crate::builtin::json_output::print_json;
 use async_trait::async_trait;
 use clap::{Arg, ArgAction, ArgMatches, Command};
@@ -68,6 +70,45 @@ impl CliPlugin for CredentialCliPlugin {
                                 .action(ArgAction::SetTrue)
                                 .help("Confirm writing the re-encrypted config file"),
                         ),
+                )
+                .subcommand(
+                    Command::new("setup")
+                        .about("Configure master-password protection on a legacy default-passphrase config")
+                        .arg(format_arg())
+                        .arg(
+                            Arg::new("new-password-env")
+                                .long("new-password-env")
+                                .value_name("VAR")
+                                .help("Environment variable containing the new master password; omit to prompt interactively"),
+                        )
+                        .arg(
+                            Arg::new("dry-run")
+                                .long("dry-run")
+                                .action(ArgAction::SetTrue)
+                                .help("Report the protection state that would be configured without writing files"),
+                        )
+                        .arg(
+                            Arg::new("yes")
+                                .long("yes")
+                                .action(ArgAction::SetTrue)
+                                .help("Confirm writing the protected config file"),
+                        ),
+                )
+                .subcommand(
+                    Command::new("unlock")
+                        .about("Verify the master password and report the process unlock state")
+                        .arg(format_arg())
+                        .arg(
+                            Arg::new("password-env")
+                                .long("password-env")
+                                .value_name("VAR")
+                                .help("Environment variable containing the master password; omit to prompt or fall back to VOIDB_MASTER_PASSWORD"),
+                        ),
+                )
+                .subcommand(
+                    Command::new("forget")
+                        .about("Clear in-process master password state (one-shot CLI no-op)")
+                        .arg(format_arg()),
                 ),
         ]
     }
@@ -88,10 +129,126 @@ impl CliPlugin for CredentialCliPlugin {
 fn handle_master(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbError> {
     match matches.subcommand() {
         Some(("reencrypt", sub_matches)) => handle_reencrypt(sub_matches, ctx),
+        Some(("setup", sub_matches)) => handle_setup(sub_matches, ctx),
+        Some(("unlock", sub_matches)) => handle_unlock(sub_matches),
+        Some(("forget", sub_matches)) => handle_forget(sub_matches),
         _ => Err(VoidbError::Plugin(
             "Unknown credential master command".into(),
         )),
     }
+}
+
+/// Configures master-password protection on a legacy default-passphrase
+/// config. Refuses to run on an already-protected config (that is a
+/// reencrypt); prompts twice unless --new-password-env is supplied.
+fn handle_setup(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbError> {
+    ensure_json_format(matches)?;
+
+    if ctx.config.credential_protection_mode() == CredentialProtectionMode::UserPassphrase {
+        return Err(VoidbError::Config(
+            "Master-password protection is already configured; use 'vb credential master reencrypt' to change the password"
+                .into(),
+        ));
+    }
+    let interactive = matches.get_one::<String>("new-password-env").is_none();
+    if interactive && !std::io::stdin().is_terminal() {
+        return Err(VoidbError::Config(
+            "Interactive setup requires a terminal; set --new-password-env <VAR> for non-interactive use"
+                .into(),
+        ));
+    }
+    let dry_run = matches.get_flag("dry-run");
+    if dry_run {
+        let state = ctx
+            .config
+            .credential_protection_state(MasterPasswordSessionState::NotConfigured);
+        print_json(&success_envelope(json!({
+            "dry_run": true,
+            "current_protection_mode": ctx.config.credential_protection_mode(),
+            "target_protection_mode": CredentialProtectionMode::UserPassphrase,
+            "credential_summary": state.summary,
+        })))?;
+        return Ok(());
+    }
+    if !matches.get_flag("yes") {
+        return Err(VoidbError::Plugin(
+            "Refusing to rewrite config without --yes; use --dry-run to preview".into(),
+        ));
+    }
+    let new_password = if interactive {
+        prompt_confirmed_new_password()?
+    } else {
+        new_master_password(matches)?
+    };
+    let native_credentials_reencrypted =
+        reencrypt_native_credentials(None, new_password.as_str())?;
+    let result = AppConfig::reencrypt_config_file(None, new_password.as_str())?;
+    print_json(&success_envelope(json!({
+        "protection_mode": result.protection_mode,
+        "master_password": result.master_password,
+        "credential_summary": result.credential_summary,
+        "native_credentials_reencrypted": native_credentials_reencrypted,
+        "active_password_env": VOIDB_MASTER_PASSWORD_ENV,
+    })))
+}
+
+/// Verifies the master password and reports the unlock state. One-shot CLI
+/// processes do not retain unlock state, so this is verify-and-report.
+fn handle_unlock(matches: &ArgMatches) -> Result<(), VoidbError> {
+    ensure_json_format(matches)?;
+
+    let password = match password_from_env_arg(matches, "password-env")? {
+        Some(password) => password,
+        None => match std::env::var(VOIDB_MASTER_PASSWORD_ENV) {
+            Ok(password) if !password.is_empty() => password,
+            _ if std::io::stdin().is_terminal() => {
+                crate::prompt_master_password("VoidB master password: ")?
+            }
+            _ => {
+                return Err(VoidbError::Config(
+                    "Master password required; set VOIDB_MASTER_PASSWORD or --password-env for non-interactive unlock"
+                        .into(),
+                ))
+            }
+        },
+    };
+    let unlocked = AppConfig::load_with_password(Some(&password)).is_ok();
+    drop(password);
+    if !unlocked {
+        return Err(VoidbError::Crypto(
+            "Invalid master password for credential protection".into(),
+        ));
+    }
+    print_json(&success_envelope(json!({
+        "unlocked": true,
+        "scope": "process",
+        "note": "One-shot CLI commands exit after completion; unlock state is not persisted. Long-lived processes supply the password through VOIDB_MASTER_PASSWORD.",
+    })))
+}
+
+/// One-shot CLI commands never retain master-password state across processes,
+/// so forget is a redacted no-op that reports exactly that.
+fn handle_forget(matches: &ArgMatches) -> Result<(), VoidbError> {
+    ensure_json_format(matches)?;
+    print_json(&success_envelope(json!({
+        "forgotten": true,
+        "scope": "process",
+        "note": "One-shot CLI commands do not retain master-password state between processes; the in-memory password for this process is dropped on exit.",
+    })))
+}
+
+fn prompt_confirmed_new_password() -> Result<String, VoidbError> {
+    let password = crate::prompt_master_password("New master password: ")
+        .map_err(|error| VoidbError::Plugin(format!("read master password: {error}")))?;
+    let confirmation = crate::prompt_master_password("Confirm master password: ").map_err(
+        |error| VoidbError::Plugin(format!("read master password confirmation: {error}")),
+    )?;
+    if password != confirmation {
+        return Err(VoidbError::Plugin(
+            "Master password confirmation did not match".into(),
+        ));
+    }
+    Ok(password)
 }
 
 fn handle_reencrypt(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbError> {
@@ -316,5 +473,70 @@ mod tests {
                 .get_arguments()
                 .any(|arg| arg.get_id() == "dry-run")
         );
+    }
+
+    fn master_subcommand(name: &str) -> Command {
+        let plugin = CredentialCliPlugin::new();
+        let commands = plugin.commands();
+        let master = commands
+            .iter()
+            .find(|command| command.get_name() == "master")
+            .expect("master command");
+        master
+            .get_subcommands()
+            .find(|command| command.get_name() == name)
+            .unwrap_or_else(|| panic!("{name} subcommand"))
+            .clone()
+    }
+
+    #[test]
+    fn master_setup_and_unlock_expose_documented_surface() {
+        let setup = master_subcommand("setup");
+        assert!(setup.get_arguments().any(|arg| arg.get_id() == "new-password-env"));
+        assert!(setup.get_arguments().any(|arg| arg.get_id() == "yes"));
+        assert!(setup.get_arguments().any(|arg| arg.get_id() == "dry-run"));
+
+        let unlock = master_subcommand("unlock");
+        assert!(unlock.get_arguments().any(|arg| arg.get_id() == "password-env"));
+
+        let forget = master_subcommand("forget");
+        assert!(forget.get_arguments().all(|arg| arg.get_id() != "yes"));
+    }
+
+    #[test]
+    fn setup_parses_non_interactive_and_interactive_forms() {
+        let command = master_subcommand("setup");
+        let matches = command
+            .clone()
+            .try_get_matches_from(["setup", "--new-password-env", "VOIDB_TEST_PW", "--yes"])
+            .expect("non-interactive setup parses");
+        assert!(matches.get_flag("yes"));
+
+        let matches = command
+            .try_get_matches_from(["setup", "--dry-run"])
+            .expect("interactive dry-run setup parses");
+        assert!(matches.get_flag("dry-run"));
+    }
+
+    #[test]
+    fn unlock_reports_error_without_tty_or_password_source() {
+        let command = master_subcommand("unlock");
+        let matches = command
+            .try_get_matches_from(["unlock"])
+            .expect("unlock parses");
+        // Non-TTY test processes have neither --password-env nor a usable
+        // VOIDB_MASTER_PASSWORD, so the handler must fail closed with the
+        // structured guidance error instead of prompting.
+        if std::env::var_os(VOIDB_MASTER_PASSWORD_ENV).is_some_and(|value| !value.is_empty()) {
+            return; // environment provides a password; skip the fail-closed assert
+        }
+        assert!(handle_unlock(&matches).is_err());
+    }
+
+    #[test]
+    fn forget_is_a_reported_no_op() {
+        let command = master_subcommand("forget");
+        let matches = command.try_get_matches_from(["forget"]).expect("parses");
+        handle_forget(&matches).expect("forget never fails");
     }
 }

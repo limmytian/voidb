@@ -385,10 +385,23 @@ pub const SENSITIVE_FIELDS: &[&str] = &[
 
 #[cfg(test)]
 mod tests {
+
+    /// Keeps encryption tests off the OS keyring: the keyring backend can
+    /// block indefinitely on a keychain authorization prompt in headless or
+    /// sandboxed environments (observed on macOS), so tests exercise the
+    /// file-fallback install secret instead.
+    pub(crate) fn disable_keyring_for_tests() {
+        static ONCE: std::sync::Once = std::sync::Once::new();
+        ONCE.call_once(|| unsafe {
+            std::env::set_var("VOIDB_DISABLE_KEYRING", "1");
+        });
+    }
+
     use super::*;
 
     #[test]
     fn test_encrypt_decrypt_roundtrip() {
+        disable_keyring_for_tests();
         let plaintext = "my-secret-password-123";
         let encrypted = encrypt(plaintext, None).unwrap();
         assert!(is_encrypted(&encrypted));
@@ -400,6 +413,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_decrypt_with_master_password() {
+        disable_keyring_for_tests();
         let plaintext = "database-password";
         let master = "my-master-key";
 
@@ -417,6 +431,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_rejects_plaintext_by_default() {
+        disable_keyring_for_tests();
         // decrypt() is strict: plaintext input is an error, not a silent
         // passthrough. Legacy plaintext configs must opt in explicitly.
         let plain = "just-a-plain-string";
@@ -429,6 +444,7 @@ mod tests {
 
     #[test]
     fn test_new_encryptions_do_not_use_legacy_default_passphrase() {
+        disable_keyring_for_tests();
         let encrypted = encrypt("install-key-protected", None).unwrap();
         // The retired compiled-in passphrase must not decrypt fresh envelopes;
         // they are protected by the per-installation secret instead.
@@ -438,6 +454,7 @@ mod tests {
 
     #[test]
     fn test_is_encrypted() {
+        disable_keyring_for_tests();
         assert!(!is_encrypted("plaintext"));
         assert!(!is_encrypted(""));
         assert!(is_encrypted("$VOIDB$abc123"));
@@ -446,6 +463,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_empty_string() {
+        disable_keyring_for_tests();
         let encrypted = encrypt("", None).unwrap();
         let decrypted = decrypt(&encrypted, None).unwrap();
         assert_eq!(decrypted, "");
@@ -453,6 +471,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_unicode() {
+        disable_keyring_for_tests();
         let plaintext = "密码测试 パスワード 🔐";
         let encrypted = encrypt(plaintext, None).unwrap();
         let decrypted = decrypt(&encrypted, None).unwrap();
@@ -461,6 +480,7 @@ mod tests {
 
     #[test]
     fn test_different_encryptions_produce_different_output() {
+        disable_keyring_for_tests();
         let plaintext = "same-password";
         let e1 = encrypt(plaintext, None).unwrap();
         let e2 = encrypt(plaintext, None).unwrap();
@@ -473,6 +493,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_decrypt_json_fields() {
+        disable_keyring_for_tests();
         let mut config = serde_json::json!({
             "host": "localhost",
             "port": 3306,
@@ -503,6 +524,7 @@ mod tests {
 
     #[test]
     fn test_invalid_encrypted_data() {
+        disable_keyring_for_tests();
         let result = decrypt("$VOIDB$not-valid-base64!!!", None);
         assert!(result.is_err());
 
@@ -513,6 +535,7 @@ mod tests {
 
     #[test]
     fn test_v1_backward_compat() {
+        disable_keyring_for_tests();
         // Manually create a V1-encrypted value using old derive_key_v1
         let plaintext = "legacy-secret";
         let passphrase = LEGACY_DEFAULT_PASSPHRASE;
@@ -541,6 +564,7 @@ mod tests {
 
     #[test]
     fn test_new_encryptions_use_v2() {
+        disable_keyring_for_tests();
         let encrypted = encrypt("test", None).unwrap();
         assert!(encrypted.starts_with("$VOIDB2$"));
     }

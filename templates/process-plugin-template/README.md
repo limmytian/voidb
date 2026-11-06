@@ -21,12 +21,18 @@ cargo run --example fixture_smoke
 
 ## Running with VoidB
 
-Add to `VOIDB_PLUGIN_PATH`:
+Unsigned development plugins must be discovered from an explicit development
+root: set `VOIDB_PLUGIN_PATH` to the directory that CONTAINS the plugin's
+folder and enable unsigned execution:
 
 ```bash
 export VOIDB_PLUGIN_PATH=$(pwd)
-voidb-cli plugin list
+VOIDB_PLUGIN_PATH=$(pwd) VOIDB_ALLOW_UNSIGNED_PLUGINS=1 vb plugin list
 ```
+
+`VOIDB_PLUGIN_PATH` and `VOIDB_ALLOW_UNSIGNED_PLUGINS=1` only apply to explicit
+development roots; managed installs require packaging and signing, then
+`vb plugin install <plugin>`.
 
 ## License
 

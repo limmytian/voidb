@@ -157,7 +157,10 @@ pub(super) async fn run_invocation_with_discovery_and_profiles_with_id(
                 profile: ConnectionProfileRef::Id(profile.id.clone()),
                 purpose: ConnectionInstancePurpose::CapabilityInvocation,
                 reuse: InstanceReusePolicy::Allow,
-                options: Value::Null,
+                // The plugin runtime needs the profile's decrypted
+                // plugin configuration to connect; the secret-brokering
+                // policy scopes this disclosure to the invocation.
+                options: connection.plugin_config.clone().unwrap_or(Value::Null),
             }
         } else {
             InvocationConnectionTarget::Stateless

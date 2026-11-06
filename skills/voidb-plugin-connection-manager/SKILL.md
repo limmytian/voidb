@@ -36,14 +36,14 @@ Locate the repo root, then inspect:
 - Render redacted profile metadata and credential state without leaking secrets.
 - Show capability and CLI guidance through metadata, not by invoking live
   destructive operations.
-- Launch via `voidb` (no arguments), `voidb --connection-manager`, or
-  `voidb-cli connections tui`.
+- Launch via `vb-tui` (no arguments), `vb-tui --connection-manager`, or
+  `vb connections tui`.
 
 ## Boundaries
 
 - New manager CRUD writes `profiles.json` / `credentials.json`; it never writes
   `AppConfig.connections`. Legacy `config.toml` connections migrate only
-  through `voidb-cli profile migrate apply`.
+  through `vb profile migrate apply`.
 - Do not let ordinary plugins write to the profile or connection stores.
 - Keep secret fields masked in status text, profile catalogs, logs, test
   output, and guidance rows.

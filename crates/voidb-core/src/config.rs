@@ -369,10 +369,23 @@ pub(crate) fn write_private_file(path: &Path, content: impl AsRef<[u8]>) -> std:
 
 #[cfg(test)]
 mod tests {
+
+    /// Keeps encryption tests off the OS keyring: the keyring backend can
+    /// block indefinitely on a keychain authorization prompt in headless or
+    /// sandboxed environments (observed on macOS), so tests exercise the
+    /// file-fallback install secret instead.
+    pub(crate) fn disable_keyring_for_tests() {
+        static ONCE: std::sync::Once = std::sync::Once::new();
+        ONCE.call_once(|| unsafe {
+            std::env::set_var("VOIDB_DISABLE_KEYRING", "1");
+        });
+    }
+
     use super::*;
 
     #[test]
     fn connection_lookup_accepts_composite_key_and_legacy_name() {
+        disable_keyring_for_tests();
         let config = AppConfig {
             connections: vec![ConnectionConfig {
                 name: "local".into(),
@@ -403,6 +416,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn write_private_file_sets_0600_permissions() {
+        disable_keyring_for_tests();
         use std::os::unix::fs::PermissionsExt;
 
         let path = std::env::temp_dir().join(format!(
@@ -432,6 +446,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn security_sensitive_local_files_are_private() {
+        disable_keyring_for_tests();
         use std::os::unix::fs::PermissionsExt;
 
         use crate::{
@@ -494,6 +509,7 @@ mod tests {
 
     #[test]
     fn reencrypt_config_file_sets_user_passphrase_metadata() {
+        disable_keyring_for_tests();
         let root = temp_config_root("reencrypt");
         std::fs::create_dir_all(&root).expect("create temp root");
         let path = root.join("config.toml");
@@ -566,6 +582,7 @@ mod tests {
 
     #[test]
     fn configured_user_passphrase_save_requires_active_password() {
+        disable_keyring_for_tests();
         let root = temp_config_root("protected-save");
         std::fs::create_dir_all(&root).expect("create temp root");
         let path = root.join("config.toml");

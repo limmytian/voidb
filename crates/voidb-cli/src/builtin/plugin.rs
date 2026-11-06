@@ -2982,7 +2982,13 @@ struct PluginListItem {
 
 impl PluginListItem {
     fn from_candidate(candidate: &ProcessPluginCandidate) -> Self {
-        let diagnostics = if candidate.state == ProcessPluginCandidateState::Invalid {
+        // Shadowed candidates carry the shadow diagnostic so
+        // `--include-shadowed` can explain why a candidate lost selection;
+        // Invalid candidates carry their validation failures.
+        let diagnostics = if matches!(
+            candidate.state,
+            ProcessPluginCandidateState::Invalid | ProcessPluginCandidateState::Shadowed
+        ) {
             candidate.diagnostics.clone()
         } else {
             Vec::new()

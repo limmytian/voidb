@@ -91,12 +91,12 @@ modes, and capability IDs; it must never contain credentials.
 The stable command names can land in the implementation slice, but the flow
 should behave as follows:
 
-1. `voidb credential master setup`
+1. `vb credential master setup`
    Prompts for a new master password twice with terminal echo disabled. Empty
    passwords are rejected. On success, the command records only password-derived
    metadata needed to validate future unlock attempts. This command is reserved
    for a follow-up; the current setup path is `reencrypt`.
-2. `voidb credential master reencrypt`
+2. `vb credential master reencrypt`
    Requires the current or newly confirmed master password, decrypts existing
    credential blobs (per-installation secret or legacy default passphrase),
    writes them with the user passphrase, and
@@ -114,12 +114,12 @@ should behave as follows:
    `VOIDB_MASTER_PASSWORD` or `--current-password-env <VAR>`, and optionally
    the new one with `--new-password-env <VAR>`. Use `--dry-run` to inspect
    counts without writing. `re-encrypt` is a visible alias.
-3. `voidb credential master unlock`
+3. `vb credential master unlock`
    Prompts for the master password and unlocks only the current process. For
    short-lived CLI invocations this usually means the same command immediately
    performs the protected operation. Current CLI unlock state is supplied through
    `VOIDB_MASTER_PASSWORD` for the process.
-4. `voidb credential master forget`
+4. `vb credential master forget`
    Clears any in-memory master password for long-lived processes. In one-shot
    CLI commands it should be a harmless no-op with a redacted status response.
 5. Commands that need credentials while locked must fail with a master-password
@@ -209,9 +209,9 @@ Focused changes to this flow should run:
 cargo test -p voidb-core credential_protection --quiet
 cargo test -p voidb-core reencrypt_config_file_sets_user_passphrase_metadata --quiet
 cargo test -p voidb-core configured_user_passphrase_save_requires_active_password --quiet
-cargo test -p vb master_reencrypt_command_exposes_safe_password_sources --quiet
-cargo test -p vb default_passphrase_warning_is_redacted_and_machine_readable --quiet
-cargo test -p vb user_passphrase_protection_suppresses_default_passphrase_warning --quiet
+cargo test -p voidb-cli master_reencrypt_command_exposes_safe_password_sources --quiet
+cargo test -p voidb-cli default_passphrase_warning_is_redacted_and_machine_readable --quiet
+cargo test -p voidb-cli user_passphrase_protection_suppresses_default_passphrase_warning --quiet
 cargo test -p voidb-tui credential --quiet
 git diff --check
 ```

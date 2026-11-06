@@ -86,8 +86,8 @@ Database and protocol drivers (`mysql_async`, `tokio-postgres`, `rusqlite`, `red
 - SQLite (`rusqlite`) and DuckDB (`duckdb`) use `bundled` feature — compile C libraries from source
 - Release profile: LTO enabled, single codegen unit, `opt-level = "z"` (size-optimized), strip symbols
 - Feature flags: `voidb-core` has `default = ["mysql"]` feature gate
-- No Dockerfile, no committed CI/CD runner config, no `rust-toolchain.toml`
-- Cross-platform package jobs are documented in Package CI Matrix
+- CI/CD runner config lives in `.github/workflows/` (`ci.yml`, `release.yml`, `update-registry.yml`); no Dockerfile, no `rust-toolchain.toml`
+- Cross-platform package jobs are defined in [Release Packaging](release-packaging.md) and `.github/workflows/release.yml`
 
 ## Platform Requirements
 

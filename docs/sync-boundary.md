@@ -12,8 +12,7 @@ It builds on:
 - [Secret Brokering and Redaction Policy](secret-brokering-redaction-policy.md)
 - [Audit and Structured Error Schema](audit-and-error-schema.md)
 - [Plugin Manifest Schema](plugin-manifest-schema.md)
-- [Future Plugin Installation Model](plugin-installation-model.md)
-- [Migration Compatibility Notes](migration-compatibility-notes.md)
+- [Plugin Installation Model](plugin-installation-model.md)
 - [VoidB Sync Architecture](sync-plugin.md)
 - [Object-Level Sync Model](object-level-sync-model.md)
 
@@ -26,10 +25,10 @@ The local capability-first model must define profile identity, credential
 references, secret brokering, policy, plugin compatibility, audit records, and
 structured errors before sync becomes a default or product-contract surface.
 
-The current sync plugin is beta-certified but remains opt-in. Req49 records the
-release-facing beta decision, and Req60 records local object-level
-stable-readiness evidence, in
-Sync Beta Readiness. The compatibility bundle path
+The current sync plugin is beta-certified but remains opt-in; the
+release-facing beta decision is the opt-in boundary in this document, and
+object-level stable-readiness evidence is recorded by
+`scripts/release-sync-smoke.sh`. The compatibility bundle path
 snapshots local configuration into an end-to-end encrypted bundle for
 backup/manual recovery. That bundle behavior is not the public sync contract
 and must not be used to define profile, credential, policy, plugin, or audit
@@ -108,7 +107,7 @@ This is acceptable only as opt-in compatibility behavior. It gives users a
 working backup/sync path, but it is too coarse to be the capability-first sync
 model because it treats storage files as the contract.
 
-Req60 adds a local object-level readiness gate for the target contract. The
+The object-level MVP adds a local readiness gate for the target contract. The
 plugin can push and pull object records for profiles, profile policy,
 credential references, encrypted credential records, plugin compatibility, and
 app preferences; it records object conflicts instead of falling back to a
@@ -289,7 +288,7 @@ the default sync behavior for capability-first profiles.
 | Runtime instances and sessions | No | No | Local live state. |
 | Saved query text | Yes, opt-in | Conditional | Policy may classify query text as target-system data. |
 | Plugin local state under `plugins/<id>/` | Yes, opt-in | Conditional | Requires plugin-owned sync schema before default enablement. |
-| Installed plugin binaries | No | No | See [Future Plugin Installation Model](plugin-installation-model.md). |
+| Installed plugin binaries | No | No | See [Plugin Installation Model](plugin-installation-model.md). |
 | Plugin manifests and compatibility metadata | Indirect | Yes | Enough to detect missing or incompatible plugins. |
 | Audit records | No explicit contract | Deferred | Needs retention and redaction policy before sync. |
 

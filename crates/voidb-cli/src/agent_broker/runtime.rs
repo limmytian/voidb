@@ -1168,19 +1168,35 @@ pub(super) async fn handle_broker_request(
 
 #[cfg(not(test))]
 fn register_session_factories(
-    _host: &mut AgentSessionHost,
-    _grant: &AgentGrantFile,
-    _password: &str,
+    host: &mut AgentSessionHost,
+    grant: &AgentGrantFile,
+    password: &str,
 ) -> anyhow::Result<()> {
+    use super::external_session::{ExternalPluginSessionFactory, builtin_plugin_hosts_no_sessions};
+
+    if builtin_plugin_hosts_no_sessions(&grant.plugin_id) {
+        return Ok(());
+    }
+    let Some(factory) =
+        ExternalPluginSessionFactory::resolve(&grant.plugin_id, &grant.profile_id, password)?
+    else {
+        // No installed candidate or matching profile: the session host keeps
+        // its fail-closed `Unsupported` behavior for this grant.
+        return Ok(());
+    };
+    host.register_factory(Arc::new(factory));
     Ok(())
 }
 
 #[cfg(test)]
 fn register_session_factories(
     _host: &mut AgentSessionHost,
-    _grant: &AgentGrantFile,
+    grant: &AgentGrantFile,
     _password: &str,
 ) -> anyhow::Result<()> {
+    if super::external_session::builtin_plugin_hosts_no_sessions(&grant.plugin_id) {
+        return Ok(());
+    }
     Ok(())
 }
 
@@ -1587,7 +1603,7 @@ fn broker_response(
 }
 
 #[cfg(unix)]
-pub(super) async fn send_request(
+pub(crate) async fn send_request(
     grant: &AgentGrantFile,
     request: BrokerRequest,
 ) -> anyhow::Result<BrokerResponse> {

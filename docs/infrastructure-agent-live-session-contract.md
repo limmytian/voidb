@@ -1,9 +1,11 @@
 # Infrastructure Agent Live-Session Contract
 
-This document records the shared protocol and its bundled Docker, Kubernetes,
-and Jenkins implementations. A workflow is supported only when its capability
-catalog entry declares this contract and the broker registers the owning
-plugin's live-session factory.
+This document records the shared protocol and the Docker, Kubernetes, and
+Jenkins capability families (external process plugins). A workflow is
+supported only when its capability catalog entry declares this contract and
+the broker host registers the owning plugin's live-session factory. As of
+0.4.0 the production broker registers no plugin factories, so these families
+fail closed at session open until the 0.4.1 host wiring lands.
 
 ## Ownership Boundary
 
@@ -179,7 +181,7 @@ not add those forbidden values as ad hoc metadata.
 
 ## Infrastructure Mapping
 
-The currently registered session-only capability families are:
+The session-only capability families declared by these plugins are:
 
 | Plugin | Capability family |
 |---|---|

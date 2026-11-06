@@ -1,7 +1,8 @@
 # SQL Agent Parity Matrix
 
-This matrix is the canonical comparison for the built-in PostgreSQL, MySQL,
-SQLite, and DuckDB Agent surfaces. The shared wire contract is documented in
+This matrix is the canonical comparison for the PostgreSQL, MySQL,
+SQLite, and DuckDB plugin Agent surfaces (external repositories implementing
+the shared SQL contract). The shared wire contract is documented in
 [sql-capability-contract.md](sql-capability-contract.md).
 
 ## Capability Parity

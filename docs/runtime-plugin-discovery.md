@@ -9,7 +9,7 @@ for capability-first VoidB plugins. It complements:
   `stdio-jsonrpc` messages after a process is started.
 - [Secret Brokering and Redaction Policy](secret-brokering-redaction-policy.md),
   which defines what may cross process and agent boundaries.
-- [Future Plugin Installation Model](plugin-installation-model.md), which
+- [Plugin Installation Model](plugin-installation-model.md), which
   defines how plugin directories are installed, updated, disabled, and removed.
 
 ## Scope
@@ -21,7 +21,7 @@ focused stdio JSON-RPC runtime host used by generic process-plugin invocation.
 It does not implement installation commands, marketplace behavior, long-lived
 process pooling, or a hosted plugin catalog. Installation lifecycle rules are
 documented separately in
-[Future Plugin Installation Model](plugin-installation-model.md).
+[Plugin Installation Model](plugin-installation-model.md).
 
 The current in-workspace Rust plugin factories remain the v4 TUI mechanism
 during migration. Process plugin discovery is the target contract for the new
@@ -80,9 +80,9 @@ the same plugin ID.
    list (`:` on Unix-like systems, `;` on Windows). Each entry is a plugin root
    that may contain one or more plugin directories. Trust level:
    `explicit_development`.
-2. User install root:
+2. Primary user install root (the default `vb plugin install` target):
    - macOS: `~/Library/Application Support/voidb/plugins`
-   - Linux: `${XDG_DATA_HOME:-~/.local/share}/voidb/plugins`
+   - Linux: `${XDG_CONFIG_HOME:-~/.config}/voidb/plugins`
    - Windows: `%APPDATA%\voidb\plugins`
    Trust level: `user_installed`.
 3. System install root:
@@ -93,6 +93,13 @@ the same plugin ID.
 4. Bundled app resource root, when a packaged VoidB distribution ships process
    plugins.
    Trust level: `bundled`.
+5. Secondary user data root, scanned after the bundled root:
+   - macOS: `~/Library/Application Support/voidb/plugins` (the platform
+     config and data directories coincide on macOS, so the two user roots
+     collapse into one)
+   - Linux: `${XDG_DATA_HOME:-~/.local/share}/voidb/plugins`
+   - Windows: `%LOCALAPPDATA%\voidb\plugins`
+   Trust level: `user_installed`.
 
 Core must not scan the current working directory by default. Opening a project
 or repository should not implicitly execute process plugins from that
@@ -123,6 +130,18 @@ Discovery should be deterministic. CLI output should sort plugin IDs and
 capability IDs lexicographically unless a user-facing command explicitly asks
 for discovery order.
 
+## Unmanaged Copies And Shadowing Diagnostics
+
+An available candidate in a user or system root without an installation
+record is an unmanaged copy (for example, a hand-copied plugin directory).
+It stays `available` — the integrity gate still refuses to execute it — but
+discovery attaches the `plugin.unmanaged_install_record_missing` warning
+diagnostic. When such a copy wins selection over a lower-precedence managed
+install, the integrity failure names the shadowed managed version and points
+at `vb plugin list --include-shadowed`. Shadowed candidates keep their
+shadow diagnostic, and `vb plugin list --include-shadowed` renders
+diagnostics for them. Discovery never deletes or rewrites unmanaged copies.
+
 ## Manifest Validation
 
 JSON Schema validation checks field shape. Semantic validation checks project
@@ -152,7 +171,7 @@ rules:
   version.
 
 Invalid manifests must not be partially loaded. Core may display validation
-errors in `voidb plugin list --format json`, but errors must not include
+errors in `vb plugin list --format json`, but errors must not include
 plaintext secrets, environment values, plugin stderr, or unredacted filesystem
 content.
 
@@ -326,8 +345,8 @@ crash diagnostics, stderr redaction, or generic process-plugin invocation:
 ```bash
 cargo test -p voidb-core process_plugin
 cargo test -p voidb-core process_plugin_runtime
-cargo test -p vb plugin
-cargo test -p vb invoke
+cargo test -p voidb-cli plugin
+cargo test -p voidb-cli invoke
 git diff --check
 ```
 

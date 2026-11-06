@@ -3,9 +3,9 @@
 This document makes the quality bar for plugin-owned terminal apps measurable.
 It applies to retained standalone TUIs launched through plugin CLI commands.
 
-It supports [ADR: Plugin-Owned CLI-Launched TUI Apps](adr-plugin-owned-cli-launched-tui.md),
-[Plugin-Owned TUI Launch Contract](plugin-owned-tui-launch-contract.md), and
-[Plugin-Owned TUI UX Briefs](plugin-owned-tui-ux-briefs.md).
+It supports the
+[Plugin-Owned TUI Launch Contract](plugin-owned-tui-launch-contract.md) and
+the per-plugin UX briefs maintained by each plugin repository.
 
 ## Release Classification
 
@@ -39,6 +39,13 @@ percentile method, CI variance policy, and artifact schema are defined in
 
 If a remote target blocks startup, the app must render a connecting state before
 the target operation exceeds the first-frame budget.
+
+After a successful unlock, the app must automatically load its primary
+resource view. An empty primary pane on open (for example, a Docker TUI that
+shows `No resources loaded` until the user presses a manual refresh key) fails
+this criterion: users read the empty pane as "no data available" or "cannot
+connect". Startup auto-load counts as one read-only refresh against the
+same bounds and cancellation rules as a manual refresh.
 
 ## Keyboard Journey Scorecard
 
@@ -174,7 +181,7 @@ It must not be reported as first-frame or interaction latency.
 | SSH | Raw input, terminal resize, disconnect/reconnect, host-key prompt, SFTP, forwarding, session shutdown. |
 | Email | Mailbox list, message read, search, compose draft/discard/send confirmation, attachment metadata, provider auth error. |
 | Docker/Kubernetes | Resource triage, logs, exec or attach, lifecycle confirmation, stream cancellation, disconnected target recovery; follow [Live Operations TUI Safety](live-operations-tui-safety.md). |
-| S3/WebDAV | Browse, preview metadata, upload/download plan, transfer progress, failure retry, delete confirmation; follow [Storage TUI UX Decisions](storage-tui-ux-decisions.md). |
+| S3/WebDAV | Browse, preview metadata, upload/download plan, transfer progress, failure retry, delete confirmation; follow [Storage TUI Launch And Rollback](storage-tui-launch-and-rollback.md). |
 | SQL/data inspectors | Query/read path through shared capabilities, bounded result paging, read-only mode, mutation preview or explicit CLI-only decision. |
 | Jenkins | Job/build list, console streaming, trigger/stop confirmation, queued/running/failed state, unreachable server handling; follow [Live Operations TUI Safety](live-operations-tui-safety.md). |
 | Sync | CLI-first status, conflict summary, explicit force/revision acknowledgement, credential and server-unavailable states. |

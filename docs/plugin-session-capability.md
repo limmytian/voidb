@@ -34,7 +34,7 @@ without turning the shell into a connection pool.
 | SQL databases | Short or medium-lived query sessions, optional pools, transactions, search path/session variables, and migration sessions. | Reuse only when transaction state, role, database, schema/search path, and destructive policy are compatible. Mutating and read-only work should not share hidden state unless plugin opts in. | Health is ping or lightweight query. Stale transaction/session state must invalidate reuse. |
 | SQLite and DuckDB | Local `!Send` native connections behind `SyncWorker`, plus local file locks and in-memory databases. | Reuse stays inside the owning worker. `:memory:` and temp-file sessions are local-only and must not be shared across unrelated invocations. | Worker drop and explicit close release native handles. Health is worker liveness plus optional lightweight query. |
 | Redis | Network connection/client manager, selected DB, scan cursors, optional pub/sub or monitor streams. | Reuse must include DB index, TLS/auth settings, and purpose. Pub/sub or monitor streams should be separate from ordinary commands. | Health is ping or connection liveness. Broken streams invalidate only the affected purpose. |
-| S3 and WebDAV | HTTP clients, transfer workers, scratch-directory state, optional sync planning. | Reuse is safe for stateless clients with same profile and endpoint policy. Long uploads/downloads are active leases, not shared sessions. | Cancellation flags close active transfers. Health can be deferred until next request or run as lightweight metadata call when explicitly requested. |
+| S3 and WebDAV | HTTP clients, transfer workers, scratch-directory state, optional sync planning. | Reuse is safe for stateless clients with same profile and endpoint policy. Long uploads/downloads and lock workflows are session-only capabilities under the [Storage Agent Transfer Contract](storage-agent-transfer-contract.md); their session execution is delivered by the 0.4.1 slice. | Cancellation flags close active transfers. Health can be deferred until next request or run as lightweight metadata call when explicitly requested. |
 | Docker and Kubernetes | API clients plus optional exec/log/watch streams. | Ordinary list/inspect clients can reuse by profile/context. Exec, logs, and watches are separate streaming sessions. | Health is daemon/cluster reachability. Streaming sessions need explicit cancellation and bounded output policy. |
 | MongoDB and Elasticsearch | Authenticated client handles, database/index context, cursors, and optional raw-command sessions. | Reuse by profile plus database/index context and risk policy. Raw/destructive command sessions should not leak state into read-only use. | Health is ping/cluster health. Failed auth or topology changes invalidate matching sessions. |
 | Jenkins | HTTP client, crumb/session metadata, queued build actions, and console streaming cursors. | Reuse by profile and Jenkins base URL. Build trigger/abort operations remain destructive and require dry-run or acknowledgement policy. | Health is crumb/auth validation or lightweight job endpoint. Console streams close independently. |
@@ -217,7 +217,8 @@ The shared registry is coordination, not a substitute for service cleanup.
 - shutdown cleanup;
 - audit event shape and redaction guarantees.
 
-The SSH plugin is the first in-repo reference consumer. Its channel-mode service
+The SSH plugin (external repository) is the reference consumer. Its
+channel-mode service
 maps terminal, SFTP, and forwarding lifecycles onto descriptors while preserving
 the existing service boundary:
 
@@ -231,6 +232,17 @@ the existing service boundary:
 SSH close callbacks send existing service commands and do not expose `russh`
 handles through core. Path-only SFTP session persistence remains separate from
 runtime descriptors.
+
+### Broker host wiring status
+
+As of 0.4.0 the production broker registers no `PluginAgentSessionFactory`
+for external process plugins, so every declared `session_only` capability
+fails closed at `agent session open` even when the plugin manifest declares a
+session handoff. The 0.4.1 iteration wires an external-plugin session factory
+over `ProcessPluginSessionRuntime` into the broker host; see the
+[0.4.1 Iteration Roadmap](roadmap-0.4.1.md) and the
+[Persistent Agent Session Adoption](persistent-agent-session-adoption.md)
+matrix.
 
 ## Persistent Agent Execution Contract
 

@@ -47,9 +47,7 @@ active_docs=(
   docs/architecture.md
   docs/ssh-plugin.md
   docs/storage-tui-launch-and-rollback.md
-  docs/email-tui.md
   docs/live-operations-tui-safety.md
-  docs/ssh-release-readiness.md
   docs/release-candidate-checklist.md
   docs/readiness.md
   docs/agent-capability-matrix.md

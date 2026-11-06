@@ -15,9 +15,9 @@ Inspect:
 - `src/crypto.rs`, `src/bundler.rs`, and `src/token_store.rs` for encryption, bundle packaging, and local secret storage.
 - `src/client.rs` and `src/session.rs` for server communication and session state.
 - `src/config.rs` for sync config, periodic sync, object mappings, and conflicts.
-- `src/cli_plugin.rs` for `voidb-cli sync ...`.
+- `src/cli_plugin.rs` for `vb sync ...`.
 - `tests/e2e.rs` for end-to-end behavior.
-- `docs/sync-plugin.md`, `docs/sync-boundary.md`, `docs/object-level-sync-model.md`, and `docs/sync-beta-readiness.md`.
+- `docs/sync-plugin.md`, `docs/sync-boundary.md`, and `docs/object-level-sync-model.md`.
 
 ## Boundaries
 

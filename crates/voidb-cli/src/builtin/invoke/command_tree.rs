@@ -25,6 +25,15 @@ pub(super) fn execution_mode_arg() -> Arg {
         .help("Filter by supported execution mode; repeat to select multiple modes")
 }
 
+pub(super) fn risk_arg() -> Arg {
+    Arg::new("risk")
+        .long("risk")
+        .value_name("RISK")
+        .value_parser(["read_only", "mutating", "destructive", "external_side_effect"])
+        .action(ArgAction::Append)
+        .help("Filter by effective risk level; repeat to select multiple levels")
+}
+
 pub(super) fn run_format_arg() -> Arg {
     Arg::new("format")
         .long("format")

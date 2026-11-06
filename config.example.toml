@@ -1,12 +1,14 @@
 # VoidB configuration file example.
 #
-# Location: ~/.config/voidb/config.toml. This file is optional; when it is
+# Location: config.toml inside the VoidB config directory (the platform
+# config directory plus `voidb/`, e.g. ~/Library/Application Support/voidb/
+# on macOS or ~/.config/voidb/ on Linux). This file is optional; when it is
 # absent, VoidB uses the built-in defaults shown below.
 #
 # Connections are NOT configured in this file. Connection profiles and their
-# credentials are managed by the native Connection Manager TUI (`voidb`) and
-# the `voidb-cli profile` commands, and stored encrypted in
-# ~/.config/voidb/profiles.json and ~/.config/voidb/credentials.json.
+# credentials are managed by the native Connection Manager TUI (`vb-tui`) and
+# the `vb profile` commands, and stored encrypted as profiles.json and
+# credentials.json in that same config directory.
 
 # General settings. All fields are optional; defaults are shown.
 [settings]
@@ -29,5 +31,5 @@ max_connections = 5
 
 # Legacy note: a `[[connections]]` array left over from pre-profile versions
 # of VoidB is only read as a migration source. Import it once with
-# `voidb-cli profile migrate apply`, then manage profiles through the TUI or
-# `voidb-cli profile`. Do not add new connections by hand.
+# `vb profile migrate apply`, then manage profiles through the TUI or
+# `vb profile`. Do not add new connections by hand.

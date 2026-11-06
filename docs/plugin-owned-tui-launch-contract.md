@@ -1,8 +1,7 @@
 # Plugin-Owned TUI Launch Contract
 
 This document defines how future accepted VoidB plugin TUIs advertise and
-launch as standalone terminal apps. It follows
-[ADR: Plugin-Owned CLI-Launched TUI Apps](adr-plugin-owned-cli-launched-tui.md).
+launch as standalone terminal apps.
 
 ## Scope
 
@@ -26,15 +25,15 @@ A future in-repo plugin advertises a standalone TUI by registering a
 plugin-specific CLI subcommand:
 
 ```bash
-voidb <plugin-id> tui --profile <profile-ref>
+vb <plugin-id> tui --profile <profile-ref>
 ```
 
 Examples:
 
 ```bash
-voidb ssh tui --profile prod-shell
-voidb email tui --profile work-mail
-voidb s3 tui --profile object-store
+vb ssh tui --profile prod-shell
+vb email tui --profile work-mail
+vb s3 tui --profile object-store
 ```
 
 A process plugin may also advertise TUI availability in `plugin.toml`:
@@ -64,7 +63,7 @@ implementation-specific package contract.
 The minimum standalone command shape is:
 
 ```bash
-voidb <plugin-id> tui --profile <profile-ref>
+vb <plugin-id> tui --profile <profile-ref>
 ```
 
 Recommended common flags:
@@ -191,7 +190,7 @@ Allowed dependencies:
 
 ## Shell Launch Affordance
 
-After Requirement 77, `voidb-tui` is not a compatibility bridge for old plugin
+After Requirement 77, `vb-tui` is not a compatibility bridge for old plugin
 rendering. If a future plugin-owned TUI is accepted, the shell may offer launch
 affordances only after the plugin exposes a documented CLI command:
 
@@ -207,13 +206,12 @@ state. It is a launcher and profile catalog, not a TUI platform.
 
 A standalone TUI is shipped only when it has:
 
-- a documented `voidb <plugin> tui` command;
+- a documented `vb <plugin> tui` command;
 - profile and credential handoff without plaintext secrets in args, env, logs,
   panic output, or audit records;
 - service-layer execution for target operations;
-- for data inspectors, a completed Requirement 83 decision record in
-  [Data Inspector CLI-First Decisions](data-inspector-cli-first-decisions.md)
-  before any pilot implementation starts;
+- for data inspectors, a documented CLI-first decision before any pilot
+  implementation starts;
 - terminal lifecycle tests for startup, quit, cleanup, resize, and crash
   recovery;
 - raw input tests if it embeds a terminal or attach session;

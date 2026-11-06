@@ -265,11 +265,12 @@ impl ProcessPluginRuntimeHost {
         };
 
         crate::process_plugin::verify_plugin_binary_integrity(&self.candidate).map_err(|_| {
+            let reason = crate::process_plugin::plugin_integrity_failure_reason(&self.candidate);
             runtime_error(
                 CapabilityErrorCategory::Policy,
                 "security.process_plugin_integrity_failed",
                 "Process-plugin integrity verification failed. Refusing execution.",
-                json!({ "plugin_id": self.candidate.id }),
+                json!({ "plugin_id": self.candidate.id, "reason": reason }),
                 false,
                 RedactionStatus::NotRequired,
             )
@@ -1264,7 +1265,10 @@ fn json_rpc_error_to_capability_error(plugin_id: &str, value: &Value) -> Capabil
     }
 }
 
-fn credential_grant_descriptors(grant: &CredentialGrant) -> Vec<Value> {
+/// Builds the credential-grant descriptors a plugin receives with an
+/// invocation or session open. Descriptors carry reference IDs and classes
+/// only; secret values never cross the plugin boundary.
+pub fn credential_grant_descriptors(grant: &CredentialGrant) -> Vec<Value> {
     let expires_at = grant
         .expires_at
         .unwrap_or_else(|| grant.issued_at + ChronoDuration::minutes(5));

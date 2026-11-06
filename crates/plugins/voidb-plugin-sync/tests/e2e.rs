@@ -185,8 +185,20 @@ impl Drop for ConfigSandbox {
     }
 }
 
+/// Keeps the e2e test off the OS keyring: the keyring backend can block
+/// indefinitely on a keychain authorization prompt in headless or sandboxed
+/// environments (observed on macOS), so tests exercise the file-fallback
+/// install secret instead. Spawned server children inherit the variable.
+fn disable_keyring_for_tests() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| unsafe {
+        std::env::set_var("VOIDB_DISABLE_KEYRING", "1");
+    });
+}
+
 #[tokio::test(flavor = "current_thread")]
 async fn register_push_pull() {
+    disable_keyring_for_tests();
     let sandbox = ConfigSandbox::new();
     let server_tmp = TempDir::new().unwrap();
     let addr = spawn_server(&server_tmp).await;

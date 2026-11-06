@@ -76,7 +76,7 @@ The `plugin registry-index` command scans local plugin repositories or packaged 
 
 ```bash
 # Generate registry index from plugin repositories
-voidb plugin registry-index \
+vb plugin registry-index \
   ../voidb-plugin-s3 \
   ../voidb-plugin-email \
   ../voidb-plugin-docker \
@@ -89,7 +89,7 @@ voidb plugin registry-index \
   --format json
 
 # Index a specific packaged artifact into an existing index
-voidb plugin registry-index \
+vb plugin registry-index \
   dist/s3-0.3.0-x86_64-unknown-linux-gnu.tar.gz \
   --merge registry/index.json \
   --output registry/index.json

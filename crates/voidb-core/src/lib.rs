@@ -260,7 +260,7 @@ pub use process_plugin_contract::{
 };
 pub use process_plugin_runtime::{
     ProcessPluginHealth, ProcessPluginLaunchOptions, ProcessPluginRuntimeHost,
-    ProcessPluginRuntimeState, ProcessPluginSessionRuntime,
+    ProcessPluginRuntimeState, ProcessPluginSessionRuntime, credential_grant_descriptors,
 };
 pub use profile_adapter::{
     connection_config_to_profile, connection_configs_to_profiles, legacy_profile_id,

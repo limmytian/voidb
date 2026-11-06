@@ -11,18 +11,18 @@ For the full release-candidate command and residual-risk matrix, start with
 cargo test -p voidb-plugin-email config::tests
 cargo test -p voidb-core security_sensitive_local_files_are_private -- --nocapture
 cargo test -p voidb-core reencrypt_config_file_sets_user_passphrase_metadata -- --nocapture
-cargo test -p vb default_passphrase_warning_is_redacted_and_machine_readable -- --nocapture
-cargo test -p vb user_passphrase_protection_suppresses_default_passphrase_warning -- --nocapture
-cargo test -p vb dry_run_requires_capability_support -- --nocapture
-cargo test -p vb destructive_sqlite_exec_requires_ack_or_dry_run -- --nocapture
+cargo test -p voidb-cli default_passphrase_warning_is_redacted_and_machine_readable -- --nocapture
+cargo test -p voidb-cli user_passphrase_protection_suppresses_default_passphrase_warning -- --nocapture
+cargo test -p voidb-cli dry_run_requires_capability_support -- --nocapture
+cargo test -p voidb-cli destructive_sqlite_exec_requires_ack_or_dry_run -- --nocapture
 cargo test -p voidb-plugin-ssh capabilities
 cargo test -p voidb-plugin-ssh service
 cargo test -p voidb-core process_plugin
 cargo test -p voidb-core process_plugin_runtime
-cargo test -p vb plugin
-cargo test -p vb invoke
-cargo test -p vb jit_authorization
-cargo test -p vb ssh_reference_jit_flow
+cargo test -p voidb-cli plugin
+cargo test -p voidb-cli invoke
+cargo test -p voidb-cli jit_authorization
+cargo test -p voidb-cli ssh_reference_jit_flow
 cargo test -p voidb-tui jit_
 scripts/tui-quality-gate.sh
 scripts/ssh-fixture-smoke.sh --report target/tmp/ssh-fixture-smoke-evidence.md

@@ -136,6 +136,7 @@ fn build_cli_manager() -> CliPluginManager {
     cli_manager.register(Box::new(builtin::context::ContextCliPlugin::new()));
     cli_manager.register(Box::new(builtin::credential::CredentialCliPlugin::new()));
     cli_manager.register(Box::new(builtin::invoke::InvokeCliPlugin::new()));
+    cli_manager.register(Box::new(builtin::mcp::McpCliPlugin::new()));
     cli_manager.register(Box::new(builtin::plugin::PluginCliPlugin::new()));
     cli_manager.register(Box::new(builtin::profile::ProfileCliPlugin::new()));
 
@@ -319,6 +320,7 @@ fn command_can_use_raw_config(matches: &ArgMatches) -> bool {
         || (plugin_id == "profile" && matches!(command, "list" | "show"))
         || plugin_id == "plugin"
         || (plugin_id == "invoke" && matches!(command, "list" | "describe" | "matrix"))
+        || plugin_id == "mcp"
         || plugin_id == "context"
         || (plugin_id == "ssh" && matches!(command, "session" | "assist"))
         || (command == "tui" && tui_fixture_without_target(command_matches))
@@ -371,6 +373,17 @@ mod tests {
     use super::*;
     use std::collections::BTreeMap;
     use std::path::PathBuf;
+
+    /// Keeps encryption-related tests off the OS keyring: the keyring backend
+    /// can block indefinitely on a keychain authorization prompt in headless
+    /// or sandboxed environments (observed on macOS), so tests exercise the
+    /// file-fallback install secret instead.
+    fn disable_keyring_for_tests() {
+        static ONCE: std::sync::Once = std::sync::Once::new();
+        ONCE.call_once(|| unsafe {
+            std::env::set_var("VOIDB_DISABLE_KEYRING", "1");
+        });
+    }
 
     fn parse_cli(args: &[&str]) -> ArgMatches {
         let cli_manager = build_cli_manager();
@@ -534,6 +547,7 @@ mod tests {
 
     #[test]
     fn protected_config_static_discovery_never_requires_or_exposes_password() {
+        disable_keyring_for_tests();
         let root = std::env::temp_dir().join(format!(
             "voidb-cli-static-discovery-{}",
             uuid::Uuid::new_v4()
@@ -564,6 +578,7 @@ mod tests {
             vec!["invoke", "describe", "ssh.exec"],
             vec!["plugin", "list"],
             vec!["profile", "list"],
+            vec!["mcp", "serve"],
             vec![
                 "context",
                 "status",
@@ -596,6 +611,7 @@ mod tests {
 
     #[test]
     fn legacy_unprotected_config_static_discovery_ignores_password_context() {
+        disable_keyring_for_tests();
         let root = std::env::temp_dir().join(format!(
             "voidb-cli-legacy-static-discovery-{}",
             uuid::Uuid::new_v4()

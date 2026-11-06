@@ -1,6 +1,6 @@
 [package]
 name = "voidb-process-plugin-sdk"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2024"
 license.workspace = true
 authors.workspace = true
@@ -14,7 +14,9 @@ categories = ["development-tools", "database-implementations"]
 [dependencies]
 voidb-core = { path = "../voidb-core", default-features = false }
 
+async-trait = { workspace = true }
 chrono = { workspace = true }
 serde = { workspace = true }
+tokio = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
