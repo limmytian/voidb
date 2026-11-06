@@ -82,6 +82,27 @@ plugin-side session handle lands in its repository, run `vb invoke describe`
 against the capability and open an agent session under a scoped grant,
 record the exact behavior, and flip the adoption-matrix row only then.
 
+### Slice B addendum — session bridge and survey follow-ups (2026-11-06)
+
+The highest-leverage survey finding closed: the SDK `CapabilityRouter` never
+answered `voidb.session.*`, so every installed-binary session open failed
+with `plugin.session_unsupported` despite ~9k lines of implemented,
+unit-tested plugin session code. The SDK now exposes a `SessionBridge` plus
+a ready-made `CoreSessionAdapter` over `PluginAgentSessionFactory`
+(advertisement-gated `initialize`), all thirteen external plugins register
+their factories through it, and `SessionOpenParams.options` plus the
+stateless `invocation.connection` options carry the profile's decrypted
+plugin configuration per the secret-brokering scoped-disclosure rule.
+Verified end to end: broker session open against the docker plugin reaches
+the plugin factory and reports `health: ready`, and a deliberately broken
+socket profile fails with the configured target error instead of silently
+using defaults. Additional survey fixes: EXPLAIN ANALYZE of mutations no
+longer passes the SQL read-only gates; docker TLS profiles fail closed
+instead of silently downgrading to plaintext HTTP; kubernetes
+port-forward serves clients concurrently; mongodb/elasticsearch bulk
+operations are bounded; plugin READMEs switched to `vb` spellings and the
+stale "remain deferred" capability notes are gone.
+
 ### Slice A addendum — external plugin work items found during 0.4.1 (2026-11-06)
 
 - `voidb-plugin-docker`: the standalone TUI did not auto-load its primary
