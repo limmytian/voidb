@@ -10,6 +10,7 @@ VoidB is a terminal-based database management tool with vim-style keybindings an
 - [Service Layer Design](service-layer-design.md) - Service-layer decisions, invariants, and known pitfalls from the plugin decoupling milestone
 - [Technology Stack](tech-stack.md) - Languages, runtime, dependencies, and build tooling inventory
 - [0.4.1 Iteration Roadmap](roadmap-0.4.1.md) - Scope, workstreams, sequencing, and definition of done for the 0.4.1 iteration
+- [0.4.2 Iteration Roadmap](roadmap-0.4.2.md) - Profile lifecycle CLI, release automation, quality batch, and the TUI dedup pilot
 - [MCP Server](mcp-server.md) - `vb mcp serve` stdio gateway: tools, annotations, broker-gated calls, resources, and client configuration
 - [ADR: MCP Agent Gateway](adr-mcp-agent-gateway.md) - Pinned protocol revision and the grant-client authorization architecture
 - [Process Plugin Quickstart](quickstart-process-plugin.md) - Five-minute quickstart for writing stdio-jsonrpc process plugins in multiple languages
