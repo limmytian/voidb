@@ -137,6 +137,22 @@ When creating a profile, enter `Connection type`, `Name`, then optional
 its connection type (case-insensitive). Display names may be repeated. Each
 profile also receives a globally unique, immutable Profile ID.
 
+Agents and scripts can manage profiles without the TUI:
+
+```bash
+vb profile create --plugin mysql --name prod-db \
+  --input mysql-profile.json --credential password:env=VOIDB_MYSQL_PASSWORD --format json
+vb profile update prod-db --set metadata.database=app2 --expected-version 3 --format json
+vb profile validate --plugin mysql --input mysql-profile.json --format json
+```
+
+`profile create/update/validate` validate documents against the plugin's
+declared schema, reject plaintext secrets in payloads
+(`validation.secret_in_profile_payload`), convert `--credential
+<class>:env=VAR|file=PATH` sources into credential references, and guard
+updates with `--expected-version` optimistic concurrency. See
+[Connection Profile CLI Contract](docs/connection-profile-cli.md).
+
 For agent access, select a profile in the Connection Manager, press `a`, and
 confirm the recommended 15-minute read-only access. Agents can then use the
 short facade command without handling grant IDs, plugin IDs, or immutable

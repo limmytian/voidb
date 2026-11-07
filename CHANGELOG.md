@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Profile lifecycle CLI (`vb profile create/update/validate`)**: the documented-but-missing profile management commands are now implemented (`docs/connection-profile-cli.md`). Schema-driven documents validate against the plugin's bundled profile form schema; plaintext credential material in payloads is rejected with `validation.secret_in_profile_payload`; `--credential <class>:env=VAR|file=PATH` sources convert into credential references without echoing values; `update` guards with `--expected-version` optimistic concurrency (`conflict.profile_version_mismatch`, required for non-interactive writes); `--dry-run` previews the planned redacted profile; name conflicts are stable (`conflict.profile_name_conflict`); every mutation is audit-logged. Stored profiles gain a monotonic `version` field, and non-credential configuration is mirrored into profile metadata so agent-facing `list`/`show` describe the target without decryption. Interactive schema prompts are deferred; the commands are JSON-first.
 - **`vb plugin update --all`**: one command updates every installed plugin with a newer registry version. Prints the plan (installed → target), requires a typed `UPDATE` confirmation on a terminal or `--yes` for scripts, honors `--dry-run`, and continues past per-plugin failures with a structured summary (`updated`, `up_to_date`, `failed`).
+
+### Changed
+- **Self-updating plugin registry**: every official plugin repository's release workflow now sends a `plugin_released` `repository_dispatch` to the core repository after publishing (plugin id + release tag), so `update-registry.yml` re-indexes the registry without a manual run; the dispatch step fails loudly with the manual recovery command, and the per-plugin sync path reads `client_payload.plugin_id`.
 
 ## [0.4.1] - 2026-11-06
 
