@@ -3,7 +3,7 @@
   "schema_version": 1,
   "registry_name": "VoidB Official Plugin Registry",
   "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
-  "updated_at": "2026-11-07T08:48:28.081944594Z",
+  "updated_at": "2026-11-07T09:00:31.486252128Z",
   "plugins": [
     {
       "id": "docker",
@@ -35,7 +35,7 @@
         "attach_resize",
         "container_action"
       ],
-      "latest_version": "0.3.6",
+      "latest_version": "0.3.7",
       "versions": [
         {
           "version": "0.3.3",
@@ -225,6 +225,55 @@
               "sha256": "sha256:c25431e66f05541b927951c6820707f9f4fb6d9b6106cf5b56939f41d983e7dd",
               "size_bytes": 5449555,
               "signature": "94c22f6f26d4f331c0b557a1bf69139f49fd091937a92f76948a03fc856a65a49472f88ee19a1a91808719c3407a4e9fb1b743905a9650f69dcef248e8ba3508"
+            }
+          ]
+        },
+        {
+          "version": "0.3.7",
+          "protocol_version": "1",
+          "released_at": "2026-11-07T09:00:26.996938289Z",
+          "voidb_core": ">=0.4.1",
+          "platforms": [
+            "darwin",
+            "linux"
+          ],
+          "signature_scheme": "ed25519",
+          "packages": [
+            {
+              "filename": "docker-0.3.7-aarch64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-docker/releases/download/v0.3.7/docker-0.3.7-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:8e2046e4fed57ad2c95c2777a8cdbc34b00bade311ffd52e5a858a84753460e4",
+              "size_bytes": 4567808,
+              "signature": "ae619c2da752cf1b29740d390158832dc942aabf0251e8e8c087a30b524e2ba833be89932093784429b1c461999be3daeb01f21fee2b511407a27fea034e850f"
+            },
+            {
+              "filename": "docker-0.3.7-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-docker/releases/download/v0.3.7/docker-0.3.7-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:cef825a19be1407cea59657ef529f91f6738fefe9fa07b513cbcbb31ab4cf48c",
+              "size_bytes": 5757355,
+              "signature": "5173da44c5bf9949bf9252627d843cad8d1168f3ca3c60e0a2407eb8b9b96245d7d18acfb216c3a58e306d80f6e50815703be89c55aea433b1fe03030c44ba0b"
+            },
+            {
+              "filename": "docker-0.3.7-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-docker/releases/download/v0.3.7/docker-0.3.7-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:b07ba5c76f79ec1a9376f06f8c6ec00290593396a4021bc4b35eb1d7680f91fd",
+              "size_bytes": 4752414,
+              "signature": "92833af04a98d534fa476ba4178b3457b3b66115b4f824d8761d5224cd0c289fcd7dbce1322e340499de31583e5fa00b6ee9b089b2f55a75ac986a7cbd804d09"
+            },
+            {
+              "filename": "docker-0.3.7-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-docker/releases/download/v0.3.7/docker-0.3.7-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:cb282a934153af386ac9804f8480466bf1920089619179a650c16069f0c0a14a",
+              "size_bytes": 5441255,
+              "signature": "721981f57cdf9e5c0c20c1370214473af8008d5276d04880867a65e4c4dd8aea0722aa5b719c3d80f1c496797fbee497daa1517791a74093296f1da4a94ee306"
             }
           ]
         }
