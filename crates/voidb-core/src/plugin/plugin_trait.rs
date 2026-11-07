@@ -4,7 +4,7 @@
 //! Plugins are autonomous applications that run within the VoidB shell.
 
 use anyhow::Result;
-use ratatui::{layout::Rect, Frame};
+use ratatui::{Frame, layout::Rect};
 
 use crate::{Event, ShellCapabilities};
 
@@ -182,12 +182,7 @@ pub trait Plugin: Send + Sync {
     ///     Ok(())
     /// }
     /// ```
-    fn update(
-        &mut self,
-        frame: &mut Frame,
-        area: Rect,
-        event: Option<Event>,
-    ) -> Result<()>;
+    fn update(&mut self, frame: &mut Frame, area: Rect, event: Option<Event>) -> Result<()>;
 
     /// Whether this plugin currently wants raw keyboard input.
     ///

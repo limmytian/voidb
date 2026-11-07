@@ -194,9 +194,7 @@ impl std::str::FromStr for AuditOperation {
             "assist_respond" | "assist.respond" => Ok(Self::AssistRespond),
             "assist_inspect" | "assist.inspect" => Ok(Self::AssistInspect),
             "assist_propose" | "assist.propose" => Ok(Self::AssistPropose),
-            "assist_approve_control" | "assist.approve_control" => {
-                Ok(Self::AssistApproveControl)
-            }
+            "assist_approve_control" | "assist.approve_control" => Ok(Self::AssistApproveControl),
             "assist_revoke" | "assist.revoke" => Ok(Self::AssistRevoke),
             "assist_cancel" | "assist.cancel" => Ok(Self::AssistCancel),
             "assist_expire" | "assist.expire" => Ok(Self::AssistExpire),
@@ -632,10 +630,7 @@ fn audit_event_matches_profile(event: &AuditEvent, profile: &str) -> bool {
     }
 }
 
-fn audit_event_matches_policy_outcome(
-    event: &AuditEvent,
-    outcome: PolicyDecisionOutcome,
-) -> bool {
+fn audit_event_matches_policy_outcome(event: &AuditEvent, outcome: PolicyDecisionOutcome) -> bool {
     event
         .metadata
         .get("policy_decision")
@@ -704,8 +699,7 @@ fn append_private_line(path: &Path, line: &str) -> std::io::Result<()> {
 mod tests {
     use super::*;
     use crate::capability::{
-        ActorType, CapabilityErrorCategory, CredentialClass, PolicyDecisionOutcome,
-        RedactionStatus,
+        ActorType, CapabilityErrorCategory, CredentialClass, PolicyDecisionOutcome, RedactionStatus,
     };
     use chrono::TimeZone;
     use std::sync::atomic::{AtomicU64, Ordering};

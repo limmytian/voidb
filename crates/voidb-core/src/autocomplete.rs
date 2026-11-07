@@ -47,42 +47,150 @@ enum SqlContext {
 }
 
 static SQL_KEYWORDS: &[&str] = &[
-    "SELECT", "FROM", "WHERE", "AND", "OR", "NOT", "IN", "IS", "NULL",
-    "INSERT", "INTO", "VALUES", "UPDATE", "SET", "DELETE",
-    "CREATE", "ALTER", "DROP", "TABLE", "INDEX", "VIEW", "DATABASE", "SCHEMA",
-    "JOIN", "INNER", "LEFT", "RIGHT", "OUTER", "CROSS", "FULL", "ON",
-    "ORDER", "BY", "ASC", "DESC", "GROUP", "HAVING",
-    "LIMIT", "OFFSET", "DISTINCT", "AS", "CASE", "WHEN", "THEN", "ELSE", "END",
-    "UNION", "ALL", "EXCEPT", "INTERSECT",
-    "EXISTS", "BETWEEN", "LIKE", "ILIKE",
-    "PRIMARY", "KEY", "FOREIGN", "REFERENCES", "UNIQUE", "CHECK", "DEFAULT",
-    "CONSTRAINT", "CASCADE", "RESTRICT",
-    "BEGIN", "COMMIT", "ROLLBACK", "TRANSACTION",
-    "GRANT", "REVOKE", "TRUNCATE",
-    "IF", "REPLACE", "TEMPORARY", "TEMP",
-    "WITH", "RECURSIVE", "RETURNING",
-    "EXPLAIN", "ANALYZE", "VERBOSE",
-    "TRUE", "FALSE",
+    "SELECT",
+    "FROM",
+    "WHERE",
+    "AND",
+    "OR",
+    "NOT",
+    "IN",
+    "IS",
+    "NULL",
+    "INSERT",
+    "INTO",
+    "VALUES",
+    "UPDATE",
+    "SET",
+    "DELETE",
+    "CREATE",
+    "ALTER",
+    "DROP",
+    "TABLE",
+    "INDEX",
+    "VIEW",
+    "DATABASE",
+    "SCHEMA",
+    "JOIN",
+    "INNER",
+    "LEFT",
+    "RIGHT",
+    "OUTER",
+    "CROSS",
+    "FULL",
+    "ON",
+    "ORDER",
+    "BY",
+    "ASC",
+    "DESC",
+    "GROUP",
+    "HAVING",
+    "LIMIT",
+    "OFFSET",
+    "DISTINCT",
+    "AS",
+    "CASE",
+    "WHEN",
+    "THEN",
+    "ELSE",
+    "END",
+    "UNION",
+    "ALL",
+    "EXCEPT",
+    "INTERSECT",
+    "EXISTS",
+    "BETWEEN",
+    "LIKE",
+    "ILIKE",
+    "PRIMARY",
+    "KEY",
+    "FOREIGN",
+    "REFERENCES",
+    "UNIQUE",
+    "CHECK",
+    "DEFAULT",
+    "CONSTRAINT",
+    "CASCADE",
+    "RESTRICT",
+    "BEGIN",
+    "COMMIT",
+    "ROLLBACK",
+    "TRANSACTION",
+    "GRANT",
+    "REVOKE",
+    "TRUNCATE",
+    "IF",
+    "REPLACE",
+    "TEMPORARY",
+    "TEMP",
+    "WITH",
+    "RECURSIVE",
+    "RETURNING",
+    "EXPLAIN",
+    "ANALYZE",
+    "VERBOSE",
+    "TRUE",
+    "FALSE",
 ];
 
 static SQL_FUNCTIONS: &[&str] = &[
-    "COUNT", "SUM", "AVG", "MIN", "MAX",
-    "COALESCE", "NULLIF", "CAST",
-    "CONCAT", "LENGTH", "LOWER", "UPPER", "TRIM", "SUBSTRING", "REPLACE",
-    "ROUND", "CEIL", "FLOOR", "ABS", "MOD",
-    "NOW", "CURRENT_TIMESTAMP", "CURRENT_DATE", "CURRENT_TIME",
-    "DATE", "YEAR", "MONTH", "DAY", "HOUR", "MINUTE", "SECOND",
-    "DATE_FORMAT", "DATE_ADD", "DATE_SUB", "DATEDIFF", "TIMESTAMPDIFF",
-    "IF", "IFNULL", "IIF",
-    "ROW_NUMBER", "RANK", "DENSE_RANK", "NTILE", "LEAD", "LAG",
-    "OVER", "PARTITION",
-    "STRING_AGG", "GROUP_CONCAT", "ARRAY_AGG",
-    "JSON_EXTRACT", "JSON_OBJECT", "JSON_ARRAY",
+    "COUNT",
+    "SUM",
+    "AVG",
+    "MIN",
+    "MAX",
+    "COALESCE",
+    "NULLIF",
+    "CAST",
+    "CONCAT",
+    "LENGTH",
+    "LOWER",
+    "UPPER",
+    "TRIM",
+    "SUBSTRING",
+    "REPLACE",
+    "ROUND",
+    "CEIL",
+    "FLOOR",
+    "ABS",
+    "MOD",
+    "NOW",
+    "CURRENT_TIMESTAMP",
+    "CURRENT_DATE",
+    "CURRENT_TIME",
+    "DATE",
+    "YEAR",
+    "MONTH",
+    "DAY",
+    "HOUR",
+    "MINUTE",
+    "SECOND",
+    "DATE_FORMAT",
+    "DATE_ADD",
+    "DATE_SUB",
+    "DATEDIFF",
+    "TIMESTAMPDIFF",
+    "IF",
+    "IFNULL",
+    "IIF",
+    "ROW_NUMBER",
+    "RANK",
+    "DENSE_RANK",
+    "NTILE",
+    "LEAD",
+    "LAG",
+    "OVER",
+    "PARTITION",
+    "STRING_AGG",
+    "GROUP_CONCAT",
+    "ARRAY_AGG",
+    "JSON_EXTRACT",
+    "JSON_OBJECT",
+    "JSON_ARRAY",
 ];
 
 pub struct AutocompleteEngine {
     tables: Vec<String>,
-    columns: Vec<(String, String)>,  // (table, column)
+    columns: Vec<(String, String)>, // (table, column)
     schemas: Vec<String>,
 }
 
@@ -134,8 +242,10 @@ impl AutocompleteEngine {
                 self.add_schemas(&prefix_lower, &mut suggestions, &mut seen);
                 self.add_keywords(&prefix_upper, &mut suggestions, &mut seen);
             }
-            SqlContext::SelectColumns | SqlContext::WhereCondition
-            | SqlContext::SetColumns | SqlContext::OrderByColumns => {
+            SqlContext::SelectColumns
+            | SqlContext::WhereCondition
+            | SqlContext::SetColumns
+            | SqlContext::OrderByColumns => {
                 self.add_columns(&prefix_lower, &mut suggestions, &mut seen);
                 self.add_functions(&prefix_upper, &mut suggestions, &mut seen);
                 self.add_tables(&prefix_lower, &mut suggestions, &mut seen);
@@ -162,7 +272,8 @@ impl AutocompleteEngine {
 
     fn extract_prefix(&self, text: &str, cursor_pos: usize) -> String {
         let before = &text[..cursor_pos.min(text.len())];
-        let start = before.rfind(|c: char| !c.is_alphanumeric() && c != '_' && c != '.')
+        let start = before
+            .rfind(|c: char| !c.is_alphanumeric() && c != '_' && c != '.')
             .map(|i| i + 1)
             .unwrap_or(0);
         before[start..].to_string()
@@ -202,8 +313,14 @@ impl AutocompleteEngine {
                 }
                 _ => {
                     // Check if this looks like a complete statement start
-                    if i == 0 && (token == "INSERT" || token == "DELETE" || token == "BEGIN"
-                        || token == "COMMIT" || token == "ROLLBACK" || token == "EXPLAIN") {
+                    if i == 0
+                        && (token == "INSERT"
+                            || token == "DELETE"
+                            || token == "BEGIN"
+                            || token == "COMMIT"
+                            || token == "ROLLBACK"
+                            || token == "EXPLAIN")
+                    {
                         return SqlContext::StatementStart;
                     }
                     continue;
@@ -218,7 +335,12 @@ impl AutocompleteEngine {
         }
     }
 
-    fn add_keywords(&self, prefix: &str, suggestions: &mut Vec<Suggestion>, seen: &mut HashSet<String>) {
+    fn add_keywords(
+        &self,
+        prefix: &str,
+        suggestions: &mut Vec<Suggestion>,
+        seen: &mut HashSet<String>,
+    ) {
         for &kw in SQL_KEYWORDS {
             if kw.starts_with(prefix) && !seen.contains(kw) {
                 seen.insert(kw.to_string());
@@ -231,7 +353,12 @@ impl AutocompleteEngine {
         }
     }
 
-    fn add_functions(&self, prefix: &str, suggestions: &mut Vec<Suggestion>, seen: &mut HashSet<String>) {
+    fn add_functions(
+        &self,
+        prefix: &str,
+        suggestions: &mut Vec<Suggestion>,
+        seen: &mut HashSet<String>,
+    ) {
         for &func in SQL_FUNCTIONS {
             if func.starts_with(prefix) && !seen.contains(func) {
                 seen.insert(func.to_string());
@@ -244,7 +371,12 @@ impl AutocompleteEngine {
         }
     }
 
-    fn add_tables(&self, prefix: &str, suggestions: &mut Vec<Suggestion>, seen: &mut HashSet<String>) {
+    fn add_tables(
+        &self,
+        prefix: &str,
+        suggestions: &mut Vec<Suggestion>,
+        seen: &mut HashSet<String>,
+    ) {
         for table in &self.tables {
             let lower = table.to_lowercase();
             if lower.starts_with(prefix) && !seen.contains(&lower) {
@@ -258,7 +390,12 @@ impl AutocompleteEngine {
         }
     }
 
-    fn add_columns(&self, prefix: &str, suggestions: &mut Vec<Suggestion>, seen: &mut HashSet<String>) {
+    fn add_columns(
+        &self,
+        prefix: &str,
+        suggestions: &mut Vec<Suggestion>,
+        seen: &mut HashSet<String>,
+    ) {
         for (table, col) in &self.columns {
             let lower = col.to_lowercase();
             if lower.starts_with(prefix) && !seen.contains(&lower) {
@@ -272,7 +409,12 @@ impl AutocompleteEngine {
         }
     }
 
-    fn add_schemas(&self, prefix: &str, suggestions: &mut Vec<Suggestion>, seen: &mut HashSet<String>) {
+    fn add_schemas(
+        &self,
+        prefix: &str,
+        suggestions: &mut Vec<Suggestion>,
+        seen: &mut HashSet<String>,
+    ) {
         for schema in &self.schemas {
             let lower = schema.to_lowercase();
             if lower.starts_with(prefix) && !seen.contains(&lower) {
@@ -304,7 +446,11 @@ mod tests {
         let mut engine = AutocompleteEngine::new();
         engine.set_tables(vec!["users".into(), "products".into(), "orders".into()]);
         let suggestions = engine.complete("SELECT * FROM us", 16);
-        assert!(suggestions.iter().any(|s| s.label == "users" && s.kind == SuggestionKind::Table));
+        assert!(
+            suggestions
+                .iter()
+                .any(|s| s.label == "users" && s.kind == SuggestionKind::Table)
+        );
     }
 
     #[test]
@@ -316,14 +462,22 @@ mod tests {
             ("users".into(), "email".into()),
         ]);
         let suggestions = engine.complete("SELECT na", 9);
-        assert!(suggestions.iter().any(|s| s.label == "name" && s.kind == SuggestionKind::Column));
+        assert!(
+            suggestions
+                .iter()
+                .any(|s| s.label == "name" && s.kind == SuggestionKind::Column)
+        );
     }
 
     #[test]
     fn test_function_completion() {
         let engine = AutocompleteEngine::new();
         let suggestions = engine.complete("SELECT COU", 10);
-        assert!(suggestions.iter().any(|s| s.label == "COUNT()" && s.kind == SuggestionKind::Function));
+        assert!(
+            suggestions
+                .iter()
+                .any(|s| s.label == "COUNT()" && s.kind == SuggestionKind::Function)
+        );
     }
 
     #[test]

@@ -146,8 +146,9 @@ mod tests {
 
         let message = b"signed by the real publisher";
         let sig_hex = sign_bytes(message, &signing_key);
-        let result = verify_bytes_signature(message, &sig_hex, &hex::encode(other_verifying.to_bytes()))
-            .expect("verification itself must not error");
+        let result =
+            verify_bytes_signature(message, &sig_hex, &hex::encode(other_verifying.to_bytes()))
+                .expect("verification itself must not error");
         assert!(!result.valid);
     }
 
@@ -197,9 +198,11 @@ mod tests {
             std::fs::read_to_string(dir.join("plugin.tar.zst.sig")).expect("sig file"),
             sig_hex
         );
-        assert!(verify_file_signature(&path, &sig_hex, &pub_hex)
-            .expect("verify file")
-            .valid);
+        assert!(
+            verify_file_signature(&path, &sig_hex, &pub_hex)
+                .expect("verify file")
+                .valid
+        );
 
         std::fs::write(&path, b"package payload TAMPERED").expect("tamper package");
         assert!(

@@ -19,9 +19,7 @@ use voidb_core::agent_authorization::AgentPrincipal;
 use voidb_core::plugin::cli::{CliContext, CliPlugin};
 use voidb_core::{VoidbError, discover_process_plugins};
 
-use crate::agent_broker::{
-    AGENT_CLIENT_ID_ENV, AGENT_INSTANCE_ID_ENV, AGENT_TASK_ID_ENV,
-};
+use crate::agent_broker::{AGENT_CLIENT_ID_ENV, AGENT_INSTANCE_ID_ENV, AGENT_TASK_ID_ENV};
 use handlers::McpServer;
 use wire::MAX_FRAME_BYTES;
 
@@ -50,36 +48,40 @@ impl CliPlugin for McpCliPlugin {
     }
 
     fn commands(&self) -> Vec<Command> {
-        vec![Command::new("serve")
-            .about(
-                "Serve the capability catalog as MCP tools over stdio \
+        vec![
+            Command::new("serve")
+                .about(
+                    "Serve the capability catalog as MCP tools over stdio \
                  (JSON-RPC; tools/call requires an active agent grant)",
-            )
-            .arg(
-                Arg::new("client-id")
-                    .long("client-id")
-                    .value_name("CLIENT_ID")
-                    .help("Agent principal client id for grant matching (default: env or none)"),
-            )
-            .arg(
-                Arg::new("task-id")
-                    .long("task-id")
-                    .value_name("TASK_ID")
-                    .requires("client-id")
-                    .help("Agent principal task id; required together with --client-id"),
-            )
-            .arg(
-                Arg::new("instance-id")
-                    .long("instance-id")
-                    .value_name("INSTANCE_ID")
-                    .help("Optional agent principal instance id"),
-            )
-            .arg(
-                Arg::new("quiet")
-                    .long("quiet")
-                    .action(ArgAction::SetTrue)
-                    .help("Suppress the stderr startup banner"),
-            )]
+                )
+                .arg(
+                    Arg::new("client-id")
+                        .long("client-id")
+                        .value_name("CLIENT_ID")
+                        .help(
+                            "Agent principal client id for grant matching (default: env or none)",
+                        ),
+                )
+                .arg(
+                    Arg::new("task-id")
+                        .long("task-id")
+                        .value_name("TASK_ID")
+                        .requires("client-id")
+                        .help("Agent principal task id; required together with --client-id"),
+                )
+                .arg(
+                    Arg::new("instance-id")
+                        .long("instance-id")
+                        .value_name("INSTANCE_ID")
+                        .help("Optional agent principal instance id"),
+                )
+                .arg(
+                    Arg::new("quiet")
+                        .long("quiet")
+                        .action(ArgAction::SetTrue)
+                        .help("Suppress the stderr startup banner"),
+                ),
+        ]
     }
 
     async fn execute(
@@ -144,11 +146,7 @@ fn mcp_principal(matches: &ArgMatches) -> Result<Option<AgentPrincipal>, VoidbEr
     let explicit_instance = matches.get_one::<String>("instance-id").cloned();
     let (client_id, task_id, instance_id) =
         if explicit_client.is_some() || explicit_task.is_some() || explicit_instance.is_some() {
-            (
-                explicit_client,
-                explicit_task,
-                explicit_instance,
-            )
+            (explicit_client, explicit_task, explicit_instance)
         } else {
             (
                 nonempty_env(AGENT_CLIENT_ID_ENV),

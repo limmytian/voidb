@@ -18,8 +18,8 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 use voidb_core::capability::{
     CapabilityDefinition, CapabilityError, CapabilityErrorCategory, CapabilityInvocation,
-    ConnectionInstancePurpose, ConnectionProfile, CredentialClass, InstanceReusePolicy,
-    InvocationConnectionTarget, InvocationControls, CapabilityRiskLevel, RedactionStatus,
+    CapabilityRiskLevel, ConnectionInstancePurpose, ConnectionProfile, CredentialClass,
+    InstanceReusePolicy, InvocationConnectionTarget, InvocationControls, RedactionStatus,
     grant_credentials_for_invocation,
 };
 use voidb_core::process_plugin::ProcessPluginCandidateState;
@@ -27,13 +27,11 @@ use voidb_core::process_plugin_runtime::{
     ProcessPluginRuntimeHost, ProcessPluginSessionRuntime, credential_grant_descriptors,
 };
 use voidb_core::session::{
-    AgentSessionCallRequest, AgentSessionCallResult, AgentSessionOpenContext,
-    AgentSessionConcurrency, PluginAgentSession, PluginAgentSessionFactory, PluginSessionError,
+    AgentSessionCallRequest, AgentSessionCallResult, AgentSessionConcurrency,
+    AgentSessionOpenContext, PluginAgentSession, PluginAgentSessionFactory, PluginSessionError,
     PluginSessionErrorCode, PluginSessionHealth, PluginSessionReason,
 };
-use voidb_core::{
-    ConnectionConfig, DatabaseType, LocalProfileStore, redact_text_with_json,
-};
+use voidb_core::{ConnectionConfig, DatabaseType, LocalProfileStore, redact_text_with_json};
 
 /// Built-in plugin IDs that never host persistent agent sessions:
 /// `connections` is an observer without protocol state, and Sync remains
@@ -67,13 +65,10 @@ impl ExternalPluginSessionFactory {
         master_password: &str,
     ) -> anyhow::Result<Option<Self>> {
         let discovery = voidb_core::discover_process_plugins();
-        let candidate = discovery
-            .candidates
-            .into_iter()
-            .find(|candidate| {
-                candidate.id == grant_plugin_id
-                    && candidate.state == ProcessPluginCandidateState::Available
-            });
+        let candidate = discovery.candidates.into_iter().find(|candidate| {
+            candidate.id == grant_plugin_id
+                && candidate.state == ProcessPluginCandidateState::Available
+        });
         let Some(candidate) = candidate else {
             return Ok(None);
         };
@@ -98,10 +93,7 @@ impl ExternalPluginSessionFactory {
             for capability in &manifest.capabilities {
                 // Grant capabilities are qualified as "plugin.capability".
                 let definition = capability_definition(manifest.id.clone(), capability);
-                capabilities.insert(
-                    format!("{}.{}", manifest.id, capability.id),
-                    definition,
-                );
+                capabilities.insert(format!("{}.{}", manifest.id, capability.id), definition);
             }
         }
 
@@ -189,8 +181,8 @@ impl PluginAgentSessionFactory for ExternalPluginSessionFactory {
             })
             .unwrap_or_else(|| "capability_invocation".to_owned());
 
-        let credential_grants =
-            self.session_credential_grants(&context.binding.allowed_capabilities, &plugin_session_id)?;
+        let credential_grants = self
+            .session_credential_grants(&context.binding.allowed_capabilities, &plugin_session_id)?;
 
         let open_result = runtime
             .session_open(json!({
@@ -451,9 +443,7 @@ fn map_capability_error(error: &CapabilityError) -> PluginSessionError {
             "Plugin session output failed closed and cannot be returned.",
         );
     }
-    if let Ok(code) =
-        serde_json::from_value::<PluginSessionErrorCode>(json!(error.code))
-    {
+    if let Ok(code) = serde_json::from_value::<PluginSessionErrorCode>(json!(error.code)) {
         return PluginSessionError::new(code, error.message.clone());
     }
     let code = match error.code.as_str() {
@@ -600,13 +590,13 @@ mod tests {
     use super::*;
     use crate::agent_session_host::AgentSessionHost;
     use chrono::Duration;
-    use voidb_core::process_plugin::{
-        ProcessPluginCandidate,
-        ProcessPluginPackageSource, ProcessPluginRoot, ProcessPluginRootKind,
-        discover_process_plugins_from_roots, validate_process_plugin_package,
-        write_process_plugin_install_record, cleanup_process_plugin_package_staging,
-    };
     use voidb_core::plugin_provenance::sign_test_candidate;
+    use voidb_core::process_plugin::{
+        ProcessPluginCandidate, ProcessPluginPackageSource, ProcessPluginRoot,
+        ProcessPluginRootKind, cleanup_process_plugin_package_staging,
+        discover_process_plugins_from_roots, validate_process_plugin_package,
+        write_process_plugin_install_record,
+    };
     use voidb_core::session::{
         AgentSessionBinding, AgentSessionCloseAgentRequest, AgentSessionOpenRequest,
         AgentSessionRef, PluginSessionPurpose,
@@ -645,10 +635,16 @@ mod tests {
         std::fs::create_dir_all(&bin).expect("create bin");
         std::fs::write(schemas.join("profile.schema.json"), r#"{"type":"object"}"#)
             .expect("write profile schema");
-        std::fs::write(schemas.join("echo-input.schema.json"), r#"{"type":"object"}"#)
-            .expect("write input schema");
-        std::fs::write(schemas.join("echo-output.schema.json"), r#"{"type":"object"}"#)
-            .expect("write output schema");
+        std::fs::write(
+            schemas.join("echo-input.schema.json"),
+            r#"{"type":"object"}"#,
+        )
+        .expect("write input schema");
+        std::fs::write(
+            schemas.join("echo-output.schema.json"),
+            r#"{"type":"object"}"#,
+        )
+        .expect("write output schema");
 
         let script = bin.join("fixture-runtime");
         std::fs::write(&script, fixture_script()).expect("write script");
@@ -782,10 +778,7 @@ done
             for capability in &manifest.capabilities {
                 // Grant capabilities are qualified as "plugin.capability".
                 let definition = capability_definition(manifest.id.clone(), capability);
-                capabilities.insert(
-                    format!("{}.{}", manifest.id, capability.id),
-                    definition,
-                );
+                capabilities.insert(format!("{}.{}", manifest.id, capability.id), definition);
             }
         }
         ExternalPluginSessionFactory {
@@ -834,7 +827,10 @@ done
 
         let handle = factory.open(context.clone()).await.expect("session open");
         assert_eq!(handle.concurrency(), AgentSessionConcurrency::Serialized);
-        assert!(matches!(handle.health().await.expect("health"), PluginSessionHealth::Ready));
+        assert!(matches!(
+            handle.health().await.expect("health"),
+            PluginSessionHealth::Ready
+        ));
 
         let reference = AgentSessionRef::new("agent-session:test", 1);
         let result = handle

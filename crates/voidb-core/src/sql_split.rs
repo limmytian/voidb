@@ -35,22 +35,32 @@ pub fn split_statements(sql: &str) -> Vec<&str> {
                         i += 1;
                     }
                 }
-                if i < len { i += 1; }
+                if i < len {
+                    i += 1;
+                }
             }
             b'`' => {
                 i += 1;
-                while i < len && bytes[i] != b'`' { i += 1; }
-                if i < len { i += 1; }
+                while i < len && bytes[i] != b'`' {
+                    i += 1;
+                }
+                if i < len {
+                    i += 1;
+                }
             }
             b'-' if i + 1 < len && bytes[i + 1] == b'-' => {
-                while i < len && bytes[i] != b'\n' { i += 1; }
+                while i < len && bytes[i] != b'\n' {
+                    i += 1;
+                }
             }
             b'/' if i + 1 < len && bytes[i + 1] == b'*' => {
                 i += 2;
                 while i + 1 < len && !(bytes[i] == b'*' && bytes[i + 1] == b'/') {
                     i += 1;
                 }
-                if i + 1 < len { i += 2; }
+                if i + 1 < len {
+                    i += 2;
+                }
             }
             b';' => {
                 let stmt = sql[start..i].trim();
@@ -60,7 +70,9 @@ pub fn split_statements(sql: &str) -> Vec<&str> {
                 i += 1;
                 start = i;
             }
-            _ => { i += 1; }
+            _ => {
+                i += 1;
+            }
         }
     }
 

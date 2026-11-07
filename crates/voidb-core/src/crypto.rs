@@ -199,7 +199,10 @@ fn install_passphrase_from_file() -> Result<Zeroizing<String>, VoidbError> {
             }
             Ok(Zeroizing::new(trimmed.to_string()))
         }
-        Err(err) => Err(VoidbError::Crypto(format!("Install key create failed: {}", err))),
+        Err(err) => Err(VoidbError::Crypto(format!(
+            "Install key create failed: {}",
+            err
+        ))),
     }
 }
 
@@ -240,7 +243,11 @@ pub fn encrypt(plaintext: &str, master_password: Option<&str>) -> Result<String,
     envelope.extend_from_slice(&nonce_bytes);
     envelope.extend_from_slice(&ciphertext);
 
-    Ok(format!("{}{}", ENCRYPTED_PREFIX_V2, BASE64_STANDARD.encode(&envelope)))
+    Ok(format!(
+        "{}{}",
+        ENCRYPTED_PREFIX_V2,
+        BASE64_STANDARD.encode(&envelope)
+    ))
 }
 
 /// Decrypt an encrypted envelope string.
@@ -341,9 +348,11 @@ pub fn encrypt_json_fields(
         for (key, val) in map.iter_mut() {
             if sensitive_keys.contains(&key.as_str())
                 && let serde_json::Value::String(s) = val
-                    && !s.is_empty() && !is_encrypted(s) {
-                        *s = encrypt(s, master_password)?;
-                    }
+                && !s.is_empty()
+                && !is_encrypted(s)
+            {
+                *s = encrypt(s, master_password)?;
+            }
         }
     }
     Ok(())
@@ -360,9 +369,10 @@ pub fn decrypt_json_fields(
         for (key, val) in map.iter_mut() {
             if sensitive_keys.contains(&key.as_str())
                 && let serde_json::Value::String(s) = val
-                    && is_encrypted(s) {
-                        *s = decrypt(s, master_password)?;
-                    }
+                && is_encrypted(s)
+            {
+                *s = decrypt(s, master_password)?;
+            }
         }
     }
     Ok(())
@@ -550,7 +560,11 @@ mod tests {
         envelope.extend_from_slice(&salt);
         envelope.extend_from_slice(&nonce_bytes);
         envelope.extend_from_slice(&ciphertext);
-        let v1_encrypted = format!("{}{}", ENCRYPTED_PREFIX_V1, BASE64_STANDARD.encode(&envelope));
+        let v1_encrypted = format!(
+            "{}{}",
+            ENCRYPTED_PREFIX_V1,
+            BASE64_STANDARD.encode(&envelope)
+        );
 
         // V1 value should be recognized as encrypted
         assert!(is_encrypted(&v1_encrypted));

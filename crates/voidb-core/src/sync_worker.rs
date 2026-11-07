@@ -75,7 +75,10 @@ pub struct SyncWorker<Cmd: Send + 'static, Resp: Send + 'static> {
 impl<Cmd: Send + 'static, Resp: Send + 'static> std::fmt::Debug for SyncWorker<Cmd, Resp> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SyncWorker")
-            .field("thread_alive", &self.thread.as_ref().map(|t| !t.is_finished()))
+            .field(
+                "thread_alive",
+                &self.thread.as_ref().map(|t| !t.is_finished()),
+            )
             .finish()
     }
 }
@@ -102,10 +105,7 @@ impl<Cmd: Send + 'static, Resp: Send + 'static> SyncWorker<Cmd, Resp> {
     ///
     /// # Errors
     /// Returns `Err` if `init_fn` fails or if the init barrier channel breaks.
-    pub fn spawn<C, F, H>(
-        init_fn: F,
-        handler_fn: H,
-    ) -> Result<Self, String>
+    pub fn spawn<C, F, H>(init_fn: F, handler_fn: H) -> Result<Self, String>
     where
         C: 'static, // No Send bound -- this is the entire point
         F: FnOnce() -> Result<C, String> + Send + 'static,
@@ -307,7 +307,10 @@ mod tests {
 
         // The thread should complete within a reasonable time
         let result = thread.join();
-        assert!(result.is_ok(), "Worker thread did not exit cleanly after sender was dropped");
+        assert!(
+            result.is_ok(),
+            "Worker thread did not exit cleanly after sender was dropped"
+        );
     }
 
     #[tokio::test]

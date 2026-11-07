@@ -270,12 +270,9 @@ mod tests {
     #[test]
     fn launch_plan_uses_profile_ref_in_args_and_grant_ref_in_env() {
         let profile = profile();
-        let request = TuiLaunchRequest::new(
-            "ssh",
-            ConnectionProfileRef::Name("prod".into()),
-            "terminal",
-        )
-        .raw_input(true);
+        let request =
+            TuiLaunchRequest::new("ssh", ConnectionProfileRef::Name("prod".into()), "terminal")
+                .raw_input(true);
 
         let plan = build_tui_launch_plan(&profile, request, "voidb", DateTime::UNIX_EPOCH).unwrap();
 

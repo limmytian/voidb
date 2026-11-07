@@ -192,7 +192,9 @@ pub fn extract(dest: &Path, archive: &[u8], preserve: &HashSet<String>) -> Resul
         let rel_str = path.to_string_lossy().to_string();
 
         if rel_str.contains("..") {
-            return Err(SyncError::Bundle(format!("rejecting unsafe path: {rel_str}")));
+            return Err(SyncError::Bundle(format!(
+                "rejecting unsafe path: {rel_str}"
+            )));
         }
         if preserve.contains(&rel_str) {
             // The archive shouldn't have preserved entries anyway (they're in
@@ -256,7 +258,12 @@ mod tests {
         let (manifest, archive) = build(src.path()).unwrap();
         assert_eq!(manifest.files.len(), 4); // config.toml, saved_queries.json, plugins/mysql/state.json, plugins/postgres/state.json
         assert!(manifest.files.iter().any(|e| e.path == "config.toml"));
-        assert!(manifest.files.iter().any(|e| e.path == "plugins/mysql/state.json"));
+        assert!(
+            manifest
+                .files
+                .iter()
+                .any(|e| e.path == "plugins/mysql/state.json")
+        );
         assert!(!manifest.files.iter().any(|e| e.path == "sync.toml"));
 
         extract(dst.path(), &archive, &preserve_on_extract()).unwrap();
@@ -267,9 +274,19 @@ mod tests {
     fn kind_global_excludes_plugins() {
         let src = make_fixture();
         let (manifest, _) = build_for_kind(src.path(), "global").unwrap();
-        assert!(manifest.files.iter().all(|e| !e.path.starts_with("plugins")));
+        assert!(
+            manifest
+                .files
+                .iter()
+                .all(|e| !e.path.starts_with("plugins"))
+        );
         assert!(manifest.files.iter().any(|e| e.path == "config.toml"));
-        assert!(manifest.files.iter().any(|e| e.path == "saved_queries.json"));
+        assert!(
+            manifest
+                .files
+                .iter()
+                .any(|e| e.path == "saved_queries.json")
+        );
     }
 
     #[test]

@@ -1488,7 +1488,12 @@ mod tests {
         );
 
         let created = store
-            .upsert_native_connection(None, &mysql_connection("db1.internal.example", "pw"), None, None)
+            .upsert_native_connection(
+                None,
+                &mysql_connection("db1.internal.example", "pw"),
+                None,
+                None,
+            )
             .expect("create profile");
         assert_eq!(created.version, 1);
 
@@ -1534,7 +1539,12 @@ mod tests {
         );
 
         let profile = store
-            .upsert_native_connection(None, &mysql_connection("db.internal.example", "pw"), None, None)
+            .upsert_native_connection(
+                None,
+                &mysql_connection("db.internal.example", "pw"),
+                None,
+                None,
+            )
             .expect("create profile");
 
         assert_eq!(profile.metadata["host"], "db.internal.example");
@@ -1543,10 +1553,12 @@ mod tests {
         assert!(profile.metadata["password"].is_null());
         assert_eq!(profile.metadata["source"], "native_profile_store");
         // The password still produced a credential reference.
-        assert!(profile
-            .credential_refs
-            .iter()
-            .any(|reference| reference.class == CredentialClass::Password));
+        assert!(
+            profile
+                .credential_refs
+                .iter()
+                .any(|reference| reference.class == CredentialClass::Password)
+        );
     }
 
     #[test]
@@ -1558,7 +1570,12 @@ mod tests {
         );
 
         let created = store
-            .upsert_native_connection(None, &mysql_connection("db1.internal.example", "pw"), None, None)
+            .upsert_native_connection(
+                None,
+                &mysql_connection("db1.internal.example", "pw"),
+                None,
+                None,
+            )
             .expect("create profile");
         let created_plan = derive_native_profile(
             &created.id,
@@ -1583,7 +1600,8 @@ mod tests {
                 document.clone(),
             )
             .expect("update profile");
-        let update_plan = derive_native_profile(&created.id, Some(&created), &config, None, &document);
+        let update_plan =
+            derive_native_profile(&created.id, Some(&created), &config, None, &document);
         assert_eq!(update_plan, updated);
         assert_eq!(update_plan.version, 2);
     }

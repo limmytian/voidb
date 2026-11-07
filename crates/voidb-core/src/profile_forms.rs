@@ -4,11 +4,11 @@
 //! form contract so the Connection Manager renderer is generic. Process
 //! plugins can expose the same shape from their manifest profile schema.
 
-use serde_json::{Value, json};
 use crate::{
     ProfileFormCondition, ProfileFormField, ProfileFormFieldKind, ProfileFormOption,
     ProfileFormSchema,
 };
+use serde_json::{Value, json};
 
 pub fn default_plugin_config(plugin_id: &str) -> Value {
     match plugin_id {

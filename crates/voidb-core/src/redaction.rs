@@ -115,7 +115,10 @@ pub fn strip_credential_values(config: &Value) -> Value {
     strip_credential_kind(config, None).unwrap_or_else(|| Value::Object(Default::default()))
 }
 
-fn strip_credential_kind(value: &Value, inherited_kind: Option<RedactionTargetKind>) -> Option<Value> {
+fn strip_credential_kind(
+    value: &Value,
+    inherited_kind: Option<RedactionTargetKind>,
+) -> Option<Value> {
     match value {
         Value::Object(map) => {
             let mut out = serde_json::Map::with_capacity(map.len());
@@ -367,10 +370,8 @@ mod tests {
             "password": "redis-secret"
         });
 
-        let (redacted, status) = redact_text_with_json(
-            "connection attempt scheduled for retry",
-            &config,
-        );
+        let (redacted, status) =
+            redact_text_with_json("connection attempt scheduled for retry", &config);
 
         assert_eq!(status, RedactionStatus::NotRequired);
         assert_eq!(redacted, "connection attempt scheduled for retry");
@@ -435,9 +436,11 @@ mod tests {
         assert!(values.contains(&"node1.internal.example"));
         assert!(values.contains(&"node2.internal.example"));
         // Every target carries a stable <redacted:...> placeholder.
-        assert!(targets
-            .iter()
-            .all(|t| t.placeholder.starts_with("<redacted:")));
+        assert!(
+            targets
+                .iter()
+                .all(|t| t.placeholder.starts_with("<redacted:"))
+        );
     }
 
     #[test]

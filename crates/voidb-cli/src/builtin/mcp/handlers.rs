@@ -12,13 +12,11 @@ use voidb_core::agent_authorization::AgentPrincipal;
 use voidb_core::capability::{CapabilityDefinition, CapabilityExecutionMode, CapabilityRiskLevel};
 use voidb_core::process_plugin::ProcessPluginDiscovery;
 
-use crate::agent_broker::{
-    BrokerRequest, BrokerResponse, find_agent_exec_grant, send_request,
-};
+use crate::agent_broker::{BrokerRequest, BrokerResponse, find_agent_exec_grant, send_request};
 
 use super::wire::{
-    INTERNAL_ERROR, INVALID_PARAMS, INVALID_REQUEST, MCP_PROTOCOL_VERSION, METHOD_NOT_FOUND,
-    JsonRpcFrame, PARSE_ERROR, RESOURCE_NOT_FOUND, SUPPORTED_PROTOCOL_VERSIONS, failure,
+    INTERNAL_ERROR, INVALID_PARAMS, INVALID_REQUEST, JsonRpcFrame, MCP_PROTOCOL_VERSION,
+    METHOD_NOT_FOUND, PARSE_ERROR, RESOURCE_NOT_FOUND, SUPPORTED_PROTOCOL_VERSIONS, failure,
     failure_with_data, success,
 };
 
@@ -37,7 +35,10 @@ pub(crate) struct McpServer {
 }
 
 impl McpServer {
-    pub(crate) fn new(principal: Option<AgentPrincipal>, discovery: ProcessPluginDiscovery) -> Self {
+    pub(crate) fn new(
+        principal: Option<AgentPrincipal>,
+        discovery: ProcessPluginDiscovery,
+    ) -> Self {
         Self {
             initialized: false,
             principal,
@@ -49,7 +50,11 @@ impl McpServer {
     /// line. Notifications produce no response.
     pub(crate) async fn handle_frame(&mut self, frame: &[u8]) -> Vec<String> {
         let Ok(parsed) = serde_json::from_slice::<JsonRpcFrame>(frame) else {
-            return vec![failure(&Value::Null, PARSE_ERROR, "parse error: invalid JSON frame")];
+            return vec![failure(
+                &Value::Null,
+                PARSE_ERROR,
+                "parse error: invalid JSON frame",
+            )];
         };
         if parsed.jsonrpc.as_deref() != Some("2.0") {
             return vec![failure(
@@ -82,12 +87,19 @@ impl McpServer {
             "tools/call" => vec![self.handle_tools_call(&id, &parsed.params).await],
             "resources/list" => vec![self.handle_resources_list(&id)],
             "resources/read" => vec![self.handle_resources_read(&id, &parsed.params).await],
-            other => vec![failure(&id, METHOD_NOT_FOUND, format!("unknown method: {other}"))],
+            other => vec![failure(
+                &id,
+                METHOD_NOT_FOUND,
+                format!("unknown method: {other}"),
+            )],
         }
     }
 
     fn handle_initialize(&self, id: &Value, params: &Value) -> String {
-        let requested = params.get("protocolVersion").and_then(Value::as_str).unwrap_or("");
+        let requested = params
+            .get("protocolVersion")
+            .and_then(Value::as_str)
+            .unwrap_or("");
         let negotiated = if SUPPORTED_PROTOCOL_VERSIONS.contains(&requested) {
             requested.to_owned()
         } else {
@@ -123,7 +135,10 @@ impl McpServer {
         let Some(name) = params.get("name").and_then(Value::as_str) else {
             return failure(id, INVALID_PARAMS, "tools/call requires a tool name");
         };
-        let arguments = params.get("arguments").cloned().unwrap_or_else(|| json!({}));
+        let arguments = params
+            .get("arguments")
+            .cloned()
+            .unwrap_or_else(|| json!({}));
         let Value::Object(mut arguments) = arguments else {
             return failure(id, INVALID_PARAMS, "tools/call arguments must be an object");
         };
@@ -156,7 +171,10 @@ impl McpServer {
             Ok(Some(grant)) => grant,
             Ok(None) => return success(id, grant_required_result(name, &profile_ref)),
             Err(error) => {
-                return success(id, broker_failure_result(&format!("grant lookup failed: {error}")))
+                return success(
+                    id,
+                    broker_failure_result(&format!("grant lookup failed: {error}")),
+                );
             }
         };
         let response = match send_request(
@@ -170,7 +188,10 @@ impl McpServer {
         {
             Ok(response) => response,
             Err(error) => {
-                return success(id, broker_failure_result(&format!("agent broker unreachable: {error}")))
+                return success(
+                    id,
+                    broker_failure_result(&format!("agent broker unreachable: {error}")),
+                );
             }
         };
         success(id, tool_result_from_broker_response(&response))

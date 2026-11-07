@@ -3,9 +3,9 @@
 //! Provides reusable AST inspection, query plan verification, pagination,
 //! and standard SQL capability routing for external SQL plugins.
 
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use std::sync::Arc;
 use voidb_core::{
     CapabilityDefinition, CapabilityError, CapabilityInvocation, CapabilityInvocationResult,
     CapabilityRiskLevel, CredentialClass, InvocationStatus, SQL_DEFAULT_ROW_LIMIT,
@@ -135,28 +135,16 @@ pub trait GenericSqlBackend: Send + Sync + 'static {
     }
 
     /// Execute a read-only query statement and return rows.
-    fn query(
-        &self,
-        scope: Option<&str>,
-        sql: &str,
-    ) -> Result<SqlQueryResult, CapabilityError>;
+    fn query(&self, scope: Option<&str>, sql: &str) -> Result<SqlQueryResult, CapabilityError>;
 
     /// Inspect query plan for read-oriented SQL.
-    fn explain(
-        &self,
-        scope: Option<&str>,
-        sql: &str,
-    ) -> Result<SqlQueryResult, CapabilityError> {
+    fn explain(&self, scope: Option<&str>, sql: &str) -> Result<SqlQueryResult, CapabilityError> {
         let explain_sql = sql_explain_statement(sql, self.dialect());
         self.query(scope, &explain_sql)
     }
 
     /// Execute a mutating SQL statement.
-    fn exec(
-        &self,
-        scope: Option<&str>,
-        sql: &str,
-    ) -> Result<SqlExecResult, CapabilityError>;
+    fn exec(&self, scope: Option<&str>, sql: &str) -> Result<SqlExecResult, CapabilityError>;
 
     /// List databases or schemas.
     fn list_catalogs(&self) -> Result<Vec<SqlCatalogItem>, CapabilityError> {
@@ -308,7 +296,9 @@ pub fn mount_generic_sql_router<B: GenericSqlBackend>(
         .capability("exec", move |inv, _grants| handle_exec(&b3, inv))
         .capability("catalogs", move |inv, _grants| handle_catalogs(&b4, inv))
         .capability("tables", move |inv, _grants| handle_tables(&b5, inv))
-        .capability("describe_table", move |inv, _grants| handle_describe_table(&b6, inv))
+        .capability("describe_table", move |inv, _grants| {
+            handle_describe_table(&b6, inv)
+        })
 }
 
 fn handle_query<B: GenericSqlBackend>(
@@ -593,8 +583,14 @@ fn required_str(input: &Value, field: &str) -> Result<String, CapabilityError> {
 
 fn optional_scope(input: &Value, scope: SqlCatalogScope) -> Option<String> {
     match scope {
-        SqlCatalogScope::Database => input.get("database").and_then(Value::as_str).map(str::to_string),
-        SqlCatalogScope::Schema => input.get("schema").and_then(Value::as_str).map(str::to_string),
+        SqlCatalogScope::Database => input
+            .get("database")
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        SqlCatalogScope::Schema => input
+            .get("schema")
+            .and_then(Value::as_str)
+            .map(str::to_string),
         SqlCatalogScope::LocalDatabase => None,
     }
 }
@@ -603,9 +599,7 @@ fn optional_scope(input: &Value, scope: SqlCatalogScope) -> Option<String> {
 mod tests {
     use super::*;
     use chrono::Utc;
-    use voidb_core::{
-        ActorRef, ActorType, InvocationConnectionTarget, InvocationControls,
-    };
+    use voidb_core::{ActorRef, ActorType, InvocationConnectionTarget, InvocationControls};
 
     struct MockSqlBackend {
         dialect: SqlDialect,
@@ -630,21 +624,15 @@ mod tests {
             })
         }
 
-        fn exec(
-            &self,
-            _scope: Option<&str>,
-            _sql: &str,
-        ) -> Result<SqlExecResult, CapabilityError> {
+        fn exec(&self, _scope: Option<&str>, _sql: &str) -> Result<SqlExecResult, CapabilityError> {
             Ok(SqlExecResult { rows_affected: 2 })
         }
 
         fn list_catalogs(&self) -> Result<Vec<SqlCatalogItem>, CapabilityError> {
-            Ok(vec![
-                SqlCatalogItem {
-                    name: "default".into(),
-                    description: Some("Default database".into()),
-                },
-            ])
+            Ok(vec![SqlCatalogItem {
+                name: "default".into(),
+                description: Some("Default database".into()),
+            }])
         }
 
         fn list_tables(&self, _scope: Option<&str>) -> Result<Vec<SqlTableItem>, CapabilityError> {
@@ -689,13 +677,11 @@ mod tests {
         let backend = MockSqlBackend {
             dialect: SqlDialect::MySql,
         };
-        let mut router = mount_generic_sql_router(
-            CapabilityRouter::new("mock_sql"),
-            backend,
-        );
+        let mut router = mount_generic_sql_router(CapabilityRouter::new("mock_sql"), backend);
 
         let inv = sample_invocation("query", json!({ "sql": "SELECT * FROM users" }), false);
-        let res = crate::ProcessPluginHandler::invoke(&mut router, inv, vec![]).expect("invoke query");
+        let res =
+            crate::ProcessPluginHandler::invoke(&mut router, inv, vec![]).expect("invoke query");
         assert_eq!(res.status, InvocationStatus::Succeeded);
         assert_eq!(res.output_summary["row_count"], 2);
     }
@@ -705,13 +691,11 @@ mod tests {
         let backend = MockSqlBackend {
             dialect: SqlDialect::MySql,
         };
-        let mut router = mount_generic_sql_router(
-            CapabilityRouter::new("mock_sql"),
-            backend,
-        );
+        let mut router = mount_generic_sql_router(CapabilityRouter::new("mock_sql"), backend);
 
         let inv = sample_invocation("query", json!({ "sql": "DROP TABLE users" }), false);
-        let err = crate::ProcessPluginHandler::invoke(&mut router, inv, vec![]).expect_err("should reject mutation");
+        let err = crate::ProcessPluginHandler::invoke(&mut router, inv, vec![])
+            .expect_err("should reject mutation");
         assert_eq!(err.code, "policy.read_only_violation");
     }
 
@@ -720,13 +704,15 @@ mod tests {
         let backend = MockSqlBackend {
             dialect: SqlDialect::MySql,
         };
-        let mut router = mount_generic_sql_router(
-            CapabilityRouter::new("mock_sql"),
-            backend,
-        );
+        let mut router = mount_generic_sql_router(CapabilityRouter::new("mock_sql"), backend);
 
-        let inv = sample_invocation("exec", json!({ "sql": "DELETE FROM users WHERE id = 1" }), true);
-        let res = crate::ProcessPluginHandler::invoke(&mut router, inv, vec![]).expect("dry run preview");
+        let inv = sample_invocation(
+            "exec",
+            json!({ "sql": "DELETE FROM users WHERE id = 1" }),
+            true,
+        );
+        let res =
+            crate::ProcessPluginHandler::invoke(&mut router, inv, vec![]).expect("dry run preview");
         assert_eq!(res.status, InvocationStatus::Succeeded);
         assert_eq!(res.output["dry_run"], true);
         assert_eq!(res.output["would_execute"], true);
@@ -737,13 +723,15 @@ mod tests {
         let backend = MockSqlBackend {
             dialect: SqlDialect::MySql,
         };
-        let mut router = mount_generic_sql_router(
-            CapabilityRouter::new("mock_sql"),
-            backend,
-        );
+        let mut router = mount_generic_sql_router(CapabilityRouter::new("mock_sql"), backend);
 
-        let inv = sample_invocation("exec", json!({ "sql": "DELETE FROM users WHERE id = 1" }), false);
-        let res = crate::ProcessPluginHandler::invoke(&mut router, inv, vec![]).expect("exec mutation");
+        let inv = sample_invocation(
+            "exec",
+            json!({ "sql": "DELETE FROM users WHERE id = 1" }),
+            false,
+        );
+        let res =
+            crate::ProcessPluginHandler::invoke(&mut router, inv, vec![]).expect("exec mutation");
         assert_eq!(res.status, InvocationStatus::Succeeded);
         assert_eq!(res.output["rows_affected"], 2);
     }
@@ -753,19 +741,17 @@ mod tests {
         let backend = MockSqlBackend {
             dialect: SqlDialect::MySql,
         };
-        let mut router = mount_generic_sql_router(
-            CapabilityRouter::new("mock_sql"),
-            backend,
-        );
+        let mut router = mount_generic_sql_router(CapabilityRouter::new("mock_sql"), backend);
 
         let inv = sample_invocation("catalogs", json!({}), false);
-        let res = crate::ProcessPluginHandler::invoke(&mut router, inv, vec![]).expect("list catalogs");
+        let res =
+            crate::ProcessPluginHandler::invoke(&mut router, inv, vec![]).expect("list catalogs");
         assert_eq!(res.output_summary["count"], 1);
 
         let inv2 = sample_invocation("tables", json!({ "database": "default" }), false);
-        let res2 = crate::ProcessPluginHandler::invoke(&mut router, inv2, vec![]).expect("list tables");
+        let res2 =
+            crate::ProcessPluginHandler::invoke(&mut router, inv2, vec![]).expect("list tables");
         assert_eq!(res2.output_summary["table_count"], 1);
         assert_eq!(res2.output_summary["view_count"], 1);
     }
 }
-

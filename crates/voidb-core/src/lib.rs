@@ -267,19 +267,19 @@ pub use profile_adapter::{
     connection_config_to_profile, connection_configs_to_profiles, legacy_profile_id,
     profile_plugin_id,
 };
+pub use profile_forms::{default_plugin_config, profile_form_schema};
 pub use profile_schema::{
     ProfileFormCondition, ProfileFormField, ProfileFormFieldKind, ProfileFormOption,
     ProfileFormSchema, ProfileFormViolation,
 };
-pub use profile_forms::{default_plugin_config, profile_form_schema};
 pub use profile_store::{
     ConnectionManagerProfileCatalog, ConnectionManagerProfileEntry, ConnectionManagerProfileSource,
     LocalProfileStore, NativeProfileDocument, ProfileMigrationAction, ProfileMigrationApplyResult,
-    ProfileMigrationItem, ProfileMigrationPlan, StoredCredentialEncryption,
-    StoredCredentialRecord, StoredCredentialSource, database_type_for_plugin,
-    derive_native_profile, migrated_credential_ref_id, migrated_profile_from_connection,
-    migrated_profile_id, native_connection_credential_id, new_native_profile_id,
-    normalize_profile_name, profile_names_equal, profiles_with_migrated_first,
+    ProfileMigrationItem, ProfileMigrationPlan, StoredCredentialEncryption, StoredCredentialRecord,
+    StoredCredentialSource, database_type_for_plugin, derive_native_profile,
+    migrated_credential_ref_id, migrated_profile_from_connection, migrated_profile_id,
+    native_connection_credential_id, new_native_profile_id, normalize_profile_name,
+    profile_names_equal, profiles_with_migrated_first,
 };
 pub use redaction::{
     RedactionTarget, RedactionTargetKind, collect_redaction_targets, credential_class_for_key,

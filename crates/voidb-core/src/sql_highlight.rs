@@ -2,36 +2,176 @@ use ratatui::style::{Color, Style};
 use ratatui::text::Span;
 
 const KEYWORDS: &[&str] = &[
-    "SELECT", "FROM", "WHERE", "AND", "OR", "NOT", "IN", "IS", "NULL",
-    "INSERT", "INTO", "VALUES", "UPDATE", "SET", "DELETE", "CREATE", "ALTER",
-    "DROP", "TABLE", "DATABASE", "INDEX", "VIEW", "TRIGGER", "FUNCTION",
-    "PROCEDURE", "IF", "EXISTS", "PRIMARY", "KEY", "FOREIGN", "REFERENCES",
-    "UNIQUE", "CHECK", "DEFAULT", "AUTO_INCREMENT", "SERIAL",
-    "JOIN", "LEFT", "RIGHT", "INNER", "OUTER", "CROSS", "ON", "USING",
-    "GROUP", "BY", "ORDER", "HAVING", "LIMIT", "OFFSET", "UNION", "ALL",
-    "DISTINCT", "AS", "CASE", "WHEN", "THEN", "ELSE", "END",
-    "BEGIN", "COMMIT", "ROLLBACK", "TRANSACTION", "SAVEPOINT",
-    "GRANT", "REVOKE", "EXPLAIN", "ANALYZE", "SHOW", "DESCRIBE", "DESC",
-    "ASC", "LIKE", "BETWEEN", "CAST", "COALESCE", "NULLIF",
-    "TRUE", "FALSE", "WITH", "RECURSIVE", "RETURNING", "CONFLICT",
-    "DO", "NOTHING", "CONSTRAINT", "CASCADE", "RESTRICT",
-    "SCHEMA", "OWNER", "TO", "TYPE", "ENUM", "SEQUENCE",
-    "REPLACE", "TRUNCATE", "RENAME", "ADD", "COLUMN", "MODIFY",
-    "INT", "INTEGER", "BIGINT", "SMALLINT", "TINYINT", "FLOAT", "DOUBLE",
-    "DECIMAL", "NUMERIC", "CHAR", "VARCHAR", "TEXT", "BLOB", "BOOLEAN",
-    "DATE", "TIME", "DATETIME", "TIMESTAMP", "JSON", "UUID",
-    "NOT", "TEMPORARY", "TEMP",
+    "SELECT",
+    "FROM",
+    "WHERE",
+    "AND",
+    "OR",
+    "NOT",
+    "IN",
+    "IS",
+    "NULL",
+    "INSERT",
+    "INTO",
+    "VALUES",
+    "UPDATE",
+    "SET",
+    "DELETE",
+    "CREATE",
+    "ALTER",
+    "DROP",
+    "TABLE",
+    "DATABASE",
+    "INDEX",
+    "VIEW",
+    "TRIGGER",
+    "FUNCTION",
+    "PROCEDURE",
+    "IF",
+    "EXISTS",
+    "PRIMARY",
+    "KEY",
+    "FOREIGN",
+    "REFERENCES",
+    "UNIQUE",
+    "CHECK",
+    "DEFAULT",
+    "AUTO_INCREMENT",
+    "SERIAL",
+    "JOIN",
+    "LEFT",
+    "RIGHT",
+    "INNER",
+    "OUTER",
+    "CROSS",
+    "ON",
+    "USING",
+    "GROUP",
+    "BY",
+    "ORDER",
+    "HAVING",
+    "LIMIT",
+    "OFFSET",
+    "UNION",
+    "ALL",
+    "DISTINCT",
+    "AS",
+    "CASE",
+    "WHEN",
+    "THEN",
+    "ELSE",
+    "END",
+    "BEGIN",
+    "COMMIT",
+    "ROLLBACK",
+    "TRANSACTION",
+    "SAVEPOINT",
+    "GRANT",
+    "REVOKE",
+    "EXPLAIN",
+    "ANALYZE",
+    "SHOW",
+    "DESCRIBE",
+    "DESC",
+    "ASC",
+    "LIKE",
+    "BETWEEN",
+    "CAST",
+    "COALESCE",
+    "NULLIF",
+    "TRUE",
+    "FALSE",
+    "WITH",
+    "RECURSIVE",
+    "RETURNING",
+    "CONFLICT",
+    "DO",
+    "NOTHING",
+    "CONSTRAINT",
+    "CASCADE",
+    "RESTRICT",
+    "SCHEMA",
+    "OWNER",
+    "TO",
+    "TYPE",
+    "ENUM",
+    "SEQUENCE",
+    "REPLACE",
+    "TRUNCATE",
+    "RENAME",
+    "ADD",
+    "COLUMN",
+    "MODIFY",
+    "INT",
+    "INTEGER",
+    "BIGINT",
+    "SMALLINT",
+    "TINYINT",
+    "FLOAT",
+    "DOUBLE",
+    "DECIMAL",
+    "NUMERIC",
+    "CHAR",
+    "VARCHAR",
+    "TEXT",
+    "BLOB",
+    "BOOLEAN",
+    "DATE",
+    "TIME",
+    "DATETIME",
+    "TIMESTAMP",
+    "JSON",
+    "UUID",
+    "NOT",
+    "TEMPORARY",
+    "TEMP",
 ];
 
 const FUNCTIONS: &[&str] = &[
-    "COUNT", "SUM", "AVG", "MIN", "MAX", "ABS", "CEIL", "FLOOR", "ROUND",
-    "UPPER", "LOWER", "TRIM", "LTRIM", "RTRIM", "LENGTH", "SUBSTRING",
-    "CONCAT", "REPLACE", "REVERSE", "LEFT", "RIGHT",
-    "NOW", "CURDATE", "CURTIME", "DATE_FORMAT", "DATEDIFF",
-    "IFNULL", "COALESCE", "NULLIF", "CAST", "CONVERT",
-    "GROUP_CONCAT", "STRING_AGG", "ARRAY_AGG",
-    "ROW_NUMBER", "RANK", "DENSE_RANK", "LAG", "LEAD", "OVER", "PARTITION",
-    "EXISTS", "ANY", "SOME",
+    "COUNT",
+    "SUM",
+    "AVG",
+    "MIN",
+    "MAX",
+    "ABS",
+    "CEIL",
+    "FLOOR",
+    "ROUND",
+    "UPPER",
+    "LOWER",
+    "TRIM",
+    "LTRIM",
+    "RTRIM",
+    "LENGTH",
+    "SUBSTRING",
+    "CONCAT",
+    "REPLACE",
+    "REVERSE",
+    "LEFT",
+    "RIGHT",
+    "NOW",
+    "CURDATE",
+    "CURTIME",
+    "DATE_FORMAT",
+    "DATEDIFF",
+    "IFNULL",
+    "COALESCE",
+    "NULLIF",
+    "CAST",
+    "CONVERT",
+    "GROUP_CONCAT",
+    "STRING_AGG",
+    "ARRAY_AGG",
+    "ROW_NUMBER",
+    "RANK",
+    "DENSE_RANK",
+    "LAG",
+    "LEAD",
+    "OVER",
+    "PARTITION",
+    "EXISTS",
+    "ANY",
+    "SOME",
 ];
 
 fn is_keyword(word: &str) -> bool {
@@ -67,7 +207,10 @@ pub fn highlight_sql(sql: &str) -> Vec<Span<'static>> {
             while i < len && chars[i] != '\n' {
                 i += 1;
             }
-            spans.push(Span::styled(chars[start..i].iter().collect::<String>(), comment_style));
+            spans.push(Span::styled(
+                chars[start..i].iter().collect::<String>(),
+                comment_style,
+            ));
             continue;
         }
 
@@ -78,8 +221,15 @@ pub fn highlight_sql(sql: &str) -> Vec<Span<'static>> {
             while i + 1 < len && !(chars[i] == '*' && chars[i + 1] == '/') {
                 i += 1;
             }
-            if i + 1 < len { i += 2; } else { i = len; }
-            spans.push(Span::styled(chars[start..i].iter().collect::<String>(), comment_style));
+            if i + 1 < len {
+                i += 2;
+            } else {
+                i = len;
+            }
+            spans.push(Span::styled(
+                chars[start..i].iter().collect::<String>(),
+                comment_style,
+            ));
             continue;
         }
 
@@ -99,7 +249,10 @@ pub fn highlight_sql(sql: &str) -> Vec<Span<'static>> {
                     i += 1;
                 }
             }
-            spans.push(Span::styled(chars[start..i].iter().collect::<String>(), str_style));
+            spans.push(Span::styled(
+                chars[start..i].iter().collect::<String>(),
+                str_style,
+            ));
             continue;
         }
 
@@ -109,7 +262,10 @@ pub fn highlight_sql(sql: &str) -> Vec<Span<'static>> {
             while i < len && (chars[i].is_ascii_digit() || chars[i] == '.') {
                 i += 1;
             }
-            spans.push(Span::styled(chars[start..i].iter().collect::<String>(), num_style));
+            spans.push(Span::styled(
+                chars[start..i].iter().collect::<String>(),
+                num_style,
+            ));
             continue;
         }
 
@@ -124,7 +280,9 @@ pub fn highlight_sql(sql: &str) -> Vec<Span<'static>> {
             // Check if next non-space char is '(' → function
             let next_paren = {
                 let mut j = i;
-                while j < len && chars[j] == ' ' { j += 1; }
+                while j < len && chars[j] == ' ' {
+                    j += 1;
+                }
                 j < len && chars[j] == '('
             };
 
@@ -152,7 +310,10 @@ pub fn highlight_sql_with_cursor(sql: &str, cursor_pos: usize) -> Vec<Span<'stat
     if sql.is_empty() {
         return vec![
             Span::styled("\u{258c}", Style::default().fg(Color::White)),
-            Span::styled("Type your SQL query here...", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                "Type your SQL query here...",
+                Style::default().fg(Color::DarkGray),
+            ),
         ];
     }
 
@@ -176,7 +337,13 @@ pub fn highlight_sql_with_cursor(sql: &str, cursor_pos: usize) -> Vec<Span<'stat
                 result.push(Span::styled(text[..local_pos].to_string(), span.style));
             }
 
-            let cursor_char = &text[local_pos..local_pos + text[local_pos..].chars().next().map(|c| c.len_utf8()).unwrap_or(1)];
+            let cursor_char = &text[local_pos
+                ..local_pos
+                    + text[local_pos..]
+                        .chars()
+                        .next()
+                        .map(|c| c.len_utf8())
+                        .unwrap_or(1)];
             result.push(Span::styled(cursor_char.to_string(), cursor_style));
 
             let after_cursor = local_pos + cursor_char.len();

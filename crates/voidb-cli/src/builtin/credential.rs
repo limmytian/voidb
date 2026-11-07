@@ -180,8 +180,7 @@ fn handle_setup(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbError
     } else {
         new_master_password(matches)?
     };
-    let native_credentials_reencrypted =
-        reencrypt_native_credentials(None, new_password.as_str())?;
+    let native_credentials_reencrypted = reencrypt_native_credentials(None, new_password.as_str())?;
     let result = AppConfig::reencrypt_config_file(None, new_password.as_str())?;
     print_json(&success_envelope(json!({
         "protection_mode": result.protection_mode,
@@ -240,9 +239,10 @@ fn handle_forget(matches: &ArgMatches) -> Result<(), VoidbError> {
 fn prompt_confirmed_new_password() -> Result<String, VoidbError> {
     let password = crate::prompt_master_password("New master password: ")
         .map_err(|error| VoidbError::Plugin(format!("read master password: {error}")))?;
-    let confirmation = crate::prompt_master_password("Confirm master password: ").map_err(
-        |error| VoidbError::Plugin(format!("read master password confirmation: {error}")),
-    )?;
+    let confirmation =
+        crate::prompt_master_password("Confirm master password: ").map_err(|error| {
+            VoidbError::Plugin(format!("read master password confirmation: {error}"))
+        })?;
     if password != confirmation {
         return Err(VoidbError::Plugin(
             "Master password confirmation did not match".into(),
@@ -492,12 +492,20 @@ mod tests {
     #[test]
     fn master_setup_and_unlock_expose_documented_surface() {
         let setup = master_subcommand("setup");
-        assert!(setup.get_arguments().any(|arg| arg.get_id() == "new-password-env"));
+        assert!(
+            setup
+                .get_arguments()
+                .any(|arg| arg.get_id() == "new-password-env")
+        );
         assert!(setup.get_arguments().any(|arg| arg.get_id() == "yes"));
         assert!(setup.get_arguments().any(|arg| arg.get_id() == "dry-run"));
 
         let unlock = master_subcommand("unlock");
-        assert!(unlock.get_arguments().any(|arg| arg.get_id() == "password-env"));
+        assert!(
+            unlock
+                .get_arguments()
+                .any(|arg| arg.get_id() == "password-env")
+        );
 
         let forget = master_subcommand("forget");
         assert!(forget.get_arguments().all(|arg| arg.get_id() != "yes"));

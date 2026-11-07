@@ -29,7 +29,12 @@ pub(super) fn risk_arg() -> Arg {
     Arg::new("risk")
         .long("risk")
         .value_name("RISK")
-        .value_parser(["read_only", "mutating", "destructive", "external_side_effect"])
+        .value_parser([
+            "read_only",
+            "mutating",
+            "destructive",
+            "external_side_effect",
+        ])
         .action(ArgAction::Append)
         .help("Filter by effective risk level; repeat to select multiple levels")
 }

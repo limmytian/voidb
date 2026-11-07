@@ -5,12 +5,14 @@ use crate::{CellValue, ColumnInfo, Row, TableSchema};
 
 pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
     let mut cb = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
-    cb.set_text(text).map_err(|e| format!("Clipboard write failed: {}", e))
+    cb.set_text(text)
+        .map_err(|e| format!("Clipboard write failed: {}", e))
 }
 
 pub fn paste_from_clipboard() -> Result<String, String> {
     let mut cb = Clipboard::new().map_err(|e| format!("Clipboard init failed: {}", e))?;
-    cb.get_text().map_err(|e| format!("Clipboard read failed: {}", e))
+    cb.get_text()
+        .map_err(|e| format!("Clipboard read failed: {}", e))
 }
 
 /// Structured clipboard data for row copy/paste across tables and connections.
@@ -60,12 +62,13 @@ impl ClipboardRows {
         // Build human-readable TSV lines first (for external paste)
         let mut tsv_lines: Vec<String> = Vec::with_capacity(self.rows.len());
         for row in &self.rows {
-            let line: Vec<String> = row.iter().map(|v| {
-                match v {
+            let line: Vec<String> = row
+                .iter()
+                .map(|v| match v {
                     CellValue::Null => "NULL".to_string(),
                     _ => v.display(),
-                }
-            }).collect();
+                })
+                .collect();
             tsv_lines.push(line.join("\t"));
         }
         // Append structured JSON on last line for VoidB-to-VoidB paste
@@ -84,14 +87,16 @@ impl ClipboardRows {
 
     pub fn parse_text(text: &str, target_columns: &[ColumnInfo]) -> Result<(Self, bool), String> {
         // Check first line (legacy format) or last line (new format) for structured JSON
-        let json_result = text.strip_prefix(CLIPBOARD_MAGIC)
+        let json_result = text
+            .strip_prefix(CLIPBOARD_MAGIC)
             .map(|s| {
                 // Legacy: entire text is VOIDB_ROWS:JSON
                 s.to_string()
             })
             .or_else(|| {
                 // New format: TSV lines + last line is VOIDB_ROWS:JSON
-                text.lines().last()
+                text.lines()
+                    .last()
                     .and_then(|last| last.strip_prefix(CLIPBOARD_MAGIC))
                     .map(|s| s.to_string())
             });
@@ -99,9 +104,16 @@ impl ClipboardRows {
         if let Some(json_str) = json_result {
             let clip: ClipboardRows =
                 serde_json::from_str(&json_str).map_err(|e| format!("Parse failed: {}", e))?;
-            let target_names: Vec<String> = target_columns.iter().map(|c| c.name.to_lowercase()).collect();
+            let target_names: Vec<String> = target_columns
+                .iter()
+                .map(|c| c.name.to_lowercase())
+                .collect();
             let matched = clip.column_names.len() == target_names.len()
-                && clip.column_names.iter().zip(target_names.iter()).all(|(a, b)| a.to_lowercase() == *b);
+                && clip
+                    .column_names
+                    .iter()
+                    .zip(target_names.iter())
+                    .all(|(a, b)| a.to_lowercase() == *b);
             Ok((clip, matched))
         } else {
             let clip = Self::parse_tsv(text, target_columns);
@@ -247,9 +259,18 @@ impl VoidbClipboard {
             Self::Database(d) => {
                 let total = d.total_rows();
                 if total > 0 {
-                    format!("Database '{}' ({} tables, {} rows)", d.database_name, d.table_count(), total)
+                    format!(
+                        "Database '{}' ({} tables, {} rows)",
+                        d.database_name,
+                        d.table_count(),
+                        total
+                    )
                 } else {
-                    format!("Database '{}' ({} tables, structure only)", d.database_name, d.table_count())
+                    format!(
+                        "Database '{}' ({} tables, structure only)",
+                        d.database_name,
+                        d.table_count()
+                    )
                 }
             }
         }
