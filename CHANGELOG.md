@@ -5,6 +5,11 @@ All notable changes to VoidB will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **`vb plugin update --all`**: one command updates every installed plugin with a newer registry version. Prints the plan (installed → target), requires a typed `UPDATE` confirmation on a terminal or `--yes` for scripts, honors `--dry-run`, and continues past per-plugin failures with a structured summary (`updated`, `up_to_date`, `failed`).
+
 ## [0.4.1] - 2026-11-06
 
 ### Added

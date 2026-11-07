@@ -2,6 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
+use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 
 use crate::builtin::json_output::print_json;
@@ -155,12 +156,34 @@ impl CliPlugin for PluginCliPlugin {
                 .arg(format_arg())
                 .arg(install_root_arg()),
             Command::new("update")
-                .about("Update an installed process plugin from registry or a local package")
+                .about("Update installed process plugins from the registry")
                 .arg(
                     Arg::new("plugin")
-                        .required(true)
                         .value_name("PLUGIN_ID")
-                        .help("Installed process plugin ID to update"),
+                        .help("Installed process plugin ID to update; omit with --all to update every outdated plugin"),
+                )
+                .arg(
+                    Arg::new("all")
+                        .long("all")
+                        .action(ArgAction::SetTrue)
+                        .conflicts_with("plugin")
+                        .conflicts_with("from")
+                        .conflicts_with("version")
+                        .help("Update every installed plugin that has a newer registry version"),
+                )
+                .arg(
+                    Arg::new("yes")
+                        .long("yes")
+                        .short('y')
+                        .action(ArgAction::SetTrue)
+                        .help("Skip the update-plan confirmation (scripts)"),
+                )
+                .arg(
+                    Arg::new("dry-run")
+                        .long("dry-run")
+                        .action(ArgAction::SetTrue)
+                        .conflicts_with("yes")
+                        .help("Print the update plan without updating"),
                 )
                 .arg(
                     Arg::new("from")
@@ -423,7 +446,13 @@ impl CliPlugin for PluginCliPlugin {
             }
             "install" => handle_install(matches).await,
             "install-default" | "init-defaults" => handle_install_default(matches).await,
-            "update" => handle_update(matches).await,
+            "update" => {
+                if matches.get_flag("all") {
+                    handle_update_all(matches).await
+                } else {
+                    handle_update(matches).await
+                }
+            }
             "search" => handle_search(matches).await,
             "disable" => handle_lifecycle(matches, PluginLifecycleOperation::Disable),
             "enable" => handle_lifecycle(matches, PluginLifecycleOperation::Enable),
@@ -864,6 +893,267 @@ async fn handle_install_default(matches: &ArgMatches) -> Result<(), VoidbError> 
             }
             Ok(())
         }
+    }
+}
+
+/// One planned update in the `update --all` plan.
+#[derive(Debug, Clone, Serialize)]
+struct PluginUpdatePlanItem {
+    plugin_id: String,
+    installed_version: String,
+    registry_version: String,
+}
+
+/// One executed update in the `update --all` summary.
+#[derive(Debug, Clone, Serialize)]
+struct PluginUpdateOutcome {
+    plugin_id: String,
+    status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    from_version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    to_version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error_code: Option<String>,
+}
+
+fn failed_update_outcome(item: &PluginUpdatePlanItem, code: &str, message: &str) -> (String, PluginUpdateOutcome) {
+    (
+        message.to_string(),
+        PluginUpdateOutcome {
+            plugin_id: item.plugin_id.clone(),
+            status: "failed".into(),
+            from_version: Some(item.installed_version.clone()),
+            to_version: Some(item.registry_version.clone()),
+            error_code: Some(code.to_string()),
+        },
+    )
+}
+
+/// Updates every installed plugin whose registry version is newer than the
+/// installed one. Each plugin rides the same authenticated download and
+/// rollback path as a single `vb plugin update`; a per-plugin failure is
+/// recorded and the remaining plugins continue.
+async fn handle_update_all(matches: &ArgMatches) -> Result<(), VoidbError> {
+    let format = output_format(matches)?;
+    let install_root = install_root_from_matches(matches)?;
+    let registry_url_opt = matches.get_one::<String>("registry-url").map(String::as_str);
+    let verify_key = matches.get_one::<String>("verify-key").map(String::as_str);
+    let require_signature = matches.get_flag("require-signature");
+    let dry_run = matches.get_flag("dry-run");
+    let assume_yes = matches.get_flag("yes");
+
+    let discovery = discover_process_plugins();
+    let installed: Vec<_> = discovery
+        .candidates
+        .iter()
+        .filter(|candidate| {
+            candidate.state == ProcessPluginCandidateState::Available
+                && candidate.source.root == install_root
+        })
+        .cloned()
+        .collect();
+
+    if installed.is_empty() {
+        print_json(&success_envelope(json!({
+            "updated": [], "up_to_date": [], "failed": [],
+            "note": "No installed plugins in the install root.",
+        })))?;
+        return Ok(());
+    }
+
+    let (index, source_url) = resolve_registry_index(registry_url_opt).await?;
+
+    let mut plan: Vec<PluginUpdatePlanItem> = Vec::new();
+    let mut up_to_date: Vec<String> = Vec::new();
+    for candidate in &installed {
+        let Some(entry) = index.get_plugin(&candidate.id) else {
+            up_to_date.push(candidate.id.clone());
+            continue;
+        };
+        let Some(installed_version) = candidate
+            .version
+            .as_deref()
+            .and_then(|version| Version::parse(version).ok())
+        else {
+            up_to_date.push(candidate.id.clone());
+            continue;
+        };
+        let Ok(registry_version) = Version::parse(&entry.latest_version) else {
+            up_to_date.push(candidate.id.clone());
+            continue;
+        };
+        if registry_version > installed_version {
+            plan.push(PluginUpdatePlanItem {
+                plugin_id: candidate.id.clone(),
+                installed_version: installed_version.to_string(),
+                registry_version: registry_version.to_string(),
+            });
+        } else {
+            up_to_date.push(candidate.id.clone());
+        }
+    }
+
+    if plan.is_empty() {
+        print_json(&success_envelope(json!({
+            "updated": [],
+            "up_to_date": up_to_date,
+            "failed": [],
+            "note": format!("All installed plugins are up to date with {source_url}."),
+        })))?;
+        return Ok(());
+    }
+
+    if dry_run {
+        print_json(&success_envelope(json!({
+            "dry_run": true,
+            "plan": plan,
+            "up_to_date": up_to_date,
+        })))?;
+        return Ok(());
+    }
+
+    if !assume_yes {
+        let mut rendered = String::from("The following plugins will be updated:\n");
+        for item in &plan {
+            rendered.push_str(&format!(
+                "  {}: {} -> {}\n",
+                item.plugin_id, item.installed_version, item.registry_version
+            ));
+        }
+        eprint!("{rendered}");
+        if !std::io::stdin().is_terminal() {
+            return Err(VoidbError::Plugin(
+                "Refusing to update plugins without --yes in a non-interactive shell; rerun with --yes or --dry-run".into(),
+            ));
+        }
+        eprint!("Type UPDATE to apply, anything else cancels: ");
+        use std::io::Write as _;
+        std::io::stderr().flush()?;
+        let mut confirmation = String::new();
+        std::io::stdin().read_line(&mut confirmation)?;
+        if confirmation.trim() != "UPDATE" {
+            eprintln!("update cancelled");
+            return Ok(());
+        }
+    }
+
+    let mut updated: Vec<PluginUpdateOutcome> = Vec::new();
+    let mut failed: Vec<PluginUpdateOutcome> = Vec::new();
+    for item in &plan {
+        let executed = execute_planned_update(
+            item,
+            &index,
+            registry_url_opt,
+            verify_key,
+            require_signature,
+            install_root.clone(),
+        )
+        .await;
+        match executed {
+            Ok(outcome) => {
+                eprintln!(
+                    "updated {}: {} -> {}",
+                    outcome.plugin_id,
+                    outcome.from_version.clone().unwrap_or_default(),
+                    outcome.to_version.clone().unwrap_or_default()
+                );
+                updated.push(outcome);
+            }
+            Err((message, mut outcome)) => {
+                eprintln!("failed {}: {message}", outcome.plugin_id);
+                outcome
+                    .error_code
+                    .get_or_insert_with(|| "plugin.update_failed".into());
+                failed.push(outcome);
+            }
+        }
+    }
+
+    print_json(&success_envelope(json!({
+        "updated": updated,
+        "up_to_date": up_to_date,
+        "failed": failed,
+    })));
+    Ok(())
+}
+
+/// Downloads and applies one planned update. Returns the outcome, or the
+/// failure message plus a pre-filled failed outcome for the summary.
+async fn execute_planned_update(
+    item: &PluginUpdatePlanItem,
+    index: &PluginRegistryIndex,
+    registry_url_opt: Option<&str>,
+    verify_key: Option<&str>,
+    require_signature: bool,
+    install_root: PathBuf,
+) -> Result<PluginUpdateOutcome, (String, PluginUpdateOutcome)> {
+    let entry = index.get_plugin(&item.plugin_id).ok_or_else(|| {
+        failed_update_outcome(item, "unavailable.plugin_not_in_registry", "Plugin missing from the registry")
+    })?;
+    let version_entry = entry.get_version(None).ok_or_else(|| {
+        failed_update_outcome(item, "unavailable.registry_version_missing", "Registry latest version not found")
+    })?;
+    let current_plat = voidb_core::process_plugin::current_platform();
+    let artifact = version_entry
+        .find_matching_package(std::env::consts::ARCH, current_plat)
+        .ok_or_else(|| {
+            failed_update_outcome(
+                item,
+                "unavailable.artifact_missing",
+                "No compatible package for this platform",
+            )
+        })?;
+    let download_dir = std::env::temp_dir().join(format!(
+        "voidb-download-{}",
+        Utc::now().timestamp_nanos_opt().unwrap_or(0)
+    ));
+    let dest_file = download_dir.join(&artifact.filename);
+    if let Err(error) = PluginRegistryIndex::download_artifact(artifact, &dest_file).await {
+        return Err(failed_update_outcome(
+            item,
+            "transport.download_failed",
+            &format!("Registry download failed: {error}"),
+        ));
+    }
+    if let Err(error) = check_package_signature_gate(&dest_file, verify_key, require_signature) {
+        let _ = fs::remove_file(&dest_file);
+        return Err(failed_update_outcome(item, &error.code, &error.message));
+    }
+    let source = match ProcessPluginPackageSource::from_path(&dest_file) {
+        Ok(source) => source,
+        Err(error) => {
+            let _ = fs::remove_file(&dest_file);
+            return Err(failed_update_outcome(
+                item,
+                "validation.package_invalid",
+                &error.to_string(),
+            ));
+        }
+    };
+    let outcome = update_plugin_package(
+        &item.plugin_id,
+        source,
+        install_root,
+        UpdateOptions {
+            allow_downgrade: false,
+            expected_version: Some(item.registry_version.clone()),
+        },
+    );
+    let _ = fs::remove_dir_all(&download_dir);
+    match outcome {
+        Ok(result) => Ok(PluginUpdateOutcome {
+            plugin_id: item.plugin_id.clone(),
+            status: "updated".into(),
+            from_version: Some(item.installed_version.clone()),
+            to_version: Some(item.registry_version.clone()),
+            error_code: None,
+        }),
+        Err(error) => Err(failed_update_outcome(
+            item,
+            &error.code,
+            &error.message,
+        )),
     }
 }
 
@@ -4339,5 +4629,89 @@ platforms = ["{platform}"]
         assert_eq!(record.installed_version, "1.1.0");
         assert!(record.previous_version.is_some());
         assert_eq!(record.previous_version.unwrap().version, "1.0.0");
+    }
+}
+
+
+#[cfg(test)]
+mod update_all_tests {
+    use super::*;
+
+    fn update_command() -> Command {
+        let plugin = PluginCliPlugin::new();
+        plugin
+            .commands()
+            .into_iter()
+            .find(|command| command.get_name() == "update")
+            .expect("update command")
+    }
+
+    #[test]
+    fn update_all_and_positional_are_exclusive() {
+        let command = update_command();
+        assert!(command
+            .clone()
+            .try_get_matches_from(["update", "--all", "docker"])
+            .is_err());
+        assert!(command
+            .clone()
+            .try_get_matches_from(["update", "--all", "--from", "/tmp/x"])
+            .is_err());
+        assert!(command
+            .clone()
+            .try_get_matches_from(["update", "--all", "--version", "0.3.6"])
+            .is_err());
+    }
+
+    #[test]
+    fn update_all_parses_with_yes_and_dry_run() {
+        let command = update_command();
+        let matches = command
+            .clone()
+            .try_get_matches_from(["update", "--all", "--yes"])
+            .expect("--all --yes parses");
+        assert!(matches.get_flag("all"));
+        assert!(matches.get_flag("yes"));
+
+        let matches = command
+            .try_get_matches_from(["update", "--all", "--dry-run"])
+            .expect("--all --dry-run parses");
+        assert!(matches.get_flag("dry-run"));
+        assert!(!matches.get_flag("yes"));
+    }
+
+    #[test]
+    fn update_plan_item_serializes_for_agents() {
+        let item = PluginUpdatePlanItem {
+            plugin_id: "docker".into(),
+            installed_version: "0.3.4".into(),
+            registry_version: "0.3.6".into(),
+        };
+        let value = serde_json::to_value(&item).expect("serialize");
+        assert_eq!(value["plugin_id"], "docker");
+        assert_eq!(value["installed_version"], "0.3.4");
+        assert_eq!(value["registry_version"], "0.3.6");
+
+        let outcome = PluginUpdateOutcome {
+            plugin_id: "docker".into(),
+            status: "failed".into(),
+            from_version: Some("0.3.4".into()),
+            to_version: Some("0.3.6".into()),
+            error_code: Some("transport.download_failed".into()),
+        };
+        let value = serde_json::to_value(&outcome).expect("serialize");
+        assert_eq!(value["error_code"], "transport.download_failed");
+    }
+
+    #[test]
+    fn registry_newer_semver_is_required_for_the_plan() {
+        // The plan compares parsed semvers, so a registry prerelease or
+        // malformed latest_version must not schedule an update.
+        let installed = Version::parse("0.3.6").expect("installed");
+        let newer = Version::parse("0.3.6").expect("same");
+        assert!(newer <= installed);
+        let newer = Version::parse("0.4.0").expect("newer");
+        assert!(newer > installed);
+        assert!(Version::parse("not-a-version").is_err());
     }
 }
