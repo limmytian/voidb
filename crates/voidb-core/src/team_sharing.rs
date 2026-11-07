@@ -1461,6 +1461,7 @@ mod tests {
                 denied_capabilities: vec!["exec".into()],
                 allow_destructive_by_default: false,
             },
+            version: 1,
         }
     }
 

@@ -263,6 +263,7 @@ mod tests {
                 label: Some("legacy plugin_config /auth/password".into()),
             }],
             policy: ConnectionProfilePolicy::default(),
+            version: 1,
         }
     }
 

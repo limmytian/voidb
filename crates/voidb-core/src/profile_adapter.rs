@@ -58,6 +58,7 @@ pub fn connection_config_to_profile(config: &ConnectionConfig) -> ConnectionProf
         default_options: Value::Null,
         credential_refs: legacy_credential_refs(config, &connection_key),
         policy: Default::default(),
+        version: 1,
     }
 }
 

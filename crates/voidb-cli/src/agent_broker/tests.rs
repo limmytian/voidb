@@ -326,6 +326,7 @@ fn resolve_profile_accepts_bare_immutable_profile_id() {
         default_options: serde_json::Value::Null,
         credential_refs: Vec::new(),
         policy: voidb_core::ConnectionProfilePolicy::default(),
+        version: 1,
     }];
 
     let resolved =

@@ -771,6 +771,7 @@ done
                 label: None,
             }],
             policy: Default::default(),
+            version: 1,
         }
     }
 

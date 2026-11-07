@@ -1024,6 +1024,7 @@ mod tests {
                 label: Some("local credential password".into()),
             }],
             policy: ConnectionProfilePolicy::default(),
+            version: 1,
         };
 
         let payload = sync_profile_payload(

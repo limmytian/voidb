@@ -212,6 +212,7 @@ fn seed_object_fixture(voidb_dir: &std::path::Path) -> Result<()> {
             label: Some("hosted login password".into()),
         }],
         policy: ConnectionProfilePolicy::default(),
+        version: 1,
     };
     profile_store
         .save_profiles(vec![profile.clone()])

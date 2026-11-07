@@ -107,6 +107,40 @@ pub fn redact_text_with_json(text: &str, value: &Value) -> (String, RedactionSta
     redact_text_with_targets(text, &targets)
 }
 
+/// Return a copy of a plugin configuration with every credential-shaped
+/// string value removed, keeping the non-secret configuration for display
+/// metadata. `SensitiveMetadata` values are preserved because hosts and URLs
+/// describe the target rather than authenticate it.
+pub fn strip_credential_values(config: &Value) -> Value {
+    strip_credential_kind(config, None).unwrap_or_else(|| Value::Object(Default::default()))
+}
+
+fn strip_credential_kind(value: &Value, inherited_kind: Option<RedactionTargetKind>) -> Option<Value> {
+    match value {
+        Value::Object(map) => {
+            let mut out = serde_json::Map::with_capacity(map.len());
+            for (key, item) in map {
+                let kind = field_kind(key).or_else(|| inherited_kind.clone());
+                if let Some(stripped) = strip_credential_kind(item, kind) {
+                    out.insert(key.clone(), stripped);
+                }
+            }
+            Some(Value::Object(out))
+        }
+        Value::Array(items) => Some(Value::Array(
+            items
+                .iter()
+                .filter_map(|item| strip_credential_kind(item, inherited_kind.clone()))
+                .collect(),
+        )),
+        Value::String(_) => match inherited_kind {
+            Some(RedactionTargetKind::Credential(_)) => None,
+            _ => Some(value.clone()),
+        },
+        _ => Some(value.clone()),
+    }
+}
+
 pub fn redact_text_with_targets(
     text: &str,
     targets: &[RedactionTarget],
@@ -340,6 +374,31 @@ mod tests {
 
         assert_eq!(status, RedactionStatus::NotRequired);
         assert_eq!(redacted, "connection attempt scheduled for retry");
+    }
+
+    #[test]
+    fn strip_credential_values_keeps_metadata_and_drops_credentials() {
+        let config = json!({
+            "host": "db.internal.example",
+            "port": 3306,
+            "label": "plain",
+            "password": "db-secret",
+            "nested": { "api_key": "key-secret", "region": "us-east-1" },
+            "instances": [{ "token": "tok-secret", "host": "node1.internal.example" }],
+        });
+
+        let stripped = strip_credential_values(&config);
+
+        assert_eq!(
+            stripped,
+            json!({
+                "host": "db.internal.example",
+                "port": 3306,
+                "label": "plain",
+                "nested": { "region": "us-east-1" },
+                "instances": [{ "host": "node1.internal.example" }],
+            })
+        );
     }
 
     #[test]

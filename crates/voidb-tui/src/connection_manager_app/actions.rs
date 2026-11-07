@@ -32,6 +32,7 @@ impl ConnectionManagerApp {
                     default_options: Value::Null,
                     credential_refs: Vec::new(),
                     policy: Default::default(),
+                    version: 1,
                 });
 
             let mut dialog = AuthorizationDialog::new(profile);

@@ -3143,6 +3143,7 @@ fn connection_profile_from_sync(
         default_options: payload.profile.default_options,
         credential_refs,
         policy,
+        version: 1,
     }
 }
 

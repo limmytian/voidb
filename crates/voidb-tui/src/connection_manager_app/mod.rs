@@ -29,7 +29,7 @@ use voidb_core::{
 
 use voidb_core::process_plugin::ProcessPluginCandidateState;
 
-use crate::profile_forms::{default_plugin_config, profile_form_schema};
+use voidb_core::profile_forms::{default_plugin_config, profile_form_schema};
 
 use background::installed_plugin_states;
 

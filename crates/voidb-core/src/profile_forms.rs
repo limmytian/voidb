@@ -5,7 +5,7 @@
 //! plugins can expose the same shape from their manifest profile schema.
 
 use serde_json::{Value, json};
-use voidb_core::{
+use crate::{
     ProfileFormCondition, ProfileFormField, ProfileFormFieldKind, ProfileFormOption,
     ProfileFormSchema,
 };
