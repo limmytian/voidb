@@ -733,6 +733,7 @@ fn error_envelope_is_versioned_for_agents() {
         schema_version: INVOKE_CLI_SCHEMA_VERSION,
         command: "invoke",
         exit_code: exit_code_for_error(&error),
+        data: None,
         error,
     })
     .expect("serialize envelope");
