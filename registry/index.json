@@ -3,7 +3,7 @@
   "schema_version": 1,
   "registry_name": "VoidB Official Plugin Registry",
   "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
-  "updated_at": "2026-11-07T09:22:11.185100132Z",
+  "updated_at": "2026-11-07T09:24:05.533387300Z",
   "plugins": [
     {
       "id": "docker",
@@ -2079,7 +2079,7 @@
         "import_plan",
         "import_apply"
       ],
-      "latest_version": "0.3.6",
+      "latest_version": "0.3.7",
       "versions": [
         {
           "version": "0.3.3",
@@ -2269,6 +2269,55 @@
               "sha256": "sha256:3ff3a0fb7089ef252eb21bdd136b765a06e426031584fb98933c16eb4c638137",
               "size_bytes": 3342500,
               "signature": "f1b00e42610361f9b282b01ef9ae3547d2cbf164e7297f972bd787e5daa82ba34bd5146002be1f528e1a6007c55affcda32c1006192320265338efa747e3cf09"
+            }
+          ]
+        },
+        {
+          "version": "0.3.7",
+          "protocol_version": "1",
+          "released_at": "2026-11-07T09:24:04.125922316Z",
+          "voidb_core": ">=0.4.1",
+          "platforms": [
+            "darwin",
+            "linux"
+          ],
+          "signature_scheme": "ed25519",
+          "packages": [
+            {
+              "filename": "postgres-0.3.7-aarch64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-postgres/releases/download/v0.3.7/postgres-0.3.7-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:60224fdc28eab09629044ec728e2f2f809efcbd321cc3c2d19ac7056c3440784",
+              "size_bytes": 2537619,
+              "signature": "63a6777b27f2fd40727c5bfa9fd8b506ba818de9c403ba4878aac084134d4cb3808363124c26eb0a1b92189d51a333e0ae87046fba5aa65358542737ec6dfa03"
+            },
+            {
+              "filename": "postgres-0.3.7-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-postgres/releases/download/v0.3.7/postgres-0.3.7-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:d55317f7b132dfca69b4390052226257f31fa0df02c32c493aa6d8c7d5430cac",
+              "size_bytes": 3477445,
+              "signature": "13c7d2c47b8ceb1276fbbb328f2e9d5049aac4f7603e0f9d7b87626c1eda7c81a60ecce85f773722a4a30c78b3457a645acaf90413ffcd37e4ea0e09a8ba230b"
+            },
+            {
+              "filename": "postgres-0.3.7-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-postgres/releases/download/v0.3.7/postgres-0.3.7-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:38d21dc7a9b52aee2c46f0bd507d3842e1b72705fd35a804ceae4a4e4aaf5b9f",
+              "size_bytes": 2681281,
+              "signature": "e52248f01e2f39d285efd43aa3c3f72c18813f5b83bb094593d42adaa017095149fa14653bbf737eea2e28431ae9559495809f2976246c1d2a1db0a3d5af9f04"
+            },
+            {
+              "filename": "postgres-0.3.7-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-postgres/releases/download/v0.3.7/postgres-0.3.7-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:532c74a9f41cd05e9871d1e5843382b9862f350f8aa90c997cee7ebd3e39639a",
+              "size_bytes": 3344328,
+              "signature": "df3cd61ae3d77842bf975e29defbfd28d017b881a871cd05c4cd37108923e2748eede7ba51340476d128ec24ffcf99422166b5553d26d5b7fd5b4fef58d0730c"
             }
           ]
         }
