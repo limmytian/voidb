@@ -748,12 +748,12 @@ fn profile_error(
 // Profile document lifecycle: create / update / validate
 // ---------------------------------------------------------------------------
 
-fn print_profile_error(error: Box<ProfileError>) -> Result<(), VoidbError> {
+fn print_profile_error(error: ProfileError) -> Result<(), VoidbError> {
     print_json(&JsonErrorEnvelope {
         ok: false,
         schema_version: PROFILE_CLI_SCHEMA_VERSION,
         command: "profile",
-        error: *error,
+        error,
     })
 }
 
@@ -886,8 +886,10 @@ fn reject_set_target(
         return Err(secret_in_payload_error(prefixed));
     }
 
-    if let Value::String(text) = value {
-        if !text.trim().is_empty() {
+    if let Value::String(text) = value
+        && !text.trim().is_empty()
+    {
+        {
             let last_key = pointer.rsplit('/').next().unwrap_or_default();
             let schema_secret = schema.fields.iter().any(|field| {
                 field.path == pointer && matches!(field.kind, ProfileFormFieldKind::Secret)
@@ -1054,7 +1056,6 @@ fn secret_pointer_for_class(
     metadata: &Value,
     source: &SecretSource,
 ) -> Result<String, Box<ProfileError>> {
-    const CODE: &str = "validation.credential_class_unknown";
     let schema_matches: Vec<&str> = schema
         .fields
         .iter()
@@ -1156,7 +1157,11 @@ fn pointer_conflict_error(pointer: &str) -> Box<ProfileError> {
     ))
 }
 
-fn set_at_pointer(target: &mut Value, pointer: &str, value: Value) -> Result<(), Box<ProfileError>> {
+fn set_at_pointer(
+    target: &mut Value,
+    pointer: &str,
+    value: Value,
+) -> Result<(), Box<ProfileError>> {
     let segments = pointer_segments(pointer)?;
     set_at_segments(target, &segments, pointer, value)
 }
@@ -1189,7 +1194,9 @@ fn set_at_segments(
         }
         Value::Array(items) => {
             let index: usize = head.parse().map_err(|_| pointer_conflict_error(pointer))?;
-            let slot = items.get_mut(index).ok_or_else(|| pointer_conflict_error(pointer))?;
+            let slot = items
+                .get_mut(index)
+                .ok_or_else(|| pointer_conflict_error(pointer))?;
             if !slot.is_object() && !slot.is_array() {
                 *slot = Value::Object(Default::default());
             }
@@ -1344,17 +1351,15 @@ fn read_input_document(path: &str) -> Result<Value, Box<ProfileError>> {
     const CODE: &str = "validation.profile_input_unreadable";
     let raw = if path == "-" {
         let mut buffer = String::new();
-        std::io::stdin()
-            .read_to_string(&mut buffer)
-            .map_err(|_| {
-                Box::new(profile_error(
-                    CapabilityErrorCategory::Validation,
-                    CODE,
-                    "The profile document on stdin could not be read.",
-                    json!({ "input": "-" }),
-                    false,
-                ))
-            })?;
+        std::io::stdin().read_to_string(&mut buffer).map_err(|_| {
+            Box::new(profile_error(
+                CapabilityErrorCategory::Validation,
+                CODE,
+                "The profile document on stdin could not be read.",
+                json!({ "input": "-" }),
+                false,
+            ))
+        })?;
         buffer
     } else {
         std::fs::read_to_string(path).map_err(|_| {
@@ -1381,10 +1386,7 @@ fn read_input_document(path: &str) -> Result<Value, Box<ProfileError>> {
 /// Reserved keys that CLI input documents must never set: identity, plugin
 /// ownership, name (create), and version come from flags and Core, and
 /// credential references are derived from the encrypted configuration.
-fn reject_reserved_fields(
-    document: &Value,
-    reserved: &[&str],
-) -> Result<(), Box<ProfileError>> {
+fn reject_reserved_fields(document: &Value, reserved: &[&str]) -> Result<(), Box<ProfileError>> {
     let Some(map) = document.as_object() else {
         return Err(Box::new(profile_error(
             CapabilityErrorCategory::Validation,
@@ -1444,15 +1446,17 @@ fn document_policy(document: &Value) -> Result<Option<ConnectionProfilePolicy>, 
     if raw.is_null() {
         return Ok(None);
     }
-    serde_json::from_value(raw.clone()).map(Some).map_err(|error| {
-        Box::new(profile_error(
-            CapabilityErrorCategory::Validation,
-            "validation.profile_input_invalid",
-            "The profile policy did not match the documented policy shape.",
-            json!({ "message": error.to_string() }),
-            false,
-        ))
-    })
+    serde_json::from_value(raw.clone())
+        .map(Some)
+        .map_err(|error| {
+            Box::new(profile_error(
+                CapabilityErrorCategory::Validation,
+                "validation.profile_input_invalid",
+                "The profile policy did not match the documented policy shape.",
+                json!({ "message": error.to_string() }),
+                false,
+            ))
+        })
 }
 
 fn schema_violations_error(violations: Vec<Value>) -> Box<ProfileError> {
@@ -1485,14 +1489,16 @@ fn validate_metadata_against_schema(
     if violations.is_empty() {
         return Ok(());
     }
-    Err(schema_violations_error(schema_violation_values(&violations)))
+    Err(schema_violations_error(schema_violation_values(
+        &violations,
+    )))
 }
 
 fn profile_schema_for(plugin_id: &str) -> ProfileFormSchema {
     voidb_core::profile_form_schema(plugin_id)
 }
 
-fn require_plugin_id<'a>(matches: &'a ArgMatches) -> Result<&'a str, Box<ProfileError>> {
+fn require_plugin_id(matches: &ArgMatches) -> Result<&str, Box<ProfileError>> {
     matches
         .get_one::<String>("plugin")
         .map(String::as_str)
@@ -1523,13 +1529,11 @@ fn ensure_name_available(
     name: &str,
     ignore_profile_id: Option<&str>,
 ) -> Result<(), Box<ProfileError>> {
-    let taken = profiles
-        .iter()
-        .any(|profile| {
-            profile.plugin_id == plugin_id
-                && profile.id != ignore_profile_id.unwrap_or_default()
-                && profile_names_equal(&profile.name, name)
-        });
+    let taken = profiles.iter().any(|profile| {
+        profile.plugin_id == plugin_id
+            && profile.id != ignore_profile_id.unwrap_or_default()
+            && profile_names_equal(&profile.name, name)
+    });
     if taken {
         return Err(profile_name_conflict_error(plugin_id, name));
     }
@@ -1583,10 +1587,10 @@ fn ensure_update_guards(
             false,
         )));
     }
-    if let Some(expected) = expected_version {
-        if expected != profile.version {
-            return Err(version_mismatch_error(expected, profile.version));
-        }
+    if let Some(expected) = expected_version
+        && expected != profile.version
+    {
+        return Err(version_mismatch_error(expected, profile.version));
     }
     Ok(())
 }
@@ -1596,7 +1600,7 @@ fn handle_create(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbErro
         Ok(plugin_id) => plugin_id.to_string(),
         Err(error) => {
             audit_profile_failure(AuditOperation::ProfileCreate, &error, json!({}))?;
-            return print_profile_error(error);
+            return print_profile_error(*error);
         }
     };
     let name = matches
@@ -1616,19 +1620,30 @@ fn handle_create(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbErro
     let raw = match read_input_document(input_path) {
         Ok(raw) => raw,
         Err(error) => {
-            audit_profile_failure(AuditOperation::ProfileCreate, &error, json!({ "plugin_id": plugin_id }))?;
-            return print_profile_error(error);
+            audit_profile_failure(
+                AuditOperation::ProfileCreate,
+                &error,
+                json!({ "plugin_id": plugin_id }),
+            )?;
+            return print_profile_error(*error);
         }
     };
     let parse = (|| -> Result<Value, Box<ProfileError>> {
-        reject_reserved_fields(&raw, &["id", "plugin_id", "name", "version", "credential_refs"])?;
+        reject_reserved_fields(
+            &raw,
+            &["id", "plugin_id", "name", "version", "credential_refs"],
+        )?;
         document_metadata(&raw)
     })();
     let metadata = match parse {
         Ok(metadata) => metadata,
         Err(error) => {
-            audit_profile_failure(AuditOperation::ProfileCreate, &error, json!({ "plugin_id": plugin_id }))?;
-            return print_profile_error(error);
+            audit_profile_failure(
+                AuditOperation::ProfileCreate,
+                &error,
+                json!({ "plugin_id": plugin_id }),
+            )?;
+            return print_profile_error(*error);
         }
     };
 
@@ -1639,33 +1654,53 @@ fn handle_create(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbErro
     }) {
         Ok(sources) => sources,
         Err(error) => {
-            audit_profile_failure(AuditOperation::ProfileCreate, &error, json!({ "plugin_id": plugin_id }))?;
-            return print_profile_error(error);
+            audit_profile_failure(
+                AuditOperation::ProfileCreate,
+                &error,
+                json!({ "plugin_id": plugin_id }),
+            )?;
+            return print_profile_error(*error);
         }
     };
 
     let mut metadata = metadata;
     if let Err(error) = apply_secret_sources(&mut metadata, &schema, &sources) {
-        audit_profile_failure(AuditOperation::ProfileCreate, &error, json!({ "plugin_id": plugin_id }))?;
-        return print_profile_error(error);
+        audit_profile_failure(
+            AuditOperation::ProfileCreate,
+            &error,
+            json!({ "plugin_id": plugin_id }),
+        )?;
+        return print_profile_error(*error);
     }
     if let Err(error) = validate_metadata_against_schema(&metadata, &schema) {
-        audit_profile_failure(AuditOperation::ProfileCreate, &error, json!({ "plugin_id": plugin_id }))?;
-        return print_profile_error(error);
+        audit_profile_failure(
+            AuditOperation::ProfileCreate,
+            &error,
+            json!({ "plugin_id": plugin_id }),
+        )?;
+        return print_profile_error(*error);
     }
 
     let profiles = profiles_from_context(ctx)?;
     if let Err(error) = ensure_name_available(&profiles, &plugin_id, &name, None) {
-        audit_profile_failure(AuditOperation::ProfileCreate, &error, json!({ "plugin_id": plugin_id, "name": name }))?;
-        return print_profile_error(error);
+        audit_profile_failure(
+            AuditOperation::ProfileCreate,
+            &error,
+            json!({ "plugin_id": plugin_id, "name": name }),
+        )?;
+        return print_profile_error(*error);
     }
 
     let default_options = document_default_options(&raw);
     let policy = match document_policy(&raw) {
         Ok(policy) => policy,
         Err(error) => {
-            audit_profile_failure(AuditOperation::ProfileCreate, &error, json!({ "plugin_id": plugin_id }))?;
-            return print_profile_error(error);
+            audit_profile_failure(
+                AuditOperation::ProfileCreate,
+                &error,
+                json!({ "plugin_id": plugin_id }),
+            )?;
+            return print_profile_error(*error);
         }
     };
     let config = ConnectionConfig {
@@ -1716,8 +1751,12 @@ fn handle_create(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbErro
                 json!({ "plugin_id": plugin_id, "message": error.to_string() }),
                 false,
             ));
-            audit_profile_failure(AuditOperation::ProfileCreate, &error, json!({ "plugin_id": plugin_id, "name": name }))?;
-            return print_profile_error(error);
+            audit_profile_failure(
+                AuditOperation::ProfileCreate,
+                &error,
+                json!({ "plugin_id": plugin_id, "name": name }),
+            )?;
+            return print_profile_error(*error);
         }
     };
 
@@ -1749,7 +1788,7 @@ fn handle_update(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbErro
                 &error,
                 profile_audit_metadata(profile_ref, plugin_filter),
             )?;
-            return print_profile_error(error);
+            return print_profile_error(*error);
         }
     };
     let audit_metadata = json!({
@@ -1760,8 +1799,12 @@ fn handle_update(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbErro
     });
 
     let error_and_exit = |error: Box<ProfileError>| -> Result<(), VoidbError> {
-        audit_profile_failure(AuditOperation::ProfileUpdate, &error, audit_metadata.clone())?;
-        print_profile_error(error)
+        audit_profile_failure(
+            AuditOperation::ProfileUpdate,
+            &error,
+            audit_metadata.clone(),
+        )?;
+        print_profile_error(*error)
     };
 
     if let Err(error) = ensure_update_guards(&profile, expected_version, dry_run) {
@@ -1801,16 +1844,15 @@ fn handle_update(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbErro
             Ok(raw) => raw,
             Err(error) => return error_and_exit(error),
         };
-        if let Err(error) = reject_reserved_fields(
-            &raw,
-            &["id", "plugin_id", "version", "credential_refs"],
-        ) {
+        if let Err(error) =
+            reject_reserved_fields(&raw, &["id", "plugin_id", "version", "credential_refs"])
+        {
             return error_and_exit(error);
         }
-        if let Ok(patch_metadata) = document_metadata(&raw) {
-            if let Err(error) = reject_secret_payload(&patch_metadata, Some(&schema)) {
-                return error_and_exit(error);
-            }
+        if let Ok(patch_metadata) = document_metadata(&raw)
+            && let Err(error) = reject_secret_payload(&patch_metadata, Some(&schema))
+        {
+            return error_and_exit(error);
         }
         json_merge_patch(&mut doc, &raw);
     }
@@ -1827,7 +1869,8 @@ fn handle_update(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbErro
         };
         let value: Value = serde_json::from_str(raw_value)
             .unwrap_or_else(|_| Value::String(raw_value.to_string()));
-        let (pointer_target, metadata_pointer) = if let Some(rest) = path.strip_prefix("metadata.") {
+        let (pointer_target, metadata_pointer) = if let Some(rest) = path.strip_prefix("metadata.")
+        {
             (None, format!("/{}", rest.trim_start_matches('/')))
         } else {
             match path {
@@ -1874,8 +1917,7 @@ fn handle_update(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbErro
     for path in matches.get_many::<String>("unset").unwrap_or_default() {
         match path.as_str() {
             "display_name" => {
-                doc
-                    .as_object_mut()
+                doc.as_object_mut()
                     .expect("doc is an object")
                     .remove("display_name");
             }
@@ -1924,12 +1966,15 @@ fn handle_update(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbErro
             false,
         )));
     }
-    if !profile_names_equal(&final_name, &profile.name) {
-        if let Err(error) =
-            ensure_name_available(&profiles, &profile.plugin_id, &final_name, Some(&profile.id))
-        {
-            return error_and_exit(error);
-        }
+    if !profile_names_equal(&final_name, &profile.name)
+        && let Err(error) = ensure_name_available(
+            &profiles,
+            &profile.plugin_id,
+            &final_name,
+            Some(&profile.id),
+        )
+    {
+        return error_and_exit(error);
     }
     let display_name = doc
         .get("display_name")
@@ -1960,13 +2005,14 @@ fn handle_update(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbErro
     };
 
     if dry_run {
-        let plan =
-            derive_native_profile(&profile.id, Some(&profile), &config, display_name, &document);
-        audit_profile_success(
-            AuditOperation::ProfileUpdate,
-            &plan,
-            audit_metadata,
-        )?;
+        let plan = derive_native_profile(
+            &profile.id,
+            Some(&profile),
+            &config,
+            display_name,
+            &document,
+        );
+        audit_profile_success(AuditOperation::ProfileUpdate, &plan, audit_metadata)?;
         return print_json(&success_envelope_with_warnings(
             mutation_envelope(plan, true),
             security_warnings_for_config(&ctx.config),
@@ -2004,7 +2050,7 @@ fn handle_validate(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbEr
         Ok(plugin_id) => plugin_id.to_string(),
         Err(error) => {
             audit_profile_failure(AuditOperation::ProfileValidate, &error, json!({}))?;
-            return print_profile_error(error);
+            return print_profile_error(*error);
         }
     };
     let audit_metadata = json!({ "plugin_id": plugin_id });
@@ -2015,8 +2061,12 @@ fn handle_validate(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbEr
     let raw = match read_input_document(input_path) {
         Ok(raw) => raw,
         Err(error) => {
-            audit_profile_failure(AuditOperation::ProfileValidate, &error, audit_metadata.clone())?;
-            return print_profile_error(error);
+            audit_profile_failure(
+                AuditOperation::ProfileValidate,
+                &error,
+                audit_metadata.clone(),
+            )?;
+            return print_profile_error(*error);
         }
     };
 
@@ -2024,7 +2074,11 @@ fn handle_validate(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbEr
         reject_reserved_fields(&raw, &["id", "plugin_id", "version", "credential_refs"])?;
         let metadata = document_metadata(&raw)?;
         let policy = document_policy(&raw)?;
-        if policy.is_none() && raw.as_object().is_some_and(|map| map.contains_key("policy")) {
+        if policy.is_none()
+            && raw
+                .as_object()
+                .is_some_and(|map| map.contains_key("policy"))
+        {
             return Err(Box::new(profile_error(
                 CapabilityErrorCategory::Validation,
                 "validation.profile_input_invalid",
@@ -2052,14 +2106,14 @@ fn handle_validate(matches: &ArgMatches, ctx: &CliContext) -> Result<(), VoidbEr
             event.plugin_id = Some(plugin_id.clone());
             event.metadata = json!({ "plugin_id": plugin_id, "valid": data.valid });
             append_audit_event(event)?;
-            return print_json(&success_envelope_with_warnings(
+            print_json(&success_envelope_with_warnings(
                 data,
                 security_warnings_for_config(&ctx.config),
-            ));
+            ))
         }
         Err(error) => {
             audit_profile_failure(AuditOperation::ProfileValidate, &error, audit_metadata)?;
-            print_profile_error(error)
+            print_profile_error(*error)
         }
     }
 }
@@ -2762,8 +2816,11 @@ mod tests {
     }
 
     fn native_profile_fixture(name: &str, version: u64) -> ConnectionProfile {
-        let mut profile =
-            migrated_profile_from_connection(&connection(name, DatabaseType::Plugin, Some("mysql")));
+        let mut profile = migrated_profile_from_connection(&connection(
+            name,
+            DatabaseType::Plugin,
+            Some("mysql"),
+        ));
         profile.metadata = json!({
             "source": "native_profile_store",
             "host": "db.internal.example",
@@ -2809,7 +2866,8 @@ mod tests {
         });
         reject_secret_payload(&metadata, Some(&schema)).expect("empty placeholder allowed");
 
-        let sources = vec![parse_secret_source("password:env=VOIDB_PROFILE_TEST_PASSWORD").unwrap()];
+        let sources =
+            vec![parse_secret_source("password:env=VOIDB_PROFILE_TEST_PASSWORD").unwrap()];
         apply_secret_sources(&mut metadata, &schema, &sources).expect("inject credential source");
 
         assert_eq!(metadata["password"], "resolved-secret");
@@ -2840,7 +2898,9 @@ mod tests {
             "validation.credential_source_invalid"
         );
         assert_eq!(
-            parse_secret_source("password:env=lower_case").unwrap_err().code,
+            parse_secret_source("password:env=lower_case")
+                .unwrap_err()
+                .code,
             "validation.credential_source_invalid"
         );
         assert_eq!(
@@ -3014,11 +3074,13 @@ mod tests {
         let error = validate_metadata_against_schema(&json!({}), &schema)
             .expect_err("required fields missing");
         assert_eq!(error.code, "validation.profile_schema_mismatch");
-        assert!(error.details["violations"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|violation| violation["path"] == "/host"));
+        assert!(
+            error.details["violations"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|violation| violation["path"] == "/host")
+        );
     }
 
     #[test]

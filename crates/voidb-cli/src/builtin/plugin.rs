@@ -917,7 +917,11 @@ struct PluginUpdateOutcome {
     error_code: Option<String>,
 }
 
-fn failed_update_outcome(item: &PluginUpdatePlanItem, code: &str, message: &str) -> (String, PluginUpdateOutcome) {
+fn failed_update_outcome(
+    item: &PluginUpdatePlanItem,
+    code: &str,
+    message: &str,
+) -> (String, PluginUpdateOutcome) {
     (
         message.to_string(),
         PluginUpdateOutcome {
@@ -935,9 +939,13 @@ fn failed_update_outcome(item: &PluginUpdatePlanItem, code: &str, message: &str)
 /// rollback path as a single `vb plugin update`; a per-plugin failure is
 /// recorded and the remaining plugins continue.
 async fn handle_update_all(matches: &ArgMatches) -> Result<(), VoidbError> {
-    let format = output_format(matches)?;
+    // The summary is always a JSON envelope; --format is still validated so
+    // unsupported values fail the same way as other plugin commands.
+    output_format(matches)?;
     let install_root = install_root_from_matches(matches)?;
-    let registry_url_opt = matches.get_one::<String>("registry-url").map(String::as_str);
+    let registry_url_opt = matches
+        .get_one::<String>("registry-url")
+        .map(String::as_str);
     let verify_key = matches.get_one::<String>("verify-key").map(String::as_str);
     let require_signature = matches.get_flag("require-signature");
     let dry_run = matches.get_flag("dry-run");
@@ -1044,7 +1052,6 @@ async fn handle_update_all(matches: &ArgMatches) -> Result<(), VoidbError> {
         let executed = execute_planned_update(
             item,
             &index,
-            registry_url_opt,
             verify_key,
             require_signature,
             install_root.clone(),
@@ -1074,8 +1081,7 @@ async fn handle_update_all(matches: &ArgMatches) -> Result<(), VoidbError> {
         "updated": updated,
         "up_to_date": up_to_date,
         "failed": failed,
-    })));
-    Ok(())
+    })))
 }
 
 /// Downloads and applies one planned update. Returns the outcome, or the
@@ -1083,16 +1089,23 @@ async fn handle_update_all(matches: &ArgMatches) -> Result<(), VoidbError> {
 async fn execute_planned_update(
     item: &PluginUpdatePlanItem,
     index: &PluginRegistryIndex,
-    registry_url_opt: Option<&str>,
     verify_key: Option<&str>,
     require_signature: bool,
     install_root: PathBuf,
 ) -> Result<PluginUpdateOutcome, (String, PluginUpdateOutcome)> {
     let entry = index.get_plugin(&item.plugin_id).ok_or_else(|| {
-        failed_update_outcome(item, "unavailable.plugin_not_in_registry", "Plugin missing from the registry")
+        failed_update_outcome(
+            item,
+            "unavailable.plugin_not_in_registry",
+            "Plugin missing from the registry",
+        )
     })?;
     let version_entry = entry.get_version(None).ok_or_else(|| {
-        failed_update_outcome(item, "unavailable.registry_version_missing", "Registry latest version not found")
+        failed_update_outcome(
+            item,
+            "unavailable.registry_version_missing",
+            "Registry latest version not found",
+        )
     })?;
     let current_plat = voidb_core::process_plugin::current_platform();
     let artifact = version_entry
@@ -1142,18 +1155,14 @@ async fn execute_planned_update(
     );
     let _ = fs::remove_dir_all(&download_dir);
     match outcome {
-        Ok(result) => Ok(PluginUpdateOutcome {
+        Ok(_) => Ok(PluginUpdateOutcome {
             plugin_id: item.plugin_id.clone(),
             status: "updated".into(),
             from_version: Some(item.installed_version.clone()),
             to_version: Some(item.registry_version.clone()),
             error_code: None,
         }),
-        Err(error) => Err(failed_update_outcome(
-            item,
-            &error.code,
-            &error.message,
-        )),
+        Err(error) => Err(failed_update_outcome(item, &error.code, &error.message)),
     }
 }
 
@@ -4632,7 +4641,6 @@ platforms = ["{platform}"]
     }
 }
 
-
 #[cfg(test)]
 mod update_all_tests {
     use super::*;
@@ -4649,18 +4657,24 @@ mod update_all_tests {
     #[test]
     fn update_all_and_positional_are_exclusive() {
         let command = update_command();
-        assert!(command
-            .clone()
-            .try_get_matches_from(["update", "--all", "docker"])
-            .is_err());
-        assert!(command
-            .clone()
-            .try_get_matches_from(["update", "--all", "--from", "/tmp/x"])
-            .is_err());
-        assert!(command
-            .clone()
-            .try_get_matches_from(["update", "--all", "--version", "0.3.6"])
-            .is_err());
+        assert!(
+            command
+                .clone()
+                .try_get_matches_from(["update", "--all", "docker"])
+                .is_err()
+        );
+        assert!(
+            command
+                .clone()
+                .try_get_matches_from(["update", "--all", "--from", "/tmp/x"])
+                .is_err()
+        );
+        assert!(
+            command
+                .clone()
+                .try_get_matches_from(["update", "--all", "--version", "0.3.6"])
+                .is_err()
+        );
     }
 
     #[test]
