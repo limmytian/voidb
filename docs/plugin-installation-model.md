@@ -283,6 +283,31 @@ JSON output should include:
 Human table output is a convenience layer only. Agents should branch on stable
 JSON fields and structured error categories.
 
+## Release Automation
+
+The official plugin registry updates itself when a plugin is released; nobody
+re-runs `update-registry.yml` by hand.
+
+- Every official plugin repository's `release.yml` ends its publish job with a
+  `repository_dispatch(plugin_released)` step targeting the core repository
+  (`limmytian/voidb`) with `client_payload.plugin_id` and
+  `client_payload.release = v<version>`.
+- Core's `.github/workflows/update-registry.yml` listens for that event,
+  resolves the version from `client_payload.release`, and stages only the
+  released plugin's archives (per-plugin sync) via
+  `scripts/download-release-plugins.py --plugin-id`, merging the entry into
+  `registry/index.json`. A manual `workflow_dispatch` with an empty
+  `plugin_id` still performs a full sync of all 14 plugins at the given
+  version.
+- Cross-repository dispatch cannot use the plugin repo's `GITHUB_TOKEN`; each
+  plugin repository requires a `DISPATCH_TOKEN` secret (a PAT with repo scope
+  on the core repository). The dispatch step fails loudly on a non-2xx
+  response and prints the manual recovery command
+  (`gh workflow run update-registry.yml -R limmytian/voidb -f version=... -f
+  plugin_id=...`).
+- `.github/workflows/templates/plugin-release.yml` carries the same step so
+  future plugin repositories inherit the automation.
+
 ## Trust And Security
 
 User-installed plugins are local code execution. VoidB should describe them as
