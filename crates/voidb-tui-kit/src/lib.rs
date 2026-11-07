@@ -92,6 +92,11 @@ impl BoundedLines {
         self.dropped_lines
     }
 
+    /// Approximate in-memory size of the retained lines.
+    pub fn bytes(&self) -> usize {
+        self.bytes
+    }
+
     pub fn clear(&mut self) {
         self.lines.clear();
         self.bytes = 0;
