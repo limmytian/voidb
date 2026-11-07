@@ -245,6 +245,11 @@ TUI_NAME="$(binary_name vb-tui)"
 CLI_NAME="$(binary_name vb)"
 SYNC_SERVER_NAME="$(binary_name voidb-sync-server)"
 
+# Stale same-platform artifact roots (e.g. a previous release version
+# restored into target/ by the CI cache) would leave multiple candidates for
+# `ls -d target/package/voidb-*` consumers like the CI package smoke. This
+# script owns the current version+platform root, so retire its ancestors.
+rm -rf "${OUT_DIR}"/voidb-*-"${PLATFORM}"
 rm -rf "${ARTIFACT_ROOT}"
 mkdir -p "${ARTIFACT_ROOT}"
 : > "${BUILD_INPUTS}"
