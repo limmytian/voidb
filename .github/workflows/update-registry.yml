@@ -77,7 +77,7 @@ jobs:
           # expectation automatically. The download step above already fails
           # if any expected archive is missing; this guards against staging
           # drift (renamed or nested files).
-          expected="$(PLUGIN_ID='${PLUGIN_ID}' python3 -c "import importlib.util, os; spec=importlib.util.spec_from_file_location('download_release_plugins', 'scripts/download-release-plugins.py'); module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module); plugin_ids=os.environ.get('PLUGIN_ID', ''); print((len(plugin_ids.split(',')) if plugin_ids else len(module.ALL)) * len(module.TARGETS))")"
+          expected="$(PLUGIN_ID="${PLUGIN_ID}" python3 -c "import importlib.util, os; spec=importlib.util.spec_from_file_location('download_release_plugins', 'scripts/download-release-plugins.py'); module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module); plugin_ids=os.environ.get('PLUGIN_ID', ''); print((len(plugin_ids.split(',')) if plugin_ids else len(module.ALL)) * len(module.TARGETS))")"
           if [ "${#archives[@]}" -ne "${expected}" ]; then
             echo "::error::Downloaded ${#archives[@]} plugin archives, expected ${expected} (staged plugins x TARGETS in scripts/download-release-plugins.py)."
             exit 1
