@@ -153,16 +153,14 @@ impl BoundedLines {
     }
 }
 
-/// The shared startup auto-load rule lives in the run loop of each plugin
-/// TUI (queue the initial refresh before the first draw when a live service
-/// is attached) and is locked by a fixture-mode regression test per plugin;
-/// it is documented here because it is contract, not a helper worth wrapping
-/// in callbacks.
-///
-/// The companion regression test in each adopting plugin locks the 0.4.1
-/// acceptance criterion (the docker TUI showed no data until a manual
-/// refresh) by asserting the initial refresh command is queued before the
-/// first draw.
+// The shared startup auto-load rule lives in the run loop of each plugin
+// TUI (queue the initial refresh before the first draw when a live service
+// is attached) and is locked by a fixture-mode regression test per plugin;
+// it is documented here because it is contract, not a helper worth wrapping
+// in callbacks. The companion regression test in each adopting plugin locks
+// the 0.4.1 acceptance criterion (the docker TUI showed no data until a
+// manual refresh) by asserting the initial refresh command is queued before
+// the first draw.
 
 #[cfg(test)]
 mod tests {
