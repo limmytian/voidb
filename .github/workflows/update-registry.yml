@@ -71,6 +71,8 @@ jobs:
           fi
 
       - name: Rebuild Registry From Published Archives
+        env:
+          PLUGIN_ID: ${{ inputs.plugin_id || github.event.client_payload.plugin_id }}
         run: |
           mapfile -t archives < <(find target/registry-release/.downloads -name '*.tar.gz' | sort)
           # Derive the expected archive count from the downloader itself
@@ -84,7 +86,11 @@ jobs:
             echo "::error::Downloaded ${#archives[@]} plugin archives, expected ${expected} (staged plugins x TARGETS in scripts/download-release-plugins.py)."
             exit 1
           fi
-          cargo run -p voidb-cli -- plugin registry-index "${archives[@]}" --output registry/index.json --registry-name 'VoidB Official Plugin Registry' --format json
+          merge_args=()
+          if [ -n "${PLUGIN_ID}" ]; then
+            merge_args=(--merge registry/index.json)
+          fi
+          cargo run -p voidb-cli -- plugin registry-index "${archives[@]}" "${merge_args[@]}" --output registry/index.json --registry-name 'VoidB Official Plugin Registry' --format json
         shell: bash
 
       - name: Validate Registry Manifest with CLI
