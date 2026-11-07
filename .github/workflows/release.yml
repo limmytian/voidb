@@ -252,3 +252,12 @@ jobs:
           git fetch origin "refs/tags/$tag:refs/tags/$tag"
           test "$(git rev-parse HEAD)" = "$(git rev-parse "$tag^{commit}")"
           gh release create "$tag" --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes dist/*
+
+  update-homebrew:
+    name: Update Homebrew Tap
+    needs: publish-release
+    uses: ./.github/workflows/update-homebrew.yml
+    with:
+      release_version: ${{ inputs.release_version || github.ref_name }}
+    secrets:
+      HOMEBREW_TAP_DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}

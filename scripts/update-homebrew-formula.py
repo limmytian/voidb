@@ -27,6 +27,11 @@ def main():
                 raise ValueError(f'{archive.name} must contain only the two regular core binaries')
         checksums[platform] = hashlib.sha256(archive.read_bytes()).hexdigest()
     formula = args.formula.read_text()
+    current = re.search(r'^  version "(\d+\.\d+\.\d+)"$', formula, re.MULTILINE)
+    if not current:
+        raise ValueError('Formula must have a numeric stable version')
+    if tuple(map(int, args.version.split('.'))) < tuple(map(int, current.group(1).split('.'))):
+        raise ValueError(f'Refusing to downgrade formula from {current.group(1)} to {args.version}')
     formula, count = re.subn(r'  version "[^"]+"', f'  version "{args.version}"', formula)
     if count != 1:
         raise ValueError('Formula must have exactly one version')

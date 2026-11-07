@@ -442,6 +442,9 @@ protection.
 Candidate validation can select a registry with `VOIDB_PLUGIN_REGISTRY_URL` or
 `--registry-url`. This changes the download location only; it never changes the
 compiled trusted signing keys. Release signing/verification scripts require
-Python 3.11+ and OpenSSL 3. Use `scripts/update-homebrew-formula.py` after all four
-verified Unix core archives are available; published v0.3.4 formula hashes remain
-unchanged until that evidence exists.
+Python 3.11+ and OpenSSL 3. After a core release is published, the release
+workflow verifies its four Unix archives against the published checksums and
+updates the Homebrew tap automatically. It requires the repository secret
+`HOMEBREW_TAP_DEPLOY_KEY`, a write-enabled deploy key scoped to the tap. If
+the update fails, rerun **Update Homebrew Tap** with the published release tag;
+the job is idempotent and refuses to replace a newer formula with an older one.

@@ -1,0 +1,81 @@
+name: Update Homebrew Tap
+
+on:
+  workflow_call:
+    inputs:
+      release_version:
+        required: true
+        type: string
+    secrets:
+      HOMEBREW_TAP_DEPLOY_KEY:
+        required: true
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: Published stable release tag (for example v0.4.2)
+        required: true
+        type: string
+
+concurrency:
+  group: homebrew-tap-update
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    name: Verify release and update formula
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release tooling
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Require tap deploy key
+        env:
+          TAP_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+        run: |
+          if [ -z "$TAP_KEY" ]; then
+            echo '::error::HOMEBREW_TAP_DEPLOY_KEY is required to update the Homebrew tap.'
+            exit 1
+          fi
+
+      - name: Checkout Homebrew tap
+        uses: actions/checkout@v4
+        with:
+          repository: limmytian/homebrew-tap
+          ref: main
+          path: homebrew-tap
+          ssh-key: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+
+      - name: Download and verify published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.release_version }}
+        run: |
+          version="${VERSION#v}"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo '::error::Expected a stable numeric version.'; exit 1; }
+          tag="v${version}"
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease --jq 'select(.isDraft == false and .isPrerelease == false)' | grep -q .
+          mkdir -p release-assets
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --dir release-assets --pattern SHA256SUMS --pattern "voidb-${version}-*.tar.gz"
+          python3 scripts/verify-homebrew-release.py --artifacts release-assets --version "$version"
+
+      - name: Render and publish formula
+        env:
+          VERSION: ${{ inputs.release_version }}
+        run: |
+          version="${VERSION#v}"
+          python3 scripts/update-homebrew-formula.py --artifacts release-assets --version "$version" --formula homebrew-tap/Formula/voidb.rb --output homebrew-tap/Formula/voidb.rb
+          cd homebrew-tap
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Formula/voidb.rb
+          if git diff --cached --quiet; then
+            echo 'Homebrew formula is already current.'
+          else
+            git commit -m "release: update VoidB to v${version}"
+            git push origin HEAD:main
+          fi
