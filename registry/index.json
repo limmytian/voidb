@@ -3,7 +3,7 @@
   "schema_version": 1,
   "registry_name": "VoidB Official Plugin Registry",
   "registry_url": "https://raw.githubusercontent.com/limmytian/voidb/main/registry/index.json",
-  "updated_at": "2026-11-07T09:24:05.533387300Z",
+  "updated_at": "2026-11-07T09:26:38.453024175Z",
   "plugins": [
     {
       "id": "docker",
@@ -1104,7 +1104,7 @@
         "abort_build",
         "cancel_queue_item"
       ],
-      "latest_version": "0.3.6",
+      "latest_version": "0.3.7",
       "versions": [
         {
           "version": "0.3.3",
@@ -1294,6 +1294,55 @@
               "sha256": "sha256:9402d0c07f14b7fc8de6a13b5fe8b041015d263904720a31c794662d4730d2b3",
               "size_bytes": 5926831,
               "signature": "1812335a77b3a24fcc5387cec1d377f79296e1ab0b451041ff72e24f9b023839b309f9c7f9413db8b8246401d71d81da4bf0c75e214d4f5366ecdf1bdb0e470b"
+            }
+          ]
+        },
+        {
+          "version": "0.3.7",
+          "protocol_version": "1",
+          "released_at": "2026-11-07T09:26:34.039542946Z",
+          "voidb_core": ">=0.4.1",
+          "platforms": [
+            "darwin",
+            "linux"
+          ],
+          "signature_scheme": "ed25519",
+          "packages": [
+            {
+              "filename": "jenkins-0.3.7-aarch64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-jenkins/releases/download/v0.3.7/jenkins-0.3.7-aarch64-apple-darwin.tar.gz",
+              "sha256": "sha256:6b4f0ecc1cabe2467def7112136bdfabed8a2fdc40392b388ddb903e8e162884",
+              "size_bytes": 5070571,
+              "signature": "4c03405e3b4b78967530ac54c5d05b24fc9bc039f4817eb906c8020de53478c804b89399c6fa406ef760229a52ed28438b69f55994ea514bfac21b4b3ee2270c"
+            },
+            {
+              "filename": "jenkins-0.3.7-aarch64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "aarch64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-jenkins/releases/download/v0.3.7/jenkins-0.3.7-aarch64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:cdbe259b3b6427ee08dc84cd19f57eec7099108936fa0eb1aefd82844aaa9850",
+              "size_bytes": 6320654,
+              "signature": "bbeb0c9ef26ecf53648e8b957c0ed9ff8c2ace7721f9cc082854c38fa01329e541c2ab81312259d28bc9cda5cd5b52b483a5a3a63ba5bf19d5c5db17b659e70a"
+            },
+            {
+              "filename": "jenkins-0.3.7-x86_64-apple-darwin.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-apple-darwin",
+              "url": "https://github.com/limmytian/voidb-plugin-jenkins/releases/download/v0.3.7/jenkins-0.3.7-x86_64-apple-darwin.tar.gz",
+              "sha256": "sha256:ee5f2b7c16b9078f12e420672529140650d7f9a752711658eff627d80b50b195",
+              "size_bytes": 5270411,
+              "signature": "667d361f59814025a14ed6035a593b38cf337d54b94a3a3a3987eb10e291c87f510b764fd7006b1e0132d0b30eb374bc195101e94fc6fe8ca311927999ff4803"
+            },
+            {
+              "filename": "jenkins-0.3.7-x86_64-unknown-linux-gnu.tar.gz",
+              "format": "tar.gz",
+              "target": "x86_64-unknown-linux-gnu",
+              "url": "https://github.com/limmytian/voidb-plugin-jenkins/releases/download/v0.3.7/jenkins-0.3.7-x86_64-unknown-linux-gnu.tar.gz",
+              "sha256": "sha256:f1eb3e92e562c569fdc471686dc89566d7e33063a273d57add5233e2cc39eb6a",
+              "size_bytes": 5934310,
+              "signature": "8dacabdc0e022e801cbda21684b25b721c723f3871098006a29f11e6f01b28330a7131bbaddbef838b13c6ba12eca3f266de5da8ca8c762ca1e4ea2714b13c0f"
             }
           ]
         }
