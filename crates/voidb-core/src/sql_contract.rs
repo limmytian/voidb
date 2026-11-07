@@ -679,22 +679,10 @@ fn classify_statement(statement: &str, dialect: SqlDialect) -> (SqlStatementInte
             // and DuckDB: an EXPLAIN whose analyzed statement mutates must
             // never pass the read-only gates.
             match keyword_after_explain(statement).as_deref() {
-                Some("delete")
-                | Some("insert")
-                | Some("update")
-                | Some("merge")
-                | Some("replace")
-                | Some("create")
-                | Some("drop")
-                | Some("alter")
-                | Some("truncate")
-                | Some("grant")
-                | Some("revoke")
-                | Some("call")
-                | Some("vacuum")
-                | Some("reindex")
-                | Some("lock")
-                | Some("copy") => (
+                Some("delete") | Some("insert") | Some("update") | Some("merge")
+                | Some("replace") | Some("create") | Some("drop") | Some("alter")
+                | Some("truncate") | Some("grant") | Some("revoke") | Some("call")
+                | Some("vacuum") | Some("reindex") | Some("lock") | Some("copy") => (
                     SqlStatementIntent::Write,
                     "statement.explain_analyze_mutation",
                 ),
@@ -1979,7 +1967,10 @@ mod explain_analyze_tests {
 
     #[test]
     fn plain_explain_and_explain_of_select_stay_read_only() {
-        assert!(sql_allows_read_only_query("explain select 1", SqlDialect::MySql));
+        assert!(sql_allows_read_only_query(
+            "explain select 1",
+            SqlDialect::MySql
+        ));
         assert!(sql_allows_read_only_query(
             "explain analyze select 1",
             SqlDialect::MySql

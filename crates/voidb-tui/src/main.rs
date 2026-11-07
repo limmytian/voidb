@@ -1,6 +1,5 @@
 mod connection_manager_app;
 mod plugin_onboarding;
-mod profile_forms;
 
 use anyhow::Result;
 

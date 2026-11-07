@@ -22,7 +22,7 @@ use crate::config::{AppConfig, write_private_file};
 use crate::connection::ConnectionConfig;
 use crate::error::VoidbError;
 use crate::profile_adapter::{profile_plugin_id, safe_plugin_profile_metadata};
-use crate::redaction::{RedactionTargetKind, collect_redaction_targets};
+use crate::redaction::{RedactionTargetKind, collect_redaction_targets, strip_credential_values};
 
 const PROFILE_STORE_VERSION: u32 = 1;
 const CREDENTIAL_STORE_VERSION: u32 = 1;
@@ -31,6 +31,16 @@ const MIGRATED_CREDENTIAL_ID_PREFIX: &str = "credential:";
 const MIGRATED_PROFILE_SOURCE: &str = "local_profile_store";
 const NATIVE_PROFILE_SOURCE: &str = "native_profile_store";
 const NATIVE_CONNECTION_CONFIG_KIND: &str = "encrypted_plugin_config";
+
+/// Explicit document fields for a native profile upsert.
+///
+/// `None` keeps the previously stored value so updates stay patch-shaped;
+/// `Some` replaces the field wholesale.
+#[derive(Debug, Clone, Default)]
+pub struct NativeProfileDocument {
+    pub default_options: Option<Value>,
+    pub policy: Option<ConnectionProfilePolicy>,
+}
 
 #[derive(Debug, Clone)]
 pub struct LocalProfileStore {
@@ -105,6 +115,26 @@ impl LocalProfileStore {
         display_name: Option<String>,
         master_password: Option<&str>,
     ) -> Result<ConnectionProfile, VoidbError> {
+        self.upsert_native_connection_document(
+            existing_profile_id,
+            config,
+            display_name,
+            master_password,
+            NativeProfileDocument::default(),
+        )
+    }
+
+    /// Create or update a native profile while explicitly setting optional
+    /// document fields (`default_options`, `policy`). Passing `None` keeps the
+    /// previously stored value so partial updates stay patch-shaped.
+    pub fn upsert_native_connection_document(
+        &self,
+        existing_profile_id: Option<&str>,
+        config: &ConnectionConfig,
+        display_name: Option<String>,
+        master_password: Option<&str>,
+        document: NativeProfileDocument,
+    ) -> Result<ConnectionProfile, VoidbError> {
         let plugin_id = profile_plugin_id(config);
         let profile_name = config.name.trim();
         if profile_name.is_empty() {
@@ -143,36 +173,13 @@ impl LocalProfileStore {
             class: CredentialClass::Other("plugin_config".to_string()),
             label: Some("Encrypted local plugin configuration".to_string()),
         };
-        let mut credential_refs = vec![encrypted_config_ref.clone()];
-        if let Some(plugin_config) = &config.plugin_config {
-            credential_refs.extend(
-                collect_redaction_targets(plugin_config)
-                    .into_iter()
-                    .filter_map(|target| {
-                        let RedactionTargetKind::Credential(class) = target.kind else {
-                            return None;
-                        };
-                        Some(CredentialRef {
-                            id: native_target_credential_id(&profile_id, &target.path),
-                            class,
-                            label: Some(format!("Local credential {}", target.path)),
-                        })
-                    }),
-            );
-        }
-        let profile = ConnectionProfile {
-            id: profile_id.clone(),
-            name: profile_name.to_string(),
-            plugin_id: plugin_id.clone(),
+        let profile = derive_native_profile(
+            &profile_id,
+            existing.as_ref(),
+            config,
             display_name,
-            metadata: native_profile_metadata(config),
-            default_options: existing
-                .as_ref()
-                .map(|profile| profile.default_options.clone())
-                .unwrap_or(Value::Null),
-            credential_refs,
-            policy: existing.map(|profile| profile.policy).unwrap_or_default(),
-        };
+            &document,
+        );
 
         let plugin_config = serde_json::to_string(
             config.plugin_config.as_ref().unwrap_or(&Value::Null),
@@ -756,15 +763,89 @@ fn native_target_credential_id(profile_id: &str, path: &str) -> String {
     )
 }
 
-fn native_profile_metadata(config: &ConnectionConfig) -> Value {
-    json!({
-        "source": NATIVE_PROFILE_SOURCE,
-        "connection_config_version": 1,
-        "database_type": config.db_type.protocol_name(),
-    })
+/// Build the stored [`ConnectionProfile`] for a native profile upsert without
+/// touching the store. `upsert_native_connection_document` persists exactly
+/// this derivation, so CLI dry-runs can preview the planned profile.
+///
+/// `existing` drives patch semantics: absent document fields keep the stored
+/// value, and the version bumps monotonically when a profile already exists.
+pub fn derive_native_profile(
+    profile_id: &str,
+    existing: Option<&ConnectionProfile>,
+    config: &ConnectionConfig,
+    display_name: Option<String>,
+    document: &NativeProfileDocument,
+) -> ConnectionProfile {
+    let plugin_id = profile_plugin_id(config);
+    let mut credential_refs = vec![CredentialRef {
+        id: native_connection_credential_id(profile_id),
+        class: CredentialClass::Other("plugin_config".to_string()),
+        label: Some("Encrypted local plugin configuration".to_string()),
+    }];
+    if let Some(plugin_config) = &config.plugin_config {
+        credential_refs.extend(
+            collect_redaction_targets(plugin_config)
+                .into_iter()
+                .filter_map(|target| {
+                    let RedactionTargetKind::Credential(class) = target.kind else {
+                        return None;
+                    };
+                    Some(CredentialRef {
+                        id: native_target_credential_id(profile_id, &target.path),
+                        class,
+                        label: Some(format!("Local credential {}", target.path)),
+                    })
+                }),
+        );
+    }
+
+    ConnectionProfile {
+        id: profile_id.to_string(),
+        name: config.name.trim().to_string(),
+        plugin_id,
+        display_name,
+        metadata: native_profile_metadata(config),
+        default_options: document
+            .default_options
+            .clone()
+            .or_else(|| existing.map(|profile| profile.default_options.clone()))
+            .unwrap_or(Value::Null),
+        credential_refs,
+        policy: document
+            .policy
+            .clone()
+            .or_else(|| existing.map(|profile| profile.policy.clone()))
+            .unwrap_or_default(),
+        version: existing
+            .map(|profile| profile.version.saturating_add(1))
+            .unwrap_or(1),
+    }
 }
 
-fn database_type_for_plugin(plugin_id: &str) -> crate::connection::DatabaseType {
+fn native_profile_metadata(config: &ConnectionConfig) -> Value {
+    // Mirror the non-secret parts of the plugin configuration so agent-facing
+    // profile views can describe the target without decrypting anything.
+    let mut metadata = config
+        .plugin_config
+        .as_ref()
+        .map(strip_credential_values)
+        .unwrap_or_else(|| json!({}));
+    if !metadata.is_object() {
+        metadata = json!({});
+    }
+    // Bookkeeping keys are set last so mirrored configuration can never
+    // shadow them; `native_connection` matches on `source` to resolve the
+    // encrypted payload.
+    metadata["source"] = json!(NATIVE_PROFILE_SOURCE);
+    metadata["connection_config_version"] = json!(1);
+    metadata["database_type"] = json!(config.db_type.protocol_name());
+    metadata
+}
+
+/// Map a plugin ID to the legacy `DatabaseType` tag used by internal service
+/// DTOs. Real dispatch happens through the plugin ID; this only preserves the
+/// built-in database categories for display and legacy routing.
+pub fn database_type_for_plugin(plugin_id: &str) -> crate::connection::DatabaseType {
     match plugin_id {
         "mysql" => crate::connection::DatabaseType::MySQL,
         "postgres" | "postgresql" => crate::connection::DatabaseType::PostgreSQL,
@@ -796,6 +877,7 @@ pub fn migrated_profile_from_connection(config: &ConnectionConfig) -> Connection
         default_options: Value::Null,
         credential_refs: migrated_credential_refs(config, &connection_key),
         policy: ConnectionProfilePolicy::default(),
+        version: 1,
     }
 }
 
@@ -1189,8 +1271,13 @@ mod tests {
         let profiles = std::fs::read_to_string(store.profiles_path()).expect("profiles file");
         let credentials =
             std::fs::read_to_string(store.credentials_path()).expect("credentials file");
-        assert!(!profiles.contains("db.internal.example"));
+        // Non-credential connection metadata is mirrored into the profile for
+        // agent-facing show/list output, but credential-class values must
+        // never land in the plaintext profile file.
+        assert!(profiles.contains("db.internal.example"));
         assert!(!profiles.contains("native-secret"));
+        let stored: Value = serde_json::from_str(&profiles).expect("profiles file parses");
+        assert!(stored["profiles"][0]["metadata"]["password"].is_null());
         assert!(!credentials.contains("db.internal.example"));
         assert!(!credentials.contains("native-secret"));
         assert!(credentials.contains("local_encrypted_plugin_config"));
@@ -1379,5 +1466,143 @@ mod tests {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.path);
         }
+    }
+
+    fn mysql_connection(host: &str, password: &str) -> ConnectionConfig {
+        let mut config = connection("prod", DatabaseType::MySQL, None);
+        config.plugin_config = Some(json!({
+            "host": host,
+            "port": 3306,
+            "username": "root",
+            "password": password,
+        }));
+        config
+    }
+
+    #[test]
+    fn native_upsert_starts_at_version_one_and_bumps_on_update() {
+        let temp = TempDir::new("profile-store-version");
+        let store = LocalProfileStore::new(
+            temp.path.join("profiles.json"),
+            temp.path.join("credentials.json"),
+        );
+
+        let created = store
+            .upsert_native_connection(
+                None,
+                &mysql_connection("db1.internal.example", "pw"),
+                None,
+                None,
+            )
+            .expect("create profile");
+        assert_eq!(created.version, 1);
+
+        let mut updated_config = mysql_connection("db2.internal.example", "pw2");
+        updated_config.name = "prod".into();
+        let document = NativeProfileDocument {
+            default_options: Some(json!({ "readonly": true })),
+            policy: Some(ConnectionProfilePolicy {
+                allowed_capabilities: vec!["query".into()],
+                ..Default::default()
+            }),
+        };
+        let updated = store
+            .upsert_native_connection_document(
+                Some(&created.id),
+                &updated_config,
+                Some("Production".into()),
+                None,
+                document,
+            )
+            .expect("update profile");
+
+        assert_eq!(updated.version, 2);
+        assert_eq!(updated.default_options, json!({ "readonly": true }));
+        assert_eq!(updated.policy.allowed_capabilities, vec!["query"]);
+        assert_eq!(updated.display_name.as_deref(), Some("Production"));
+
+        let reloaded = store
+            .load_profiles()
+            .expect("reload profiles")
+            .into_iter()
+            .find(|profile| profile.id == updated.id)
+            .expect("stored profile");
+        assert_eq!(reloaded.version, 2);
+    }
+
+    #[test]
+    fn native_profile_metadata_mirrors_non_secret_config_only() {
+        let temp = TempDir::new("profile-store-metadata");
+        let store = LocalProfileStore::new(
+            temp.path.join("profiles.json"),
+            temp.path.join("credentials.json"),
+        );
+
+        let profile = store
+            .upsert_native_connection(
+                None,
+                &mysql_connection("db.internal.example", "pw"),
+                None,
+                None,
+            )
+            .expect("create profile");
+
+        assert_eq!(profile.metadata["host"], "db.internal.example");
+        assert_eq!(profile.metadata["port"], 3306);
+        assert_eq!(profile.metadata["username"], "root");
+        assert!(profile.metadata["password"].is_null());
+        assert_eq!(profile.metadata["source"], "native_profile_store");
+        // The password still produced a credential reference.
+        assert!(
+            profile
+                .credential_refs
+                .iter()
+                .any(|reference| reference.class == CredentialClass::Password)
+        );
+    }
+
+    #[test]
+    fn derive_native_profile_matches_the_stored_upsert_result() {
+        let temp = TempDir::new("profile-store-derive");
+        let store = LocalProfileStore::new(
+            temp.path.join("profiles.json"),
+            temp.path.join("credentials.json"),
+        );
+
+        let created = store
+            .upsert_native_connection(
+                None,
+                &mysql_connection("db1.internal.example", "pw"),
+                None,
+                None,
+            )
+            .expect("create profile");
+        let created_plan = derive_native_profile(
+            &created.id,
+            None,
+            &mysql_connection("db1.internal.example", "pw"),
+            None,
+            &NativeProfileDocument::default(),
+        );
+        assert_eq!(created_plan, created);
+
+        let config = mysql_connection("db2.internal.example", "pw2");
+        let document = NativeProfileDocument {
+            default_options: Some(json!({ "readonly": true })),
+            policy: None,
+        };
+        let updated = store
+            .upsert_native_connection_document(
+                Some(&created.id),
+                &config,
+                None,
+                None,
+                document.clone(),
+            )
+            .expect("update profile");
+        let update_plan =
+            derive_native_profile(&created.id, Some(&created), &config, None, &document);
+        assert_eq!(update_plan, updated);
+        assert_eq!(update_plan.version, 2);
     }
 }

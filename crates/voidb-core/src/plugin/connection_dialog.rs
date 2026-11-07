@@ -7,7 +7,7 @@
 use anyhow::Result;
 use ratatui::{Frame, layout::Rect};
 
-use crate::{Event, ConnectionConfig};
+use crate::{ConnectionConfig, Event};
 
 /// Plugin-provided connection dialog component
 ///

@@ -353,6 +353,7 @@ async fn register_push_pull() {
             label: Some("login password".into()),
         }],
         policy: ConnectionProfilePolicy::default(),
+        version: 1,
     };
     profile_store
         .save_profiles(vec![profile.clone()])

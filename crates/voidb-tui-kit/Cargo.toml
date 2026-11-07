@@ -1,0 +1,15 @@
+[package]
+name = "voidb-tui-kit"
+version = "0.1.0"
+edition = "2024"
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Shared TUI building blocks for VoidB standalone process plugins"
+readme = "README.md"
+keywords = ["voidb", "plugin", "tui", "ratatui"]
+categories = ["development-tools", "command-line-utilities"]
+
+[dependencies]
+ratatui = { workspace = true }

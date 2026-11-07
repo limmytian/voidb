@@ -1743,6 +1743,7 @@ fn sync_system_profile() -> ConnectionProfile {
         default_options: Value::Null,
         credential_refs: Vec::new(),
         policy: Default::default(),
+        version: 1,
     }
 }
 

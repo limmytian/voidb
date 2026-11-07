@@ -20,18 +20,18 @@ use thiserror::Error;
 // advanced use beyond these re-exports.
 pub use voidb_core::{
     AgentSessionBinding, AgentSessionCallRequest, AgentSessionCallResult, AgentSessionConcurrency,
-    AgentSessionOpenContext, AgentSessionOpenRequest, AgentSessionRef, CapabilityAuthorizationMetadata,
-    CapabilityError, CapabilityErrorCategory, CapabilityExecutionMode, CapabilityInvocation,
-    CapabilityInvocationResult, CapabilityRiskLevel, CapabilitySessionHandoff, CredentialClass,
-    InvocationStatus, PluginAgentSession, PluginAgentSessionFactory, PluginSessionError,
-    PluginSessionErrorCode, PluginSessionHealth, PluginSessionPurpose, PluginSessionReason,
-    PROCESS_PLUGIN_JSONRPC_VERSION, PROCESS_PLUGIN_METHOD_CANCEL, PROCESS_PLUGIN_METHOD_HEALTH,
-    PROCESS_PLUGIN_METHOD_INITIALIZE, PROCESS_PLUGIN_METHOD_INVOKE,
-    PROCESS_PLUGIN_METHOD_SESSION_CALL, PROCESS_PLUGIN_METHOD_SESSION_CANCEL,
-    PROCESS_PLUGIN_METHOD_SESSION_CLOSE, PROCESS_PLUGIN_METHOD_SESSION_HEALTH,
-    PROCESS_PLUGIN_METHOD_SESSION_OPEN, PROCESS_PLUGIN_METHOD_SESSION_RENEW,
-    PROCESS_PLUGIN_PROTOCOL_VERSION, PROCESS_PLUGIN_TRANSPORT_STDIO_JSONRPC,
-    ProcessPluginCapability, ProcessPluginConnections, ProcessPluginManifest,
+    AgentSessionOpenContext, AgentSessionOpenRequest, AgentSessionRef,
+    CapabilityAuthorizationMetadata, CapabilityError, CapabilityErrorCategory,
+    CapabilityExecutionMode, CapabilityInvocation, CapabilityInvocationResult, CapabilityRiskLevel,
+    CapabilitySessionHandoff, CredentialClass, InvocationStatus, PROCESS_PLUGIN_JSONRPC_VERSION,
+    PROCESS_PLUGIN_METHOD_CANCEL, PROCESS_PLUGIN_METHOD_HEALTH, PROCESS_PLUGIN_METHOD_INITIALIZE,
+    PROCESS_PLUGIN_METHOD_INVOKE, PROCESS_PLUGIN_METHOD_SESSION_CALL,
+    PROCESS_PLUGIN_METHOD_SESSION_CANCEL, PROCESS_PLUGIN_METHOD_SESSION_CLOSE,
+    PROCESS_PLUGIN_METHOD_SESSION_HEALTH, PROCESS_PLUGIN_METHOD_SESSION_OPEN,
+    PROCESS_PLUGIN_METHOD_SESSION_RENEW, PROCESS_PLUGIN_PROTOCOL_VERSION,
+    PROCESS_PLUGIN_TRANSPORT_STDIO_JSONRPC, PluginAgentSession, PluginAgentSessionFactory,
+    PluginSessionError, PluginSessionErrorCode, PluginSessionHealth, PluginSessionPurpose,
+    PluginSessionReason, ProcessPluginCapability, ProcessPluginConnections, ProcessPluginManifest,
     ProcessPluginRequirements, ProcessPluginRuntime, ProcessPluginUi, RedactionStatus,
     TargetSystemFailure, is_supported_process_plugin_protocol_version,
     parse_process_plugin_protocol_version, redact_text_with_json,
@@ -652,16 +652,19 @@ pub struct CoreSessionAdapter {
             + Send
             + Sync,
     >,
-    handles: std::sync::Mutex<std::collections::BTreeMap<String, (u64, Arc<dyn PluginAgentSession>)>>,
+    handles:
+        std::sync::Mutex<std::collections::BTreeMap<String, (u64, Arc<dyn PluginAgentSession>)>>,
 }
 
 impl CoreSessionAdapter {
     pub fn new(
         runtime: tokio::runtime::Handle,
-        factory: impl Fn(&SessionOpenParams) -> Result<Arc<dyn PluginAgentSessionFactory>, CapabilityError>
-            + Send
-            + Sync
-            + 'static,
+        factory: impl Fn(
+            &SessionOpenParams,
+        ) -> Result<Arc<dyn PluginAgentSessionFactory>, CapabilityError>
+        + Send
+        + Sync
+        + 'static,
     ) -> Self {
         Self {
             runtime,
@@ -692,11 +695,7 @@ impl CoreSessionAdapter {
     }
 }
 
-
-fn bridge_capability_error(
-    code: impl Into<String>,
-    message: impl Into<String>,
-) -> CapabilityError {
+fn bridge_capability_error(code: impl Into<String>, message: impl Into<String>) -> CapabilityError {
     CapabilityError {
         category: CapabilityErrorCategory::Plugin,
         code: code.into(),
@@ -1734,12 +1733,14 @@ mod session_bridge_tests {
         assert!(closed.closed);
 
         // The handle registry dropped the session with the close.
-        assert!(adapter
-            .health(SessionHandleParams {
-                handle_id: "plugin-session:1".into(),
-                generation: 1,
-            })
-            .is_err());
+        assert!(
+            adapter
+                .health(SessionHandleParams {
+                    handle_id: "plugin-session:1".into(),
+                    generation: 1,
+                })
+                .is_err()
+        );
     }
 
     #[test]

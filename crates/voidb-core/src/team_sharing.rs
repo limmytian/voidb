@@ -9,7 +9,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use thiserror::Error;
 
 use crate::audit::{AuditEvent, AuditEventStatus, AuditOperation};
@@ -17,9 +17,9 @@ use crate::capability::{
     ActorId, ActorRef, ActorType, CredentialClass, CredentialRefId, PluginId, RedactionStatus,
 };
 use crate::object_sync::{
-    validate_sync_object_id, ObjectSyncError, SyncCredentialRefPayload, SyncObjectId,
+    OBJECT_SYNC_PAYLOAD_VERSION, ObjectSyncError, SyncCredentialRefPayload, SyncObjectId,
     SyncObjectKind, SyncPluginCompatibilityPayload, SyncProfilePayload, SyncProfilePolicyPayload,
-    OBJECT_SYNC_PAYLOAD_VERSION,
+    validate_sync_object_id,
 };
 
 pub const TEAM_SHARE_SCHEMA_VERSION: u32 = 1;
@@ -826,7 +826,10 @@ pub fn plan_team_share_import(
             if let Some(plugin_compatibility) = profile.plugin_compatibility.as_ref()
                 && !plugin_version_satisfies_minimum(
                     installed_version,
-                    plugin_compatibility.payload.minimum_plugin_version.as_deref(),
+                    plugin_compatibility
+                        .payload
+                        .minimum_plugin_version
+                        .as_deref(),
                 )
             {
                 actions.push(TeamShareImportAction {
@@ -900,10 +903,7 @@ pub fn create_team_share_invite(
     validate_team_share_opaque_id(TeamShareOpaqueIdKind::Collection, &input.collection_id)?;
     validate_team_share_opaque_id(TeamShareOpaqueIdKind::Member, &input.invited_by_member_id)?;
     validate_team_share_actor(&input.invited_by)?;
-    validate_team_share_opaque_id(
-        TeamShareOpaqueIdKind::Principal,
-        &input.recipient.opaque_id,
-    )?;
+    validate_team_share_opaque_id(TeamShareOpaqueIdKind::Principal, &input.recipient.opaque_id)?;
 
     Ok(TeamShareInvite {
         invite_id: input.invite_id,
@@ -956,9 +956,7 @@ pub fn accept_team_share_invite(
     let credential_reenrollment_count = import_plan
         .actions
         .iter()
-        .filter(|action| {
-            action.kind == TeamShareImportActionKind::RequireCredentialReenrollment
-        })
+        .filter(|action| action.kind == TeamShareImportActionKind::RequireCredentialReenrollment)
         .count() as u64;
     let blocked_count = import_plan.blocked.len() as u64;
     let redaction = combine_redaction(invite.redaction, import_plan.redaction);
@@ -1089,9 +1087,7 @@ pub fn team_share_acceptance_activities(
     activities
 }
 
-pub fn team_share_revocation_activity(
-    revocation: &TeamShareRevocation,
-) -> TeamShareActivityRecord {
+pub fn team_share_revocation_activity(revocation: &TeamShareRevocation) -> TeamShareActivityRecord {
     let (invite_id, member_id) = match &revocation.target {
         TeamShareRevocationTarget::Invite { invite_id } => (Some(invite_id.clone()), None),
         TeamShareRevocationTarget::Member { member_id } => (None, Some(member_id.clone())),
@@ -1298,10 +1294,7 @@ fn validate_team_share_actor(actor: &TeamShareActor) -> Result<(), TeamShareErro
     validate_team_share_opaque_id(TeamShareOpaqueIdKind::Principal, &actor.actor_id)
 }
 
-fn member_role(
-    collection: &TeamShareCollection,
-    member_id: &str,
-) -> Option<TeamShareMemberRole> {
+fn member_role(collection: &TeamShareCollection, member_id: &str) -> Option<TeamShareMemberRole> {
     if collection.owner.member_id == member_id {
         return Some(collection.owner.role);
     }
@@ -1370,7 +1363,7 @@ fn import_block_reason_for_error(error: &TeamShareError) -> TeamShareImportBlock
 #[cfg(test)]
 mod tests {
     use chrono::{TimeZone, Utc};
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
 
     use super::*;
     use crate::capability::{ConnectionProfile, ConnectionProfilePolicy, CredentialRef};
@@ -1461,6 +1454,7 @@ mod tests {
                 denied_capabilities: vec!["exec".into()],
                 allow_destructive_by_default: false,
             },
+            version: 1,
         }
     }
 
@@ -1659,8 +1653,9 @@ mod tests {
     #[test]
     fn import_plan_fails_closed_on_forged_credential_ref_links() {
         let mut collection = collection();
-        collection.profiles[0].credential_refs[0].payload.profile_object_id =
-            "sync_profile_99JZ8V1E0YH6S5J4M3K2N1P0Q9".into();
+        collection.profiles[0].credential_refs[0]
+            .payload
+            .profile_object_id = "sync_profile_99JZ8V1E0YH6S5J4M3K2N1P0Q9".into();
 
         let plan = plan_team_share_import(&collection, &TeamShareImportContext::default());
 
@@ -1710,9 +1705,11 @@ mod tests {
             action.kind == TeamShareImportActionKind::MarkProfileUnavailable
                 && action.reason == Some(TeamShareImportActionReason::IncompatiblePluginVersion)
         }));
-        assert!(!serde_json::to_string(&plan)
-            .expect("serialize plan")
-            .contains("db.internal.example"));
+        assert!(
+            !serde_json::to_string(&plan)
+                .expect("serialize plan")
+                .contains("db.internal.example")
+        );
     }
 
     #[test]
@@ -1810,10 +1807,7 @@ mod tests {
             },
         )
         .unwrap_err();
-        assert!(matches!(
-            unauthorized,
-            TeamShareError::RevokerNotAuthorized
-        ));
+        assert!(matches!(unauthorized, TeamShareError::RevokerNotAuthorized));
 
         let revocation = revoke_team_share_access(
             &collection,
@@ -1832,8 +1826,14 @@ mod tests {
         let audit_event = team_share_activity_audit_event(&activity, AuditEventStatus::Succeeded);
         let encoded = serde_json::to_string(&audit_event).expect("serialize revocation");
 
-        assert_eq!(activity.operation, TeamShareActivityOperation::AccessRevoked);
-        assert_eq!(audit_event.operation, AuditOperation::TeamShareAccessRevoked);
+        assert_eq!(
+            activity.operation,
+            TeamShareActivityOperation::AccessRevoked
+        );
+        assert_eq!(
+            audit_event.operation,
+            AuditOperation::TeamShareAccessRevoked
+        );
         assert!(encoded.contains(&consumer.member_id));
         assert!(!encoded.contains("prod-db"));
         assert!(!encoded.contains("mysql"));

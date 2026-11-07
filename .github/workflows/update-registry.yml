@@ -57,7 +57,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
-          PLUGIN_ID: ${{ inputs.plugin_id }}
+          # repository_dispatch carries the plugin id in client_payload; the
+          # inputs context is only populated for workflow_dispatch.
+          PLUGIN_ID: ${{ inputs.plugin_id || github.event.client_payload.plugin_id }}
         run: |
           # Full sync downloads every plugin at the version; a per-plugin
           # dispatch (plugin_id set) stages only that plugin's archives and

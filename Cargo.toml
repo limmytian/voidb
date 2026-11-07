@@ -7,13 +7,14 @@ exclude = ["voidb-sync-server"]
 members = [
     "crates/voidb-core",
     "crates/voidb-process-plugin-sdk",
+    "crates/voidb-tui-kit",
     "crates/voidb-tui",
     "crates/voidb-cli",
     "crates/plugins/voidb-plugin-sync",
 ]
 
 [workspace.package]
-version = "0.4.1"
+version = "0.4.2"
 edition = "2024"
 authors = ["limmytian <limmytian@gmail.com>"]
 license = "Apache-2.0"

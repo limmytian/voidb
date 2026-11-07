@@ -72,6 +72,12 @@ pub struct ConnectionProfile {
 
     #[serde(default)]
     pub policy: ConnectionProfilePolicy,
+
+    /// Monotonic document version for optimistic concurrency. It starts at 1
+    /// and is bumped by the store on every persisted mutation; clients send
+    /// the version they read with `--expected-version` guards.
+    #[serde(default)]
+    pub version: u64,
 }
 
 impl ConnectionProfile {
@@ -1625,6 +1631,7 @@ mod tests {
                 label: Some("database password".into()),
             }],
             policy: ConnectionProfilePolicy::default(),
+            version: 1,
         };
 
         assert_eq!(
@@ -1930,6 +1937,7 @@ mod tests {
             default_options: Value::Null,
             credential_refs: Vec::new(),
             policy: ConnectionProfilePolicy::default(),
+            version: 1,
         };
         let capability = CapabilityDefinition {
             plugin_id: "redis".into(),
@@ -1969,6 +1977,7 @@ mod tests {
             default_options: Value::Null,
             credential_refs: Vec::new(),
             policy: ConnectionProfilePolicy::default(),
+            version: 1,
         };
         let capability = CapabilityDefinition {
             plugin_id: "jenkins".into(),
@@ -2011,6 +2020,7 @@ mod tests {
                 denied_capabilities: Vec::new(),
                 allow_destructive_by_default: false,
             },
+            version: 1,
         };
         let capability = CapabilityDefinition {
             plugin_id: "redis".into(),
@@ -2444,6 +2454,7 @@ mod tests {
                 label: Some("password".into()),
             }],
             policy: ConnectionProfilePolicy::default(),
+            version: 1,
         };
         let capability = CapabilityDefinition {
             plugin_id: "redis".into(),
@@ -2507,6 +2518,7 @@ mod tests {
             default_options: Value::Null,
             credential_refs: Vec::new(),
             policy: ConnectionProfilePolicy::default(),
+            version: 1,
         };
         let capability = CapabilityDefinition {
             plugin_id: "redis".into(),
@@ -2645,6 +2657,7 @@ mod tests {
             default_options: Value::Null,
             credential_refs: Vec::new(),
             policy: ConnectionProfilePolicy::default(),
+            version: 1,
         }
     }
 

@@ -371,6 +371,7 @@ fn native_filter_rejects_compatibility_profiles() {
         default_options: Value::Null,
         credential_refs: Vec::new(),
         policy: Default::default(),
+        version: 1,
     };
     let mut compatibility = native.clone();
     compatibility.metadata = json!({ "source": "connection_config" });
@@ -389,6 +390,7 @@ fn authorization_presets_resolve_to_exact_capability_scopes() {
         default_options: Value::Null,
         credential_refs: Vec::new(),
         policy: Default::default(),
+        version: 1,
     };
     let mut dialog = AuthorizationDialog::new(profile);
     dialog.loading = false;
@@ -454,6 +456,7 @@ fn tui_execute_authorization_builds_explicit_password_free_arguments() {
         default_options: Value::Null,
         credential_refs: Vec::new(),
         policy: Default::default(),
+        version: 1,
     };
     let args = agent_authorize_args(
         &profile,

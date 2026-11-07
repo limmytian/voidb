@@ -13,7 +13,10 @@ pub fn cell_value_to_json(v: &CellValue) -> serde_json::Value {
         CellValue::Bool(b) => serde_json::Value::Bool(*b),
         CellValue::Int(i) => serde_json::json!(i),
         CellValue::Float(f) => serde_json::json!(f),
-        CellValue::Text(s) | CellValue::Date(s) | CellValue::DateTime(s) | CellValue::Time(s)
+        CellValue::Text(s)
+        | CellValue::Date(s)
+        | CellValue::DateTime(s)
+        | CellValue::Time(s)
         | CellValue::Uuid(s) => serde_json::Value::String(s.clone()),
         CellValue::Blob(b) => serde_json::Value::String(hex::encode(b)),
         CellValue::Json(s) => {
@@ -52,8 +55,13 @@ pub fn cell_value_to_display(v: &CellValue) -> String {
         CellValue::Bool(b) => b.to_string(),
         CellValue::Int(i) => i.to_string(),
         CellValue::Float(f) => f.to_string(),
-        CellValue::Text(s) | CellValue::Date(s) | CellValue::DateTime(s) | CellValue::Time(s)
-        | CellValue::Uuid(s) | CellValue::Json(s) | CellValue::Unknown(s) => s.clone(),
+        CellValue::Text(s)
+        | CellValue::Date(s)
+        | CellValue::DateTime(s)
+        | CellValue::Time(s)
+        | CellValue::Uuid(s)
+        | CellValue::Json(s)
+        | CellValue::Unknown(s) => s.clone(),
         CellValue::Blob(b) => format!("0x{}", hex::encode(&b[..b.len().min(16)])),
     }
 }

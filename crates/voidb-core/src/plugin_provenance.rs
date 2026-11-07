@@ -262,7 +262,8 @@ const TEST_PUBLIC_KEY: &str = "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b924
 /// test builds and behind the non-default `test-support` feature; never
 /// enabled in release artifacts.
 #[cfg(any(test, feature = "test-support"))]
-pub fn sign_test_candidate(candidate: &ProcessPluginCandidate) {    use crate::plugin_signing::sign_bytes;
+pub fn sign_test_candidate(candidate: &ProcessPluginCandidate) {
+    use crate::plugin_signing::sign_bytes;
     let root = &candidate.source.plugin_dir;
     let mut files = BTreeMap::new();
     collect_files(root, root, &mut files).expect("fixture payload");
@@ -304,8 +305,8 @@ pub fn sign_test_candidate(candidate: &ProcessPluginCandidate) {    use crate::p
 mod tests {
     use super::*;
     use crate::process_plugin::{
-        current_platform, discover_process_plugins_from_roots, ProcessPluginRoot,
-        ProcessPluginRootKind,
+        ProcessPluginRoot, ProcessPluginRootKind, current_platform,
+        discover_process_plugins_from_roots,
     };
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -469,7 +470,11 @@ platforms = ["{}"]
         let candidate = discovered_candidate(&temp.0, "redis");
         let error = verify_plugin_provenance_for_target(&candidate, HOST_TARGET)
             .expect_err("unsigned package must fail closed");
-        assert!(error.to_string().contains("Missing authenticated plugin provenance"));
+        assert!(
+            error
+                .to_string()
+                .contains("Missing authenticated plugin provenance")
+        );
     }
 
     #[test]
@@ -488,7 +493,11 @@ platforms = ["{}"]
 
         let error = verify_plugin_provenance_for_target(&candidate, HOST_TARGET)
             .expect_err("tampered payload must fail closed");
-        assert!(error.to_string().contains("differs from authenticated file digests"));
+        assert!(
+            error
+                .to_string()
+                .contains("differs from authenticated file digests")
+        );
     }
 
     #[test]
@@ -498,7 +507,11 @@ platforms = ["{}"]
         let candidate = discovered_candidate(&temp.0, "redis");
         sign_test_candidate(&candidate);
 
-        let binary = candidate.source.plugin_dir.join("bin").join("voidb-plugin-test");
+        let binary = candidate
+            .source
+            .plugin_dir
+            .join("bin")
+            .join("voidb-plugin-test");
         fs::write(&binary, "#!/bin/sh\nrm -rf /tmp/pwned\n").expect("tamper binary");
         make_executable(&binary);
 
@@ -513,10 +526,9 @@ platforms = ["{}"]
         sign_test_candidate(&candidate);
 
         // Keep a valid signature but claim an unknown signer identity.
-        let mut envelope: PluginProvenance = serde_json::from_slice(&fs::read(
-            candidate.source.plugin_dir.join(PROVENANCE_FILE),
+        let mut envelope: PluginProvenance = serde_json::from_slice(
+            &fs::read(candidate.source.plugin_dir.join(PROVENANCE_FILE)).expect("read provenance"),
         )
-        .expect("read provenance"))
         .expect("parse provenance");
         envelope.key_id = "attacker-2026-01".into();
         fs::write(
@@ -539,9 +551,11 @@ platforms = ["{}"]
 
         let error = verify_plugin_provenance_for_target(&candidate, "x86_64-unknown-other")
             .expect_err("foreign target must fail closed");
-        assert!(error
-            .to_string()
-            .contains("does not match discovery or host target"));
+        assert!(
+            error
+                .to_string()
+                .contains("does not match discovery or host target")
+        );
     }
 
     #[test]
@@ -587,11 +601,8 @@ platforms = ["{}"]
         let real = temp.0.join("real-provenance.json");
         fs::rename(candidate.source.plugin_dir.join(PROVENANCE_FILE), &real)
             .expect("move provenance");
-        std::os::unix::fs::symlink(
-            &real,
-            candidate.source.plugin_dir.join(PROVENANCE_FILE),
-        )
-        .expect("symlink provenance");
+        std::os::unix::fs::symlink(&real, candidate.source.plugin_dir.join(PROVENANCE_FILE))
+            .expect("symlink provenance");
 
         let error = verify_plugin_provenance_for_target(&candidate, HOST_TARGET)
             .expect_err("symlinked proof must fail closed");
@@ -624,9 +635,11 @@ platforms = ["{}"]
 
         let error = verify_plugin_provenance_for_target(&candidate, HOST_TARGET)
             .expect_err("escaping binary path must fail closed");
-        assert!(error
-            .to_string()
-            .contains("Authenticated executable path does not match discovery"));
+        assert!(
+            error
+                .to_string()
+                .contains("Authenticated executable path does not match discovery")
+        );
     }
 
     #[test]

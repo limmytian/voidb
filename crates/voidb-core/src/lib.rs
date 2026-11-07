@@ -31,6 +31,7 @@ pub mod process_plugin;
 pub mod process_plugin_contract;
 pub mod process_plugin_runtime;
 pub mod profile_adapter;
+pub mod profile_forms;
 pub mod profile_schema;
 pub mod profile_store;
 pub mod redaction;
@@ -266,22 +267,24 @@ pub use profile_adapter::{
     connection_config_to_profile, connection_configs_to_profiles, legacy_profile_id,
     profile_plugin_id,
 };
+pub use profile_forms::{default_plugin_config, profile_form_schema};
 pub use profile_schema::{
     ProfileFormCondition, ProfileFormField, ProfileFormFieldKind, ProfileFormOption,
     ProfileFormSchema, ProfileFormViolation,
 };
 pub use profile_store::{
     ConnectionManagerProfileCatalog, ConnectionManagerProfileEntry, ConnectionManagerProfileSource,
-    LocalProfileStore, ProfileMigrationAction, ProfileMigrationApplyResult, ProfileMigrationItem,
-    ProfileMigrationPlan, StoredCredentialEncryption, StoredCredentialRecord,
-    StoredCredentialSource, migrated_credential_ref_id, migrated_profile_from_connection,
-    migrated_profile_id, native_connection_credential_id, new_native_profile_id,
-    normalize_profile_name, profile_names_equal, profiles_with_migrated_first,
+    LocalProfileStore, NativeProfileDocument, ProfileMigrationAction, ProfileMigrationApplyResult,
+    ProfileMigrationItem, ProfileMigrationPlan, StoredCredentialEncryption, StoredCredentialRecord,
+    StoredCredentialSource, database_type_for_plugin, derive_native_profile,
+    migrated_credential_ref_id, migrated_profile_from_connection, migrated_profile_id,
+    native_connection_credential_id, new_native_profile_id, normalize_profile_name,
+    profile_names_equal, profiles_with_migrated_first,
 };
 pub use redaction::{
     RedactionTarget, RedactionTargetKind, collect_redaction_targets, credential_class_for_key,
     is_sensitive_metadata_key, placeholder_for_credential_class, redact_text_with_json,
-    redact_text_with_targets,
+    redact_text_with_targets, strip_credential_values,
 };
 pub use session::{
     AGENT_BROKER_LEGACY_PROTOCOL_VERSION, AGENT_BROKER_PROTOCOL_VERSION,

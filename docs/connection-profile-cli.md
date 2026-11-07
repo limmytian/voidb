@@ -1,7 +1,7 @@
 # Connection Profile CLI Contract
 
-This document defines the first public CLI contract for saved connection
-profiles. It belongs to the capability-first CLI work and builds on:
+This document defines the CLI contract for saved connection profiles. It
+belongs to the capability-first CLI work and builds on:
 
 - [Capability Core Model](capability-core-model.md)
 - [Secret Brokering and Redaction Policy](secret-brokering-redaction-policy.md)
@@ -28,6 +28,47 @@ agent workflows should use `profile`.
 The noun is intentionally `profile`, not `connection`, because a profile is
 saved configuration. It is not a live socket, session, pool member, tunnel, or
 runtime instance.
+
+## Shipped Status
+
+`list`, `show`, `test`, and `migrate` shipped first. As of 0.4.2,
+`create`, `update`, and `validate` are implemented in
+`crates/voidb-cli/src/builtin/profile.rs` against the contract below, with
+these shipped-implementation notes:
+
+- **JSON-first**: the commands accept `--input` documents, `--set`/`--unset`
+  scalar patches, and `--credential` secret sources. Schema-driven interactive
+  prompts for terminal users are deferred to a later slice; pass `--input -`
+  to pipe a document from stdin.
+- **Metadata is the configuration document**: the input `metadata` object is
+  the plugin configuration, validated against the plugin's bundled profile
+  form schema. Non-credential values are mirrored into the stored profile so
+  `list`/`show` can describe the target without decrypting anything; secret
+  values live only in the encrypted credential store.
+- **Reserved input fields**: documents must not set `id`, `plugin_id`,
+  `version`, or `credential_refs`. `create` also reserves `name` (it comes
+  from `--name`); `update` accepts `name` as a mutable field. Credential
+  references are derived from the encrypted configuration, so accepting them
+  from input would create dangling references
+  (`validation.profile_input_reserved_field`).
+- **Optimistic concurrency**: `update` requires `--expected-version` unless
+  `--dry-run` is given (`validation.expected_version_required`), and rejects
+  a stale version with `conflict.profile_version_mismatch`. Profile versions
+  start at 1 and are bumped by the store on every persisted mutation.
+- **Secret sources**: `<class>:env=<VAR>` requires an environment variable
+  matching `[A-Z_][A-Za-z0-9_]*`; `<class>:file=<PATH>` trims one trailing
+  newline from the file. Class resolution order: a secret field declared by
+  the plugin profile schema, then an existing credential-shaped path in the
+  document, then a top-level key named after the class token. Source values
+  are never echoed.
+- **Errors**: reserved-field violations use
+  `validation.profile_input_reserved_field`; secret-shaped payloads use
+  `validation.secret_in_profile_payload`; schema mismatches use
+  `validation.profile_schema_mismatch`; name conflicts use
+  `conflict.profile_name_conflict`.
+- **Plugin scope**: native profile store entries only. Legacy
+  `ConnectionConfig`-backed profiles must be migrated first
+  (`validation.profile_not_native`).
 
 ## Profile References
 
@@ -361,6 +402,12 @@ Mutable fields:
 `id` and `plugin_id` are immutable. Changing a profile's plugin requires
 creating a new profile because schemas, credential classes, and capabilities are
 plugin-owned.
+
+Shipped flags for `update` match the table above. `--set` accepts `name`,
+`display_name`, and `metadata.<key>` targets (`--set metadata.database=app2`);
+`--unset` accepts `display_name` and `metadata.<key>` and is idempotent.
+Writing plaintext credential material through `--input` or `--set` is rejected
+with `validation.secret_in_profile_payload`; use `--credential` sources.
 
 ### `profile test`
 

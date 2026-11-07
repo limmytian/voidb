@@ -5,7 +5,9 @@ use voidb_core::capability::{
     CapabilityRiskLevel,
 };
 use voidb_core::plugin::cli::CliPlugin;
-use voidb_core::process_plugin::{ProcessPluginRoot, ProcessPluginRootKind, discover_process_plugins_from_roots};
+use voidb_core::process_plugin::{
+    ProcessPluginRoot, ProcessPluginRootKind, discover_process_plugins_from_roots,
+};
 
 use super::handlers::{
     McpServer, annotations_for_risk, broker_failure_result, grant_required_result,
@@ -36,8 +38,12 @@ async fn initialized_server() -> McpServer {
     let mut server = empty_catalog_server();
     let responses = server
         .handle_frame(
-            request_line(1, "initialize", json!({"protocolVersion": MCP_PROTOCOL_VERSION}))
-                .as_bytes(),
+            request_line(
+                1,
+                "initialize",
+                json!({"protocolVersion": MCP_PROTOCOL_VERSION}),
+            )
+            .as_bytes(),
         )
         .await;
     assert_eq!(responses.len(), 1);
@@ -54,7 +60,9 @@ async fn initialized_server() -> McpServer {
 #[tokio::test]
 async fn initializes_and_answers_ping() {
     let mut server = initialized_server().await;
-    let responses = server.handle_frame(request_line(2, "ping", json!({})).as_bytes()).await;
+    let responses = server
+        .handle_frame(request_line(2, "ping", json!({})).as_bytes())
+        .await;
     assert_eq!(responses.len(), 1);
     assert_eq!(parse_result(&responses[0])["result"], json!({}));
 }
@@ -65,7 +73,10 @@ async fn rejects_requests_before_initialize() {
     let responses = server
         .handle_frame(request_line(1, "tools/list", json!({})).as_bytes())
         .await;
-    assert_eq!(parse_result(&responses[0])["error"]["code"], INVALID_REQUEST);
+    assert_eq!(
+        parse_result(&responses[0])["error"]["code"],
+        INVALID_REQUEST
+    );
 }
 
 #[tokio::test]
@@ -86,7 +97,10 @@ async fn unknown_method_is_method_not_found() {
     let responses = server
         .handle_frame(request_line(3, "prompts/list", json!({})).as_bytes())
         .await;
-    assert_eq!(parse_result(&responses[0])["error"]["code"], METHOD_NOT_FOUND);
+    assert_eq!(
+        parse_result(&responses[0])["error"]["code"],
+        METHOD_NOT_FOUND
+    );
 }
 
 #[tokio::test]
@@ -102,7 +116,10 @@ async fn non_20_jsonrpc_is_rejected() {
     let responses = server
         .handle_frame(br#"{"jsonrpc":"1.0","id":1,"method":"ping"}"#)
         .await;
-    assert_eq!(parse_result(&responses[0])["error"]["code"], INVALID_REQUEST);
+    assert_eq!(
+        parse_result(&responses[0])["error"]["code"],
+        INVALID_REQUEST
+    );
 }
 
 #[tokio::test]
@@ -120,8 +137,12 @@ async fn tools_call_unknown_tool_is_invalid_params() {
     let mut server = initialized_server().await;
     let responses = server
         .handle_frame(
-            request_line(5, "tools/call", json!({"name": "nope.missing", "arguments": {}}))
-                .as_bytes(),
+            request_line(
+                5,
+                "tools/call",
+                json!({"name": "nope.missing", "arguments": {}}),
+            )
+            .as_bytes(),
         )
         .await;
     assert_eq!(parse_result(&responses[0])["error"]["code"], INVALID_PARAMS);
@@ -131,7 +152,9 @@ async fn tools_call_unknown_tool_is_invalid_params() {
 async fn tools_call_rejects_non_object_arguments() {
     let mut server = initialized_server().await;
     let responses = server
-        .handle_frame(request_line(6, "tools/call", json!({"name": "a.b", "arguments": 42})).as_bytes())
+        .handle_frame(
+            request_line(6, "tools/call", json!({"name": "a.b", "arguments": 42})).as_bytes(),
+        )
         .await;
     assert_eq!(parse_result(&responses[0])["error"]["code"], INVALID_PARAMS);
 }
@@ -142,7 +165,10 @@ fn annotations_map_risk_levels() {
         annotations_for_risk(CapabilityRiskLevel::ReadOnly),
         json!({"readOnlyHint": true})
     );
-    assert_eq!(annotations_for_risk(CapabilityRiskLevel::Mutating), json!({}));
+    assert_eq!(
+        annotations_for_risk(CapabilityRiskLevel::Mutating),
+        json!({})
+    );
     assert_eq!(
         annotations_for_risk(CapabilityRiskLevel::Destructive),
         json!({"destructiveHint": true})
@@ -161,10 +187,12 @@ fn tool_definition_embeds_schema_and_profile_hint() {
     assert_eq!(tool["name"], "fixture.get");
     assert_eq!(tool["inputSchema"], capability.input_schema);
     assert_eq!(tool["annotations"], json!({"readOnlyHint": true}));
-    assert!(tool["description"]
-        .as_str()
-        .unwrap()
-        .contains("voidb_profile"));
+    assert!(
+        tool["description"]
+            .as_str()
+            .unwrap()
+            .contains("voidb_profile")
+    );
 }
 
 #[test]
@@ -186,8 +214,15 @@ fn run_argv_matches_agent_exec_shape() {
     assert_eq!(
         argv,
         vec![
-            "invoke", "run", "fixture.get", "--profile", "id:profile-1", "--input-json",
-            "{\"key\":\"v\"}", "--format", "json",
+            "invoke",
+            "run",
+            "fixture.get",
+            "--profile",
+            "id:profile-1",
+            "--input-json",
+            "{\"key\":\"v\"}",
+            "--format",
+            "json",
         ]
     );
     let acknowledged = run_argv("fixture.exec", "id:profile-1", &json!({}), true);
@@ -214,10 +249,7 @@ fn grant_required_result_carries_guidance() {
 fn broker_failure_result_is_a_retryable_execution_error() {
     let result = broker_failure_result("agent broker unreachable: no socket");
     assert_eq!(result["isError"], true);
-    assert_eq!(
-        result["structuredContent"]["error"]["retryable"],
-        true
-    );
+    assert_eq!(result["structuredContent"]["error"]["retryable"], true);
 }
 
 #[test]
@@ -226,7 +258,9 @@ fn broker_responses_map_to_tool_results() {
         protocol_version: 2,
         ok: true,
         exit_code: 0,
-        stdout: r#"{"ok":true,"schema_version":"1","command":"invoke","data":{"output":{"rows":1}}}"#.into(),
+        stdout:
+            r#"{"ok":true,"schema_version":"1","command":"invoke","data":{"output":{"rows":1}}}"#
+                .into(),
         stderr: String::new(),
         error: None,
         error_code: None,
@@ -276,9 +310,7 @@ fn serve_principal_requires_client_and_task_together() {
 
     let matches = command
         .clone()
-        .try_get_matches_from([
-            "serve", "--client-id", "mcp-client", "--task-id", "task-1",
-        ])
+        .try_get_matches_from(["serve", "--client-id", "mcp-client", "--task-id", "task-1"])
         .expect("parses");
     let principal = super::mcp_principal(&matches).unwrap().expect("principal");
     assert_eq!(principal.client_id, "mcp-client");

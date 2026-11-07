@@ -18,9 +18,9 @@ pub mod native;
 
 // Connection Manager plugin traits (Phase 1)
 pub mod connection_data;
-pub mod connection_display;
 #[cfg(feature = "tui")]
 pub mod connection_dialog;
+pub mod connection_display;
 
 // UI plugin trait for tree rendering (RFC 002 Phase 1)
 pub mod ui_plugin;
@@ -45,11 +45,11 @@ pub use connection_data::{
     ConnectionDataProvider, ConnectionSummary, DisplayLayout, FieldDefinition, FieldType,
     InlineWidget, QuickAction, ValidationRule, WidgetType,
 };
+#[cfg(feature = "tui")]
+pub use connection_dialog::{ConnectionDialogComponent, DialogAction};
 pub use connection_display::{
     ConnectionDisplayProvider, DefaultColumn, DisplayConfig, FilterOption, SortOption, ViewMode,
 };
-#[cfg(feature = "tui")]
-pub use connection_dialog::{ConnectionDialogComponent, DialogAction};
 
 // Re-export UI plugin traits
 pub use ui_plugin::{TreeNodeDef, UiPlugin};

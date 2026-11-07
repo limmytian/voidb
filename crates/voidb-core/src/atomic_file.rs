@@ -68,14 +68,26 @@ mod tests {
 
         write_private_atomic(&path, b"{\"new\": true}").expect("atomic write");
 
-        assert_eq!(std::fs::read(&path).expect("read destination"), b"{\"new\": true}");
+        assert_eq!(
+            std::fs::read(&path).expect("read destination"),
+            b"{\"new\": true}"
+        );
         // No temporary siblings remain after success.
         let leftover: HashMap<_, _> = std::fs::read_dir(&root)
             .expect("list root")
             .filter_map(|entry| entry.ok())
-            .map(|entry| (entry.file_name().to_string_lossy().into_owned(), entry.path()))
+            .map(|entry| {
+                (
+                    entry.file_name().to_string_lossy().into_owned(),
+                    entry.path(),
+                )
+            })
             .collect();
-        assert_eq!(leftover.len(), 1, "only the destination remains: {leftover:?}");
+        assert_eq!(
+            leftover.len(),
+            1,
+            "only the destination remains: {leftover:?}"
+        );
 
         std::fs::remove_dir_all(&root).expect("remove temp root");
     }

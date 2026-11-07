@@ -38,18 +38,11 @@ pub trait DatabaseAdapter: Send + Sync {
     async fn list_views(&self, database: &str) -> Result<Vec<ViewInfo>, VoidbError>;
 
     /// Get full schema information for a table.
-    async fn describe_table(
-        &self,
-        database: &str,
-        table: &str,
-    ) -> Result<TableSchema, VoidbError>;
+    async fn describe_table(&self, database: &str, table: &str) -> Result<TableSchema, VoidbError>;
 
     /// Get indexes for a table.
-    async fn list_indexes(
-        &self,
-        database: &str,
-        table: &str,
-    ) -> Result<Vec<IndexInfo>, VoidbError>;
+    async fn list_indexes(&self, database: &str, table: &str)
+    -> Result<Vec<IndexInfo>, VoidbError>;
 
     /// Get foreign keys for a table.
     async fn list_foreign_keys(
@@ -70,20 +63,24 @@ pub trait DatabaseAdapter: Send + Sync {
     ) -> Result<QueryResult, VoidbError>;
 
     /// Execute arbitrary SQL (INSERT, UPDATE, DELETE, DDL).
-    async fn execute(
-        &self,
-        sql: &str,
-        params: &[QueryParam],
-    ) -> Result<ExecuteResult, VoidbError>;
+    async fn execute(&self, sql: &str, params: &[QueryParam]) -> Result<ExecuteResult, VoidbError>;
 
     /// Execute arbitrary SQL and return result set (for user queries in editor).
     /// If database is not empty, it will be selected before executing the query.
-    async fn execute_query(&self, sql: &str, database: Option<&str>) -> Result<QueryResult, VoidbError>;
+    async fn execute_query(
+        &self,
+        sql: &str,
+        database: Option<&str>,
+    ) -> Result<QueryResult, VoidbError>;
 
     /// Execute multiple SQL statements in sequence on the same connection.
     /// This preserves connection context (USE statements, transactions, etc.).
     /// Returns a vector of results, one for each statement.
-    async fn execute_statements(&self, statements: &[String], initial_database: Option<&str>) -> Result<Vec<QueryResult>, VoidbError> {
+    async fn execute_statements(
+        &self,
+        statements: &[String],
+        initial_database: Option<&str>,
+    ) -> Result<Vec<QueryResult>, VoidbError> {
         // Default implementation: execute each statement independently (no context sharing)
         let mut results = Vec::new();
         for statement in statements {
@@ -107,7 +104,8 @@ pub trait DatabaseAdapter: Send + Sync {
     fn generate_create_table_sql(&self, schema: &TableSchema) -> String;
 
     /// Get the CREATE TABLE statement for an existing table.
-    async fn get_create_table_sql(&self, database: &str, table: &str) -> Result<String, VoidbError>;
+    async fn get_create_table_sql(&self, database: &str, table: &str)
+    -> Result<String, VoidbError>;
 
     /// Quote an identifier according to database dialect.
     fn quote_identifier(&self, name: &str) -> String;

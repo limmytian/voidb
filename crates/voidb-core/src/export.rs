@@ -124,11 +124,9 @@ fn cell_value_to_json(value: &CellValue) -> serde_json::Value {
         CellValue::Null => serde_json::Value::Null,
         CellValue::Bool(b) => serde_json::Value::Bool(*b),
         CellValue::Int(i) => serde_json::Value::Number((*i).into()),
-        CellValue::Float(f) => {
-            serde_json::Number::from_f64(*f)
-                .map(serde_json::Value::Number)
-                .unwrap_or(serde_json::Value::Null)
-        }
+        CellValue::Float(f) => serde_json::Number::from_f64(*f)
+            .map(serde_json::Value::Number)
+            .unwrap_or(serde_json::Value::Null),
         CellValue::Text(s) => serde_json::Value::String(s.clone()),
         CellValue::Blob(b) => {
             use serde_json::Value;
@@ -312,10 +310,7 @@ mod tests {
                 CellValue::Int(1),
                 CellValue::Text("Alice".to_string()),
             ]),
-            make_row(vec![
-                CellValue::Int(2),
-                CellValue::Text("Bob".to_string()),
-            ]),
+            make_row(vec![CellValue::Int(2), CellValue::Text("Bob".to_string())]),
         ];
 
         let quote = |s: &str| format!("`{}`", s);
@@ -332,9 +327,7 @@ mod tests {
     #[test]
     fn test_export_sql_escaping() {
         let columns = make_columns(&["name"]);
-        let rows = vec![make_row(vec![CellValue::Text(
-            "O'Brien".to_string(),
-        )])];
+        let rows = vec![make_row(vec![CellValue::Text("O'Brien".to_string())])];
 
         let quote = |s: &str| format!("`{}`", s);
         let mut buf = Vec::new();

@@ -58,6 +58,7 @@ pub fn connection_config_to_profile(config: &ConnectionConfig) -> ConnectionProf
         default_options: Value::Null,
         credential_refs: legacy_credential_refs(config, &connection_key),
         policy: Default::default(),
+        version: 1,
     }
 }
 
@@ -102,7 +103,10 @@ pub(crate) fn safe_plugin_profile_metadata(config: &ConnectionConfig) -> Option<
 fn ssh_profile_metadata(config: &ConnectionConfig) -> Option<Value> {
     let plugin_config = config.plugin_config.as_ref()?;
     let auth = plugin_config.get("auth")?;
-    let auth_type = auth.get("type").and_then(Value::as_str).unwrap_or("unknown");
+    let auth_type = auth
+        .get("type")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
     let auth_method = match auth_type {
         "Password" | "password" => "password",
         "PublicKey" | "public_key" | "public-key" => "public_key",

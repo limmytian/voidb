@@ -390,11 +390,7 @@ mod tests {
         let state = legacy_config_default_passphrase_state(&[
             connection("first", "redis", json!({ "password": "p1" })),
             connection("second", "redis", json!({ "password": "p2" })),
-            connection(
-                "third",
-                "mysql",
-                json!({ "password": "p3", "token": "t3" }),
-            ),
+            connection("third", "mysql", json!({ "password": "p3", "token": "t3" })),
             // A connection without credential material is not an owner.
             connection("plain", "duckdb", json!({ "path": "analytics.duckdb" })),
         ]);
